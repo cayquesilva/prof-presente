@@ -390,10 +390,17 @@ const updateEnrollmentStatus = async (req, res) => {
 // Listar inscrições do usuário logado (NOVA FUNÇÃO)
 const getMyEnrollments = async (req, res) => {
   try {
-    const userId = req.user.id; // Pega o ID do usuário logado pelo token
+    const userId = req.user.id;
+    const { page = 1, limit = 10, status } = req.query;
+    const skip = (page - 1) * limit;
+
+    const where = { userId };
+    if (status) {
+      where.status = status;
+    }
 
     const enrollments = await prisma.enrollment.findMany({
-      where: { userId },
+      where,
       include: {
         event: {
           select: {
@@ -414,7 +421,6 @@ const getMyEnrollments = async (req, res) => {
             issuedAt: true,
           },
         },
-        // Adicionei a relação com evaluation para o botão 'Avaliar' funcionar corretamente
         courseEvaluation: {
           select: {
             id: true,
@@ -422,11 +428,20 @@ const getMyEnrollments = async (req, res) => {
         },
       },
       orderBy: { enrollmentDate: "desc" },
+      skip: parseInt(skip),
+      take: parseInt(limit),
     });
 
-    // Retorna a resposta em um formato consistente com o que o frontend espera
+    const total = await prisma.enrollment.count({ where });
+
     res.json({
-      data: enrollments,
+      enrollments,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("Erro ao listar minhas inscrições:", error);

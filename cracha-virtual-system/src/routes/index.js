@@ -7,6 +7,7 @@ const userRoutes = require('./users');
 const eventRoutes = require('./events');
 const enrollmentRoutes = require('./enrollments');
 const badgeRoutes = require('./badges');
+const teacherBadgeRoutes = require('./teacherBadges');
 const checkinRoutes = require('./checkins');
 const awardRoutes = require('./awards');
 const evaluationRoutes = require('./evaluations');
@@ -18,6 +19,7 @@ router.use('/users', userRoutes);
 router.use('/events', eventRoutes);
 router.use('/enrollments', enrollmentRoutes);
 router.use('/badges', badgeRoutes);
+router.use('/teacher-badges', teacherBadgeRoutes);
 router.use('/checkins', checkinRoutes);
 router.use('/awards', awardRoutes);
 router.use('/evaluations', evaluationRoutes);
@@ -45,6 +47,7 @@ router.get('/', (req, res) => {
       events: '/api/events',
       enrollments: '/api/enrollments',
       badges: '/api/badges',
+      teacherBadges: '/api/teacher-badges',
       checkins: '/api/checkins',
       awards: '/api/awards',
       evaluations: '/api/evaluations',

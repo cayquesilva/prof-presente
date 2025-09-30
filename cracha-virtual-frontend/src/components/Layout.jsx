@@ -16,7 +16,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from './ui/sheet';
-import { Hop as Home, Calendar, Users, Award, ChartBar as BarChart3, Settings, Menu, LogOut, User, CreditCard, FileText, QrCode, Star, Shield } from 'lucide-react';
+import { Hop as Home, Calendar, Users, Award, ChartBar as BarChart3, Settings, Menu, LogOut, User, CreditCard, FileText, QrCode, Star, Shield, Trophy } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
@@ -31,6 +31,7 @@ const Layout = ({ children }) => {
     { name: 'Meus Crachás', href: '/my-badges', icon: CreditCard },
     { name: 'Avaliações', href: '/evaluations', icon: Star },
     { name: 'Check-in', href: '/check-in', icon: QrCode },
+    { name: 'Ranking Professores', href: '/teacher-ranking', icon: Trophy },
     ...(isAdmin ? [
       { name: 'Administração', href: '/admin', icon: Shield },
     ] : []),

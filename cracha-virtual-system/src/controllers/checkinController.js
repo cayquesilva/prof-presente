@@ -3,7 +3,7 @@ const { prisma } = require('../config/database');
 // Realizar check-in
 const performCheckin = async (req, res) => {
   try {
-    const { qrCodeValue, location } = req.body;
+    const { qrCodeValue, location, eventId: requestEventId } = req.body;
 
     if (!qrCodeValue) {
       return res.status(400).json({
@@ -20,7 +20,11 @@ const performCheckin = async (req, res) => {
       });
     }
 
-    const { enrollmentId, userId, eventId } = parsedData;
+    const { enrollmentId, userId, eventId, badgeType } = parsedData;
+
+    if (badgeType === 'teacher') {
+      return await performTeacherCheckin(req, res, parsedData, requestEventId, location);
+    }
 
     if (!enrollmentId || !userId || !eventId) {
       return res.status(400).json({
@@ -376,6 +380,125 @@ const getEventCheckinStats = async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao obter estatísticas de check-in:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+const performTeacherCheckin = async (req, res, parsedData, eventId, location) => {
+  try {
+    const { userId } = parsedData;
+
+    if (!eventId) {
+      return res.status(400).json({
+        error: 'Event ID é obrigatório para check-in de professor'
+      });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        error: 'Evento não encontrado'
+      });
+    }
+
+    const teacherBadge = await prisma.teacherBadge.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          }
+        }
+      }
+    });
+
+    if (!teacherBadge) {
+      return res.status(404).json({
+        error: 'Crachá de professor não encontrado'
+      });
+    }
+
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId,
+        eventId,
+        status: 'APPROVED'
+      }
+    });
+
+    if (!enrollment) {
+      return res.status(400).json({
+        error: 'Professor não está inscrito neste evento ou inscrição não aprovada'
+      });
+    }
+
+    const now = new Date();
+    if (now < event.startDate) {
+      return res.status(400).json({
+        error: 'Evento ainda não começou'
+      });
+    }
+
+    if (now > event.endDate) {
+      return res.status(400).json({
+        error: 'Evento já terminou'
+      });
+    }
+
+    const recentCheckin = await prisma.teacherCheckin.findFirst({
+      where: {
+        teacherBadgeId: teacherBadge.id,
+        eventId,
+        checkinTime: {
+          gte: new Date(Date.now() - 5 * 60 * 1000)
+        }
+      }
+    });
+
+    if (recentCheckin) {
+      return res.status(400).json({
+        error: 'Check-in já realizado recentemente',
+        lastCheckin: recentCheckin
+      });
+    }
+
+    const checkin = await prisma.teacherCheckin.create({
+      data: {
+        teacherBadgeId: teacherBadge.id,
+        eventId,
+        location: location || event.location,
+      },
+      include: {
+        teacherBadge: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    res.status(201).json({
+      message: 'Check-in de professor realizado com sucesso',
+      checkin,
+      type: 'teacher'
+    });
+
+  } catch (error) {
+    console.error('Erro ao realizar check-in de professor:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

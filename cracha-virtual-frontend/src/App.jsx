@@ -19,6 +19,7 @@ const CheckIn = lazy(() => import('./pages/CheckIn'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Evaluations = lazy(() => import('./pages/Evaluations'));
 const Profile = lazy(() => import('./pages/Profile'));
+const TeacherRanking = lazy(() => import('./pages/TeacherRanking'));
 
 import './App.css';
 
@@ -171,6 +172,19 @@ function App() {
                   <Layout>
                     <LazyWrapper>
                       <Profile />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/teacher-ranking"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <TeacherRanking />
                     </LazyWrapper>
                   </Layout>
                 </ProtectedRoute>

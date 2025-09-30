@@ -13,6 +13,7 @@ datasource db {
 enum UserRole {
   ADMIN
   USER
+  TEACHER
 }
 
 enum EnrollmentStatus {
@@ -37,8 +38,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  enrollments Enrollment[]
-  userAwards  UserAward[]
+  enrollments   Enrollment[]
+  userAwards    UserAward[]
+  teacherBadge  TeacherBadge?
 
   @@index([email])
   @@index([role])
@@ -178,4 +180,41 @@ model CourseEvaluation {
   @@index([evaluatedAt])
   @@index([createdAt])
   @@map("course_evaluations")
+}
+
+model TeacherBadge {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  qrCodeUrl     String
+  badgeImageUrl String
+  issuedAt      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacherCheckins TeacherCheckin[]
+
+  @@index([issuedAt])
+  @@index([createdAt])
+  @@map("teacher_badges")
+}
+
+model TeacherCheckin {
+  id               String       @id @default(uuid())
+  teacherBadgeId   String
+  eventId          String
+  checkinTime      DateTime     @default(now())
+  location         String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relacionamentos
+  teacherBadge TeacherBadge @relation(fields: [teacherBadgeId], references: [id], onDelete: Cascade)
+
+  @@index([teacherBadgeId])
+  @@index([eventId])
+  @@index([checkinTime])
+  @@index([createdAt])
+  @@map("teacher_checkins")
 }
