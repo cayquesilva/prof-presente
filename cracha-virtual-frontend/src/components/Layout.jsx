@@ -16,22 +16,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from './ui/sheet';
-import {
-  Home,
-  Calendar,
-  Users,
-  Award,
-  BarChart3,
-  Settings,
-  Menu,
-  LogOut,
-  User,
-  CreditCard,
-  FileText,
-  QrCode,
-  Star,
-  Shield,
-} from 'lucide-react';
+import { Hop as Home, Calendar, Users, Award, ChartBar as BarChart3, Settings, Menu, LogOut, User, CreditCard, FileText, QrCode, Star, Shield } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();

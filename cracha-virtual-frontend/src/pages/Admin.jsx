@@ -30,15 +30,7 @@ import {
 } from "../components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Badge } from "../components/ui/badge";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Users,
-  Calendar,
-  Award,
-  BarChart,
-} from "lucide-react";
+import { Plus, CreditCard as Edit, Trash2, Users, Calendar, Award, ChartBar as BarChart } from "lucide-react";
 import { toast } from "sonner";
 
 const Admin = () => {
