@@ -5,17 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { 
-  Calendar, 
-  CreditCard, 
-  Award, 
-  TrendingUp, 
-  Users, 
-  BarChart3,
-  Clock,
-  MapPin,
-  Star,
-} from 'lucide-react';
+import { Calendar, CreditCard, Award, TrendingUp, Users, ChartBar as BarChart3, Clock, MapPin, Star } from 'lucide-react';
 import { eventsAPI, enrollmentsAPI, checkinsAPI, awardsAPI } from '../lib/api';
 import '../App.css';
 
