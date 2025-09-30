@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  CANCELLED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  cpf       String?  @unique
+  birthDate DateTime
+  phone     String?
+  address   String?
+  photoUrl  String?
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  enrollments Enrollment[]
+  userAwards  UserAward[]
+
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Event {
+  id           String    @id @default(uuid())
+  title        String
+  description  String
+  startDate    DateTime
+  endDate      DateTime
+  location     String
+  maxAttendees Int?
+  imageUrl     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relacionamentos
+  enrollments Enrollment[]
+
+  @@index([startDate])
+  @@index([endDate])
+  @@index([createdAt])
+  @@map("events")
+}
+
+model Enrollment {
+  id             String           @id @default(uuid())
+  userId         String
+  eventId        String
+  enrollmentDate DateTime         @default(now())
+  status         EnrollmentStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relacionamentos
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event            Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  badge            Badge?
+  courseEvaluation CourseEvaluation?
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+  @@index([enrollmentDate])
+  @@map("enrollments")
+}
+
+model Badge {
+  id             String    @id @default(uuid())
+  enrollmentId   String    @unique
+  qrCodeUrl      String
+  badgeImageUrl  String
+  issuedAt       DateTime  @default(now())
+  validUntil     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relacionamentos
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  checkins   Checkin[]
+
+  @@index([issuedAt])
+  @@index([validUntil])
+  @@index([createdAt])
+  @@map("badges")
+}
+
+model Checkin {
+  id          String   @id @default(uuid())
+  badgeId     String
+  checkinTime DateTime @default(now())
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@index([badgeId])
+  @@index([checkinTime])
+  @@index([createdAt])
+  @@map("checkins")
+}
+
+model Award {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  criteria    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  userAwards UserAward[]
+
+  @@index([createdAt])
+  @@map("awards")
+}
+
+model UserAward {
+  id        String   @id @default(uuid())
+  userId    String
+  awardId   String
+  awardedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  award Award @relation(fields: [awardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, awardId])
+  @@index([userId])
+  @@index([awardId])
+  @@index([awardedAt])
+  @@map("user_awards")
+}
+
+model CourseEvaluation {
+  id           String   @id @default(uuid())
+  enrollmentId String   @unique
+  rating       Int      @default(1) // 1 a 5 estrelas
+  comment      String?
+  evaluatedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relacionamentos
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([rating])
+  @@index([evaluatedAt])
+  @@index([createdAt])
+  @@map("course_evaluations")
+}

@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cracha_virtual
+      POSTGRES_USER: cracha_user
+      POSTGRES_PASSWORD: cracha123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cracha_network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # Backend Node.js
+  backend:
+    image: seu-usuario/cracha-backend:latest
+    environment:
+      DATABASE_URL: "postgresql://cracha_user:cracha123@postgres:5432/cracha_virtual"
+      JWT_SECRET: "sua_chave_secreta_super_segura_para_producao"
+      JWT_EXPIRES_IN: "24h"
+      PORT: 3000
+      NODE_ENV: "production"
+      CORS_ORIGIN: "*"
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - cracha_network
+      - traefik_network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.cracha-backend.rule=Host(`api.seudominio.com`)"
+        - "traefik.http.routers.cracha-backend.entrypoints=websecure"
+        - "traefik.http.routers.cracha-backend.tls.certresolver=letsencrypt"
+        - "traefik.http.services.cracha-backend.loadbalancer.server.port=3000"
+        - "traefik.docker.network=traefik_network"
+    depends_on:
+      - postgres
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npm start
+      "
+
+  # Frontend React
+  frontend:
+    image: seu-usuario/cracha-frontend:latest
+    networks:
+      - traefik_network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.cracha-frontend.rule=Host(`cracha.seudominio.com`)"
+        - "traefik.http.routers.cracha-frontend.entrypoints=websecure"
+        - "traefik.http.routers.cracha-frontend.tls.certresolver=letsencrypt"
+        - "traefik.http.services.cracha-frontend.loadbalancer.server.port=80"
+        - "traefik.docker.network=traefik_network"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  cracha_network:
+    driver: overlay
+    attachable: true
+  traefik_network:
+    external: true
+

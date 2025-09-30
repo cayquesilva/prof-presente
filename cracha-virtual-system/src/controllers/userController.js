@@ -1,0 +1,300 @@
+const bcrypt = require('bcryptjs');
+const { body, validationResult } = require('express-validator');
+const { prisma } = require('../config/database');
+
+// Validações para atualização de usuário
+const updateUserValidation = [
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 255 })
+    .withMessage('Nome deve ter entre 2 e 255 caracteres'),
+  body('email')
+    .optional()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Email inválido'),
+  body('cpf')
+    .optional()
+    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
+    .withMessage('CPF deve estar no formato XXX.XXX.XXX-XX'),
+  body('birthDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Data de nascimento inválida'),
+];
+
+// Listar todos os usuários (apenas admin)
+const getAllUsers = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search } = req.query;
+    const skip = (page - 1) * limit;
+
+    const where = search ? {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    } : {};
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        _count: {
+          select: {
+            enrollments: true,
+          }
+        }
+      },
+      skip: parseInt(skip),
+      take: parseInt(limit),
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const total = await prisma.user.count({ where });
+
+    res.json({
+      users,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao listar usuários:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+// Obter usuário por ID
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cpf: true,
+        birthDate: true,
+        phone: true,
+        address: true,
+        photoUrl: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            enrollments: true,
+            userAwards: true,
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    res.json(user);
+
+  } catch (error) {
+    console.error('Erro ao obter usuário:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+// Atualizar usuário
+const updateUser = async (req, res) => {
+  try {
+    // Verificar erros de validação
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Dados inválidos',
+        details: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const { name, email, cpf, birthDate, phone, address, password } = req.body;
+
+    // Verificar se o usuário existe
+    const existingUser = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    // Verificar se o email já está em uso por outro usuário
+    if (email && email !== existingUser.email) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (emailExists) {
+        return res.status(409).json({
+          error: 'Email já está em uso'
+        });
+      }
+    }
+
+    // Verificar se o CPF já está em uso por outro usuário
+    if (cpf && cpf !== existingUser.cpf) {
+      const cpfExists = await prisma.user.findUnique({
+        where: { cpf }
+      });
+
+      if (cpfExists) {
+        return res.status(409).json({
+          error: 'CPF já está em uso'
+        });
+      }
+    }
+
+    // Preparar dados para atualização
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (cpf) updateData.cpf = cpf;
+    if (birthDate) updateData.birthDate = new Date(birthDate);
+    if (phone) updateData.phone = phone;
+    if (address) updateData.address = address;
+
+    // Hash da nova senha se fornecida
+    if (password) {
+      const saltRounds = 12;
+      updateData.password = await bcrypt.hash(password, saltRounds);
+    }
+
+    // Atualizar usuário
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cpf: true,
+        birthDate: true,
+        phone: true,
+        address: true,
+        photoUrl: true,
+        role: true,
+        updatedAt: true,
+      }
+    });
+
+    res.json({
+      message: 'Usuário atualizado com sucesso',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+// Deletar usuário
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    // Deletar usuário (cascade irá deletar relacionamentos)
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    res.json({
+      message: 'Usuário deletado com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao deletar usuário:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+// Atualizar foto do perfil
+const updateProfilePhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'Nenhuma imagem foi enviada'
+      });
+    }
+
+    // Construir URL da foto
+    const photoUrl = `/uploads/profiles/${req.file.filename}`;
+
+    // Atualizar usuário com nova foto
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { photoUrl },
+      select: {
+        id: true,
+        name: true,
+        photoUrl: true,
+      }
+    });
+
+    res.json({
+      message: 'Foto do perfil atualizada com sucesso',
+      photoUrl: updatedUser.photoUrl
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar foto do perfil:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+module.exports = {
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  updateProfilePhoto,
+  updateUserValidation,
+};
+

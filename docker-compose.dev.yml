@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Banco de dados PostgreSQL para desenvolvimento local
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: cracha_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cracha_virtual_dev
+      POSTGRES_USER: cracha_user
+      POSTGRES_PASSWORD: cracha123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-dev.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cracha_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cracha_user -d cracha_virtual_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Adminer para administração do banco (interface web)
+  adminer:
+    image: adminer:4.8.1
+    container_name: cracha_adminer_dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - cracha_dev_network
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres-dev
+      ADMINER_DESIGN: "lucas-sandery"
+
+  # Redis para cache (opcional - para desenvolvimento avançado)
+  redis-dev:
+    image: redis:7-alpine
+    container_name: cracha_redis_dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - cracha_dev_network
+    command: redis-server --appendonly yes --requirepass "redis123"
+    profiles:
+      - cache
+
+volumes:
+  postgres_dev_data:
+    driver: local
+    name: cracha_postgres_dev_data
+  redis_dev_data:
+    driver: local
+    name: cracha_redis_dev_data
+
+networks:
+  cracha_dev_network:
+    driver: bridge
+    name: cracha_dev_network
+

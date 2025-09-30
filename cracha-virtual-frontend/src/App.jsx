@@ -1,0 +1,120 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { lazy } from 'react';
+import { AuthProvider } from './hooks/useAuth.jsx';
+import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
+import LazyWrapper from './components/LazyWrapper';
+
+// Lazy loading das páginas
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Events = lazy(() => import('./pages/Events'));
+const MyEnrollments = lazy(() => import('./pages/MyEnrollments'));
+const MyBadges = lazy(() => import('./pages/MyBadges'));
+
+import './App.css';
+
+// Configurar React Query com otimizações
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      cacheTime: 10 * 60 * 1000, // 10 minutos
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Rotas públicas */}
+            <Route 
+              path="/login" 
+              element={
+                <LazyWrapper>
+                  <Login />
+                </LazyWrapper>
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                <LazyWrapper>
+                  <Register />
+                </LazyWrapper>
+              } 
+            />
+            
+            {/* Rotas protegidas */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <Dashboard />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/events"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <Events />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/my-enrollments"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <MyEnrollments />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/my-badges"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <MyBadges />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Rota padrão */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            {/* Rota 404 */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
