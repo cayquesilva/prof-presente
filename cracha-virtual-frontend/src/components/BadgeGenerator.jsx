@@ -4,6 +4,8 @@ import { Button } from "./ui/button";
 import { Download, Printer } from "lucide-react";
 import { toast } from "sonner";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
 const BadgeGenerator = ({ badge, onClose }) => {
   const badgeRef = useRef(null);
 
@@ -21,15 +23,18 @@ const BadgeGenerator = ({ badge, onClose }) => {
 
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(badgeRef.current, {
-        scale: 2,
-        backgroundColor: null,
+        scale: 3,
+        backgroundColor: "#ffffff",
         logging: false,
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: false,
       });
 
       canvas.toBlob((blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.download = `cracha-${badge.id}.png`;
+        link.download = `cracha-${badge.enrollment?.user?.name || badge.id}.png`;
         link.href = url;
         link.click();
         window.URL.revokeObjectURL(url);
@@ -37,7 +42,7 @@ const BadgeGenerator = ({ badge, onClose }) => {
       });
     } catch (error) {
       console.error("Erro ao baixar crachá:", error);
-      toast.error("Erro ao baixar crachá");
+      toast.error(`Erro ao baixar crachá: ${error.message}`);
     }
   };
 
@@ -100,8 +105,12 @@ const BadgeGenerator = ({ badge, onClose }) => {
           {/* Crachá para visualização/impressão */}
           <div
             ref={badgeRef}
-            className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white p-8 rounded-2xl shadow-2xl mb-6"
-            style={{ width: "400px", minHeight: "550px" }}
+            className="text-white p-8 rounded-2xl shadow-2xl mb-6"
+            style={{
+              width: "400px",
+              minHeight: "550px",
+              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%)"
+            }}
           >
             {/* Header do Crachá */}
             <div className="text-center mb-6">
@@ -113,7 +122,10 @@ const BadgeGenerator = ({ badge, onClose }) => {
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white text-3xl font-bold">
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center text-white text-3xl font-bold"
+                    style={{ background: "linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)" }}
+                  >
                     {badge.enrollment?.user?.name
                       ?.split(" ")
                       .map((n) => n[0])
@@ -125,18 +137,18 @@ const BadgeGenerator = ({ badge, onClose }) => {
               <h4 className="text-2xl font-bold mb-1">
                 {badge.enrollment?.user?.name}
               </h4>
-              <p className="text-indigo-100 text-sm">
+              <p className="text-sm" style={{ color: "#C7D2FE" }}>
                 {badge.enrollment?.user?.email}
               </p>
             </div>
 
             {/* Divisor */}
-            <div className="border-t-2 border-white/30 my-6"></div>
+            <div className="my-6" style={{ borderTop: "2px solid rgba(255, 255, 255, 0.3)" }}></div>
 
             {/* Informações do Evento */}
             <div className="space-y-4">
               <div>
-                <h5 className="text-lg font-semibold mb-2 text-indigo-100">
+                <h5 className="text-lg font-semibold mb-2" style={{ color: "#C7D2FE" }}>
                   Evento
                 </h5>
                 <p className="text-xl font-bold">
@@ -146,13 +158,13 @@ const BadgeGenerator = ({ badge, onClose }) => {
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-indigo-100 mb-1">Data</p>
+                  <p className="mb-1" style={{ color: "#C7D2FE" }}>Data</p>
                   <p className="font-semibold">
                     {formatDate(badge.enrollment?.event?.startDate)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-indigo-100 mb-1">Local</p>
+                  <p className="mb-1" style={{ color: "#C7D2FE" }}>Local</p>
                   <p className="font-semibold truncate">
                     {badge.enrollment?.event?.location}
                   </p>
@@ -160,8 +172,11 @@ const BadgeGenerator = ({ badge, onClose }) => {
               </div>
 
               <div>
-                <p className="text-indigo-100 text-xs mb-1">ID do Crachá</p>
-                <p className="font-mono text-sm bg-white/20 px-3 py-2 rounded">
+                <p className="text-xs mb-1" style={{ color: "#C7D2FE" }}>ID do Crachá</p>
+                <p
+                  className="font-mono text-sm px-3 py-2 rounded"
+                  style={{ backgroundColor: "rgba(255, 255, 255, 0.2)" }}
+                >
                   {badge.id}
                 </p>
               </div>
@@ -169,14 +184,29 @@ const BadgeGenerator = ({ badge, onClose }) => {
 
             {/* QR Code */}
             <div className="mt-6">
-              <div className="bg-white p-4 rounded-xl shadow-xl">
-                <img
-                  src={badge.qrCodeUrl}
-                  alt="QR Code"
-                  className="w-full h-auto"
-                  style={{ maxWidth: "200px", margin: "0 auto", display: "block" }}
-                />
-                <p className="text-center text-xs text-gray-600 mt-3">
+              <div className="p-4 rounded-xl" style={{ backgroundColor: "#ffffff" }}>
+                {badge.qrCodeUrl ? (
+                  <img
+                    src={`${API_BASE_URL.replace('/api', '')}${badge.qrCodeUrl}`}
+                    alt="QR Code"
+                    className="w-full h-auto"
+                    style={{ maxWidth: "200px", margin: "0 auto", display: "block" }}
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      console.error('Erro ao carregar QR Code:', badge.qrCodeUrl);
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML = '<p style="text-align: center; color: #6B7280;">QR Code não disponível</p>';
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="flex items-center justify-center"
+                    style={{ minHeight: "200px", color: "#6B7280" }}
+                  >
+                    <p>QR Code não disponível</p>
+                  </div>
+                )}
+                <p className="text-center text-xs mt-3" style={{ color: "#4B5563" }}>
                   Apresente este QR Code na entrada
                 </p>
               </div>

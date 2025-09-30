@@ -1,6 +1,7 @@
 const { prisma } = require('../config/database');
 const path = require('path');
 const fs = require('fs').promises;
+const { generateQRCode } = require('../utils/qrcode');
 
 // Obter crachá por ID da inscrição
 const getBadgeByEnrollment = async (req, res) => {
@@ -422,13 +423,55 @@ const downloadBadgeImage = async (req, res) => {
 };
 
 
+const regenerateQRCode = async (req, res) => {
+  try {
+    const { badgeId } = req.params;
+
+    const badge = await prisma.badge.findUnique({
+      where: { id: badgeId },
+      include: {
+        enrollment: {
+          include: {
+            user: true,
+            event: true,
+          }
+        }
+      }
+    });
+
+    if (!badge) {
+      return res.status(404).json({ error: 'Crachá não encontrado' });
+    }
+
+    const qrData = JSON.stringify({
+      enrollmentId: badge.enrollment.id,
+      userId: badge.enrollment.user.id,
+      eventId: badge.enrollment.event.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    const qrCodeFilename = `badge_${badge.enrollmentId}`;
+    await generateQRCode(qrData, qrCodeFilename);
+
+    res.json({
+      message: 'QR Code regenerado com sucesso',
+      qrCodeUrl: badge.qrCodeUrl
+    });
+
+  } catch (error) {
+    console.error('Erro ao regenerar QR code:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 module.exports = {
   getBadgeByEnrollment,
   generateBadgeImage,
   getQRCode,
   validateQRCode,
   getAllBadges,
-  getMyBadges, // Adicionar nova função
-  downloadBadgeImage, // Adicionar nova função
+  getMyBadges,
+  downloadBadgeImage,
+  regenerateQRCode,
 };
 

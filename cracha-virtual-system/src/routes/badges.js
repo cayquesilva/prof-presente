@@ -7,8 +7,9 @@ const {
   getQRCode,
   validateQRCode,
   getAllBadges,
-  getMyBadges, // Importar nova função
-  downloadBadgeImage, // Importar nova função
+  getMyBadges,
+  downloadBadgeImage,
+  regenerateQRCode,
 } = require("../controllers/badgeController");
 
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
@@ -41,5 +42,8 @@ router.post("/validate-qr", authenticateToken, validateQRCode);
 
 // Listar todos os crachás (apenas admin)
 router.get("/", authenticateToken, requireAdmin, getAllBadges);
+
+// Regenerar QR Code de um crachá (apenas admin)
+router.post("/:badgeId/regenerate-qr", authenticateToken, requireAdmin, regenerateQRCode);
 
 module.exports = router;
