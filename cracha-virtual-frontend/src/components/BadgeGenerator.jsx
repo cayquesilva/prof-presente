@@ -105,26 +105,55 @@ const BadgeGenerator = ({ badge, onClose }) => {
           {/* Crachá para visualização/impressão */}
           <div
             ref={badgeRef}
-            className="text-white p-8 rounded-2xl shadow-2xl mb-6"
             style={{
               width: "400px",
               minHeight: "550px",
-              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%)"
+              background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%)",
+              color: "#ffffff",
+              padding: "32px",
+              borderRadius: "16px",
+              marginBottom: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
             }}
           >
             {/* Header do Crachá */}
-            <div className="text-center mb-6">
-              <div className="w-28 h-28 bg-white rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
+            <div style={{ textAlign: "center", marginBottom: "24px" }}>
+              <div style={{
+                width: "112px",
+                height: "112px",
+                backgroundColor: "#ffffff",
+                borderRadius: "50%",
+                margin: "0 auto 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+              }}>
                 {badge.enrollment?.user?.photoUrl ? (
                   <img
                     src={badge.enrollment.user.photoUrl}
                     alt={badge.enrollment.user.name}
-                    className="w-full h-full rounded-full object-cover"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "50%",
+                      objectFit: "cover"
+                    }}
                   />
                 ) : (
                   <div
-                    className="w-full h-full rounded-full flex items-center justify-center text-white text-3xl font-bold"
-                    style={{ background: "linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ffffff",
+                      fontSize: "30px",
+                      fontWeight: "bold",
+                      background: "linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)"
+                    }}
                   >
                     {badge.enrollment?.user?.name
                       ?.split(" ")
@@ -134,48 +163,53 @@ const BadgeGenerator = ({ badge, onClose }) => {
                   </div>
                 )}
               </div>
-              <h4 className="text-2xl font-bold mb-1">
+              <h4 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>
                 {badge.enrollment?.user?.name}
               </h4>
-              <p className="text-sm" style={{ color: "#C7D2FE" }}>
+              <p style={{ fontSize: "14px", color: "#C7D2FE" }}>
                 {badge.enrollment?.user?.email}
               </p>
             </div>
 
             {/* Divisor */}
-            <div className="my-6" style={{ borderTop: "2px solid rgba(255, 255, 255, 0.3)" }}></div>
+            <div style={{ margin: "24px 0", borderTop: "2px solid rgba(255, 255, 255, 0.3)" }}></div>
 
             {/* Informações do Evento */}
-            <div className="space-y-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div>
-                <h5 className="text-lg font-semibold mb-2" style={{ color: "#C7D2FE" }}>
+                <h5 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", color: "#C7D2FE" }}>
                   Evento
                 </h5>
-                <p className="text-xl font-bold">
+                <p style={{ fontSize: "20px", fontWeight: "bold" }}>
                   {badge.enrollment?.event?.title}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", fontSize: "14px" }}>
                 <div>
-                  <p className="mb-1" style={{ color: "#C7D2FE" }}>Data</p>
-                  <p className="font-semibold">
+                  <p style={{ marginBottom: "4px", color: "#C7D2FE" }}>Data</p>
+                  <p style={{ fontWeight: "600" }}>
                     {formatDate(badge.enrollment?.event?.startDate)}
                   </p>
                 </div>
                 <div>
-                  <p className="mb-1" style={{ color: "#C7D2FE" }}>Local</p>
-                  <p className="font-semibold truncate">
+                  <p style={{ marginBottom: "4px", color: "#C7D2FE" }}>Local</p>
+                  <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {badge.enrollment?.event?.location}
                   </p>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs mb-1" style={{ color: "#C7D2FE" }}>ID do Crachá</p>
+                <p style={{ fontSize: "12px", marginBottom: "4px", color: "#C7D2FE" }}>ID do Crachá</p>
                 <p
-                  className="font-mono text-sm px-3 py-2 rounded"
-                  style={{ backgroundColor: "rgba(255, 255, 255, 0.2)" }}
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "14px",
+                    padding: "8px 12px",
+                    borderRadius: "4px",
+                    backgroundColor: "rgba(255, 255, 255, 0.2)"
+                  }}
                 >
                   {badge.id}
                 </p>
@@ -183,14 +217,13 @@ const BadgeGenerator = ({ badge, onClose }) => {
             </div>
 
             {/* QR Code */}
-            <div className="mt-6">
-              <div className="p-4 rounded-xl" style={{ backgroundColor: "#ffffff" }}>
+            <div style={{ marginTop: "24px" }}>
+              <div style={{ padding: "16px", borderRadius: "12px", backgroundColor: "#ffffff" }}>
                 {badge.qrCodeUrl ? (
                   <img
                     src={`${API_BASE_URL.replace('/api', '')}${badge.qrCodeUrl}`}
                     alt="QR Code"
-                    className="w-full h-auto"
-                    style={{ maxWidth: "200px", margin: "0 auto", display: "block" }}
+                    style={{ width: "100%", height: "auto", maxWidth: "200px", margin: "0 auto", display: "block" }}
                     crossOrigin="anonymous"
                     onError={(e) => {
                       console.error('Erro ao carregar QR Code:', badge.qrCodeUrl);
@@ -199,14 +232,11 @@ const BadgeGenerator = ({ badge, onClose }) => {
                     }}
                   />
                 ) : (
-                  <div
-                    className="flex items-center justify-center"
-                    style={{ minHeight: "200px", color: "#6B7280" }}
-                  >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "200px", color: "#6B7280" }}>
                     <p>QR Code não disponível</p>
                   </div>
                 )}
-                <p className="text-center text-xs mt-3" style={{ color: "#4B5563" }}>
+                <p style={{ textAlign: "center", fontSize: "12px", marginTop: "12px", color: "#4B5563" }}>
                   Apresente este QR Code na entrada
                 </p>
               </div>
