@@ -43,6 +43,7 @@ const getAllUsers = async (req, res) => {
         id: true,
         name: true,
         email: true,
+        cpf: true,
         role: true,
         createdAt: true,
         _count: {

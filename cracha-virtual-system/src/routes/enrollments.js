@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   enrollInEvent,
   getUserEnrollments,
+  getMyEnrollments,
   getEventEnrollments,
   cancelEnrollment,
   updateEnrollmentStatus,
@@ -35,10 +36,7 @@ router.get(
 );
 
 // Listar inscrições do usuário logado
-router.get("/my-enrollments", authenticateToken, (req, res, next) => {
-  req.params.userId = req.user.id;
-  return getUserEnrollments(req, res, next);
-});
+router.get("/my-enrollments", authenticateToken, getMyEnrollments);
 
 // Criar inscrição (POST /enrollments)
 router.post("/", authenticateToken, enrollInEvent);
@@ -92,10 +90,7 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
 });
 
 // Listar todas as inscrições (com filtros e paginação)
-router.get("/", authenticateToken, async (req, res, next) => {
-  req.params.userId = req.user.id;
-  return getUserEnrollments(req, res, next);
-});
+router.get("/", authenticateToken, getMyEnrollments);
 
 // Cancelar inscrição (DELETE)
 router.delete("/:enrollmentId", authenticateToken, cancelEnrollment);

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import api from "../lib/api";
 import {
   Card,
@@ -35,9 +36,17 @@ import { toast } from "sonner";
 
 const Admin = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("events");
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") || "events";
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   const [eventForm, setEventForm] = useState({
     title: "",
@@ -59,8 +68,8 @@ const Admin = () => {
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const response = await api.get("/users");
-      return response.data;
+      const response = await api.get("/users?limit=100");
+      return response.data.users;
     },
     enabled: activeTab === "users",
   });

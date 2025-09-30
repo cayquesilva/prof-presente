@@ -4,8 +4,15 @@ const { generateQRCode } = require("../utils/qrcode");
 // Inscrever usuário em evento
 const enrollInEvent = async (req, res) => {
   try {
-    const { eventId } = req.params;
+    // Suporta tanto via params quanto via body
+    const eventId = req.params.eventId || req.body.eventId;
     const userId = req.user.id;
+
+    if (!eventId) {
+      return res.status(400).json({
+        error: "eventId é obrigatório",
+      });
+    }
 
     // Verificar se o evento existe
     const event = await prisma.event.findUnique({

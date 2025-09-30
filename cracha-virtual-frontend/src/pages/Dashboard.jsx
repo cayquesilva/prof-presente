@@ -328,19 +328,19 @@ const Dashboard = () => {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Button variant="outline" asChild>
-                <Link to="/admin/users">
+                <Link to="/admin?tab=users">
                   <Users className="mr-2 h-4 w-4" />
                   Gerenciar Usuários
                 </Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/admin/reports">
+                <Link to="/admin?tab=dashboard">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Relatórios
                 </Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/events/create">
+                <Link to="/admin?tab=events">
                   <Calendar className="mr-2 h-4 w-4" />
                   Criar Evento
                 </Link>
