@@ -24,8 +24,33 @@ const createEvaluation = async (req, res) => {
       });
     }
 
-    const { enrollmentId } = req.params;
-    const { rating, comment } = req.body;
+    // Suporta tanto POST /evaluations (com eventId no body) quanto POST /enrollments/:id
+    let enrollmentId = req.params.enrollmentId || req.body.enrollmentId;
+    const { eventId, rating, comment } = req.body;
+
+    // Se foi passado eventId, buscar a inscrição do usuário
+    if (eventId && !enrollmentId) {
+      const enrollment = await prisma.enrollment.findFirst({
+        where: {
+          eventId,
+          userId: req.user.id,
+        },
+      });
+
+      if (!enrollment) {
+        return res.status(404).json({
+          error: 'Inscrição não encontrada para este evento'
+        });
+      }
+
+      enrollmentId = enrollment.id;
+    }
+
+    if (!enrollmentId) {
+      return res.status(400).json({
+        error: 'enrollmentId ou eventId é obrigatório'
+      });
+    }
 
     // Verificar se a inscrição existe
     const enrollment = await prisma.enrollment.findUnique({

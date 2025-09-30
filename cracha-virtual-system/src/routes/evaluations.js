@@ -16,8 +16,17 @@ const {
   requireOwnershipOrAdmin 
 } = require('../middleware/auth');
 
-// Criar avaliação de curso
+// Criar avaliação (novo formato - POST /evaluations)
+router.post('/', authenticateToken, evaluationValidation, createEvaluation);
+
+// Criar avaliação de curso (compatibilidade)
 router.post('/enrollments/:enrollmentId', authenticateToken, evaluationValidation, createEvaluation);
+
+// Listar avaliações do usuário logado
+router.get('/my', authenticateToken, (req, res, next) => {
+  req.params.userId = req.user.id;
+  return getUserEvaluations(req, res, next);
+});
 
 // Listar avaliações de um evento (apenas admin)
 router.get('/events/:eventId', authenticateToken, requireAdmin, getEventEvaluations);

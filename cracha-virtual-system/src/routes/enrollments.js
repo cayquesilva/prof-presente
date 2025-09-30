@@ -36,12 +36,71 @@ router.get(
 
 // Listar inscrições do usuário logado
 router.get("/my-enrollments", authenticateToken, (req, res, next) => {
-  // Define o userId a partir do token de autenticação
   req.params.userId = req.user.id;
-  // Reutiliza o controller que já suporta paginação e filtros
   return getUserEnrollments(req, res, next);
 });
-// Cancelar inscrição
+
+// Criar inscrição (POST /enrollments)
+router.post("/", authenticateToken, enrollInEvent);
+
+// Obter status de inscrição do usuário em um evento específico
+router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.id;
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        eventId: eventId,
+        userId: userId,
+      },
+      include: {
+        badge: true,
+      },
+    });
+
+    if (!enrollment) {
+      return res.json({
+        enrolled: false,
+        enrollmentId: null,
+        status: null,
+      });
+    }
+
+    const enrollmentCount = await prisma.enrollment.count({
+      where: {
+        eventId: eventId,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      },
+    });
+
+    res.json({
+      enrolled: true,
+      enrollmentId: enrollment.id,
+      status: enrollment.status,
+      badge: enrollment.badge,
+      enrollmentCount,
+    });
+
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Erro ao verificar status de inscrição:', error);
+    res.status(500).json({ error: 'Erro ao verificar status de inscrição' });
+  }
+});
+
+// Listar todas as inscrições (com filtros e paginação)
+router.get("/", authenticateToken, async (req, res, next) => {
+  req.params.userId = req.user.id;
+  return getUserEnrollments(req, res, next);
+});
+
+// Cancelar inscrição (DELETE)
+router.delete("/:enrollmentId", authenticateToken, cancelEnrollment);
+
+// Cancelar inscrição (PATCH - compatibilidade)
 router.patch("/:enrollmentId/cancel", authenticateToken, cancelEnrollment);
 
 // Atualizar status da inscrição (apenas admin)
