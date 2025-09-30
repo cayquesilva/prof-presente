@@ -18,6 +18,7 @@ const MyBadges = lazy(() => import('./pages/MyBadges'));
 const CheckIn = lazy(() => import('./pages/CheckIn'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Evaluations = lazy(() => import('./pages/Evaluations'));
+const Profile = lazy(() => import('./pages/Profile'));
 
 import './App.css';
 
@@ -162,7 +163,20 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
+
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <Profile />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* Rota padrão */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             
