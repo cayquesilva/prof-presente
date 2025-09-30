@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy } from 'react';
 import { AuthProvider } from './hooks/useAuth.jsx';
+import { NotificationProvider } from './components/NotificationProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LazyWrapper from './components/LazyWrapper';
@@ -11,8 +12,12 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Events = lazy(() => import('./pages/Events'));
+const EventDetails = lazy(() => import('./pages/EventDetails'));
 const MyEnrollments = lazy(() => import('./pages/MyEnrollments'));
 const MyBadges = lazy(() => import('./pages/MyBadges'));
+const CheckIn = lazy(() => import('./pages/CheckIn'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Evaluations = lazy(() => import('./pages/Evaluations'));
 
 import './App.css';
 
@@ -31,8 +36,9 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
+      <NotificationProvider>
+        <AuthProvider>
+          <Router>
           <Routes>
             {/* Rotas públicas */}
             <Route 
@@ -78,6 +84,19 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/events/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <EventDetails />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
             
             <Route
               path="/my-enrollments"
@@ -104,6 +123,45 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/check-in"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <CheckIn />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <Admin />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/evaluations"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <Evaluations />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
             
             {/* Rota padrão */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -113,6 +171,7 @@ function App() {
           </Routes>
         </Router>
       </AuthProvider>
+    </NotificationProvider>
     </QueryClientProvider>
   );
 }

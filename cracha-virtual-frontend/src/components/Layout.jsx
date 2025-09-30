@@ -28,6 +28,9 @@ import {
   User,
   CreditCard,
   FileText,
+  QrCode,
+  Star,
+  Shield,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -41,11 +44,10 @@ const Layout = ({ children }) => {
     { name: 'Eventos', href: '/events', icon: Calendar },
     { name: 'Minhas Inscrições', href: '/my-enrollments', icon: FileText },
     { name: 'Meus Crachás', href: '/my-badges', icon: CreditCard },
-    { name: 'Premiações', href: '/awards', icon: Award },
+    { name: 'Avaliações', href: '/evaluations', icon: Star },
+    { name: 'Check-in', href: '/check-in', icon: QrCode },
     ...(isAdmin ? [
-      { name: 'Usuários', href: '/admin/users', icon: Users },
-      { name: 'Relatórios', href: '/admin/reports', icon: BarChart3 },
-      { name: 'Configurações', href: '/admin/settings', icon: Settings },
+      { name: 'Administração', href: '/admin', icon: Shield },
     ] : []),
   ];
 
