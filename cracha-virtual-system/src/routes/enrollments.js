@@ -46,8 +46,7 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
     const userId = req.user.id;
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    const { prisma } = require('../config/database');
 
     const enrollment = await prisma.enrollment.findFirst({
       where: {
@@ -70,7 +69,7 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
     const enrollmentCount = await prisma.enrollment.count({
       where: {
         eventId: eventId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: 'APPROVED',
       },
     });
 
@@ -81,8 +80,6 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
       badge: enrollment.badge,
       enrollmentCount,
     });
-
-    await prisma.$disconnect();
   } catch (error) {
     console.error('Erro ao verificar status de inscrição:', error);
     res.status(500).json({ error: 'Erro ao verificar status de inscrição' });

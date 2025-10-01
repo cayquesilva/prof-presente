@@ -2,26 +2,8 @@ import { useState, useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Alert, AlertDescription } from "../components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-import { CircleCheck as CheckCircle, Circle as XCircle, QrCode, Keyboard, Camera, Calendar } from "lucide-react";
+
+import { CircleCheck as CheckCircle, Circle as XCircle, MapPin, QrCode, Keyboard, Camera, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -106,16 +88,26 @@ const CheckIn = () => {
     );
 
     html5QrcodeScanner.render(
-      (decodedText) => {
+(decodedText) => {
         try {
+          // Tentar parsear como JSON primeiro
+          let qrData;
+          try {
+            qrData = JSON.parse(decodedText);
+          } catch (parseError) {
+            // Se não for JSON, usar como está
+            qrData = decodedText;
+          }
+          
           checkInMutation.mutate({
-            qrCodeValue: decodedText,
+            qrCodeValue: typeof qrData === 'string' ? qrData : JSON.stringify(qrData),
             eventId: selectedEvent,
           });
           html5QrcodeScanner.clear();
           setIsScanning(false);
         } catch (e) {
-          toast.error("QR Code inválido");
+          console.error("Erro ao processar QR Code:", e);
+          toast.error("Erro ao processar QR Code: " + e.message);
         }
       },
       (errorMessage) => {

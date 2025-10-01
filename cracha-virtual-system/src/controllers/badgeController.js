@@ -365,11 +365,15 @@ const getMyBadges = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Buscar crachá universal do usuário
+    const userBadge = await prisma.userBadge.findUnique({
+      where: { userId }
+    });
+
     const badges = await prisma.badge.findMany({
       where: {
         enrollment: {
           userId: userId,
-          // Opcional: mostrar apenas de inscrições aprovadas
           status: 'APPROVED',
         }
       },
@@ -388,8 +392,13 @@ const getMyBadges = async (req, res) => {
       orderBy: { issuedAt: 'desc' }
     });
 
-    // Retornar no formato { data: [...] } que o frontend espera
-    res.json({ data: badges });
+    // Adicionar badgeCode do crachá universal a cada badge
+    const badgesWithCode = badges.map(badge => ({
+      ...badge,
+      badgeCode: userBadge?.badgeCode || null
+    }));
+
+    res.json({ data: badgesWithCode });
 
   } catch (error) {
     console.error('Erro ao listar meus crachás:', error);

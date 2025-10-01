@@ -136,6 +136,15 @@ const MyBadges = () => {
                   </div>
 
                   <div className="flex items-center text-sm text-gray-600">
+                  {badge.badgeCode && (
+                    <div className="bg-gray-50 p-2 rounded border border-gray-200">
+                      <p className="text-xs text-gray-500 mb-1">Código do Crachá</p>
+                      <p className="font-mono text-sm font-bold text-gray-900">
+                        {badge.badgeCode}
+                      </p>
+                    </div>
+                  )}
+
                     <MapPin className="h-4 w-4 mr-2" />
                     <span className="line-clamp-1">
                       {badge.enrollment.event.location}

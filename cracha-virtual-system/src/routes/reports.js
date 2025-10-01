@@ -28,15 +28,14 @@ router.get('/system', authenticateToken, requireAdmin, getSystemReport);
 // Estatísticas gerais do sistema (apenas admin)
 router.get('/statistics', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    const { prisma } = require('../config/database');
 
     const [totalEvents, totalUsers, activeEnrollments, totalCheckins] = await Promise.all([
       prisma.event.count(),
       prisma.user.count(),
       prisma.enrollment.count({
         where: {
-          status: { in: ['PENDING', 'CONFIRMED'] }
+          status: 'APPROVED'
         }
       }),
       prisma.checkin.count(),
@@ -48,8 +47,6 @@ router.get('/statistics', authenticateToken, requireAdmin, async (req, res) => {
       activeEnrollments,
       totalCheckins,
     });
-
-    await prisma.$disconnect();
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
     res.status(500).json({ error: 'Erro ao buscar estatísticas' });

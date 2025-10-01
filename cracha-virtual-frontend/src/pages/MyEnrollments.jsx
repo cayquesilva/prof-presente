@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
-import { Calendar, MapPin, Clock, QrCode, Star } from "lucide-react";
+import { Calendar, MapPin, Clock, Star } from "lucide-react";
 
 const MyEnrollments = () => {
   const [statusFilter, setStatusFilter] = useState("all");
@@ -105,14 +105,6 @@ const MyEnrollments = () => {
                   Ver evento
                 </Button>
               </Link>
-              {enrollment.status === "APPROVED" && enrollment.badge && (
-                <Link to={`/badges/${enrollment.badge.id}`}>
-                  <Button className="flex items-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    Crachá
-                  </Button>
-                </Link>
-              )}
               {enrollment.status === "APPROVED" &&
                 !enrollment.courseEvaluation && (
                   <Link to={`/evaluate/${enrollment.id}`}>

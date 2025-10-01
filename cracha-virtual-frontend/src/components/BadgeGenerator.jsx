@@ -109,6 +109,7 @@ const BadgeGenerator = ({ badge, onClose }) => {
               width: "400px",
               minHeight: "550px",
               background: "linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%)",
+              backgroundColor: "#4F46E5",
               color: "#ffffff",
               padding: "32px",
               borderRadius: "16px",
@@ -127,7 +128,8 @@ const BadgeGenerator = ({ badge, onClose }) => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                overflow: "hidden"
               }}>
                 {badge.enrollment?.user?.photoUrl ? (
                   <img
@@ -152,7 +154,8 @@ const BadgeGenerator = ({ badge, onClose }) => {
                       color: "#ffffff",
                       fontSize: "30px",
                       fontWeight: "bold",
-                      background: "linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)"
+                      background: "linear-gradient(135deg, #818CF8 0%, #A78BFA 100%)",
+                      backgroundColor: "#818CF8"
                     }}
                   >
                     {badge.enrollment?.user?.name
@@ -163,57 +166,79 @@ const BadgeGenerator = ({ badge, onClose }) => {
                   </div>
                 )}
               </div>
-              <h4 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px" }}>
+              <h4 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "4px", color: "#ffffff" }}>
                 {badge.enrollment?.user?.name}
               </h4>
-              <p style={{ fontSize: "14px", color: "#C7D2FE" }}>
+              <p style={{ fontSize: "14px", color: "rgba(199, 210, 254, 0.9)" }}>
                 {badge.enrollment?.user?.email}
               </p>
             </div>
 
             {/* Divisor */}
-            <div style={{ margin: "24px 0", borderTop: "2px solid rgba(255, 255, 255, 0.3)" }}></div>
+            <div style={{ margin: "24px 0", borderTop: "2px solid rgba(255, 255, 255, 0.3)", height: "0" }}></div>
 
             {/* Informações do Evento */}
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div>
-                <h5 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", color: "#C7D2FE" }}>
+                <h5 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", color: "rgba(199, 210, 254, 0.9)" }}>
                   Evento
                 </h5>
-                <p style={{ fontSize: "20px", fontWeight: "bold" }}>
+                <p style={{ fontSize: "20px", fontWeight: "bold", color: "#ffffff" }}>
                   {badge.enrollment?.event?.title}
                 </p>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", fontSize: "14px" }}>
                 <div>
-                  <p style={{ marginBottom: "4px", color: "#C7D2FE" }}>Data</p>
-                  <p style={{ fontWeight: "600" }}>
+                  <p style={{ marginBottom: "4px", color: "rgba(199, 210, 254, 0.9)" }}>Data</p>
+                  <p style={{ fontWeight: "600", color: "#ffffff" }}>
                     {formatDate(badge.enrollment?.event?.startDate)}
                   </p>
                 </div>
                 <div>
-                  <p style={{ marginBottom: "4px", color: "#C7D2FE" }}>Local</p>
-                  <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p style={{ marginBottom: "4px", color: "rgba(199, 210, 254, 0.9)" }}>Local</p>
+                  <p style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#ffffff" }}>
                     {badge.enrollment?.event?.location}
                   </p>
                 </div>
               </div>
 
               <div>
-                <p style={{ fontSize: "12px", marginBottom: "4px", color: "#C7D2FE" }}>ID do Crachá</p>
+                <p style={{ fontSize: "12px", marginBottom: "4px", color: "rgba(199, 210, 254, 0.9)" }}>ID do Crachá</p>
                 <p
                   style={{
                     fontFamily: "monospace",
                     fontSize: "14px",
                     padding: "8px 12px",
                     borderRadius: "4px",
-                    backgroundColor: "rgba(255, 255, 255, 0.2)"
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    color: "#ffffff",
+                    wordBreak: "break-all"
                   }}
                 >
                   {badge.id}
                 </p>
               </div>
+              {badge.badgeCode && (
+                <div>
+                  <p style={{ fontSize: "12px", marginBottom: "4px", color: "rgba(199, 210, 254, 0.9)" }}>Código do Crachá</p>
+                  <p
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: "16px",
+                      padding: "8px 12px",
+                      borderRadius: "4px",
+                      backgroundColor: "rgba(255, 255, 255, 0.3)",
+                      color: "#ffffff",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      letterSpacing: "1px"
+                    }}
+                  >
+                    {badge.badgeCode}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* QR Code */}
