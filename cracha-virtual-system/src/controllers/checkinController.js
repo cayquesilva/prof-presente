@@ -3,11 +3,35 @@ const { prisma } = require('../config/database');
 // Realizar check-in
 const performCheckin = async (req, res) => {
   try {
-    const { qrCodeValue, location, eventId: requestEventId } = req.body;
+    const { qrCodeValue, badgeCode, location, eventId: requestEventId } = req.body;
+
+    // Se tiver badgeCode (entrada manual), validar e converter
+    if (badgeCode) {
+      const userBadge = await prisma.userBadge.findUnique({
+        where: { badgeCode: badgeCode.toUpperCase() },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        }
+      });
+
+      if (!userBadge) {
+        return res.status(404).json({
+          error: 'Código de crachá não encontrado'
+        });
+      }
+
+      return await performUserCheckin(req, res, userBadge, requestEventId, location);
+    }
 
     if (!qrCodeValue) {
       return res.status(400).json({
-        error: 'Valor do QR code é obrigatório'
+        error: 'QR code ou código do crachá são obrigatórios'
       });
     }
 
@@ -20,10 +44,33 @@ const performCheckin = async (req, res) => {
       });
     }
 
-    const { enrollmentId, userId, eventId, badgeType } = parsedData;
+    const { enrollmentId, userId, eventId, badgeType, badgeCode: qrBadgeCode } = parsedData;
 
     if (badgeType === 'teacher') {
       return await performTeacherCheckin(req, res, parsedData, requestEventId, location);
+    }
+
+    if (badgeType === 'user') {
+      const userBadge = await prisma.userBadge.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        }
+      });
+
+      if (!userBadge) {
+        return res.status(404).json({
+          error: 'Crachá de usuário não encontrado'
+        });
+      }
+
+      return await performUserCheckin(req, res, userBadge, requestEventId, location);
     }
 
     if (!enrollmentId || !userId || !eventId) {
@@ -499,6 +546,105 @@ const performTeacherCheckin = async (req, res, parsedData, eventId, location) =>
 
   } catch (error) {
     console.error('Erro ao realizar check-in de professor:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+const performUserCheckin = async (req, res, userBadge, eventId, location) => {
+  try {
+    const { userId } = userBadge.user;
+
+    if (!eventId) {
+      return res.status(400).json({
+        error: 'Event ID é obrigatório para check-in'
+      });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        error: 'Evento não encontrado'
+      });
+    }
+
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId,
+        eventId,
+        status: 'APPROVED'
+      }
+    });
+
+    if (!enrollment) {
+      return res.status(400).json({
+        error: 'Usuário não está inscrito neste evento ou inscrição não aprovada'
+      });
+    }
+
+    const now = new Date();
+    if (now < event.startDate) {
+      return res.status(400).json({
+        error: 'Evento ainda não começou'
+      });
+    }
+
+    if (now > event.endDate) {
+      return res.status(400).json({
+        error: 'Evento já terminou'
+      });
+    }
+
+    const recentCheckin = await prisma.userCheckin.findFirst({
+      where: {
+        userBadgeId: userBadge.id,
+        eventId,
+        checkinTime: {
+          gte: new Date(Date.now() - 5 * 60 * 1000)
+        }
+      }
+    });
+
+    if (recentCheckin) {
+      return res.status(400).json({
+        error: 'Check-in já realizado recentemente',
+        lastCheckin: recentCheckin
+      });
+    }
+
+    const checkin = await prisma.userCheckin.create({
+      data: {
+        userBadgeId: userBadge.id,
+        eventId,
+        location: location || event.location,
+      },
+      include: {
+        userBadge: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    res.status(201).json({
+      message: 'Check-in realizado com sucesso',
+      checkin,
+      type: 'user'
+    });
+
+  } catch (error) {
+    console.error('Erro ao realizar check-in de usuário:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

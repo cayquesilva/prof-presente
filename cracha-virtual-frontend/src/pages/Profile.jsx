@@ -24,6 +24,9 @@ import {
   FileJson,
   Database,
   Shield,
+  CreditCard,
+  QrCode as QrCodeIcon,
+  Award,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +41,14 @@ const Profile = () => {
       return response.data;
     },
     enabled: !!user?.id,
+  });
+
+  const { data: userBadge } = useQuery({
+    queryKey: ["user-badge"],
+    queryFn: async () => {
+      const response = await api.get("/user-badges/my-badge");
+      return response.data;
+    },
   });
 
   const exportUserData = async () => {
@@ -119,6 +130,10 @@ const Profile = () => {
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Perfil
+          </TabsTrigger>
+          <TabsTrigger value="badge">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Meu Crachá
           </TabsTrigger>
           <TabsTrigger value="data">
             <Database className="h-4 w-4 mr-2" />
@@ -215,6 +230,97 @@ const Profile = () => {
                   })}
                 </p>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="badge" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Meu Crachá Universal</CardTitle>
+              <CardDescription>
+                Use este crachá para fazer check-in em qualquer evento que você esteja inscrito
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {userBadge ? (
+                <div className="space-y-6">
+                  {/* Código do Crachá */}
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-lg border-2 border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Código do Crachá</p>
+                        <p className="text-3xl font-bold font-mono text-blue-900">
+                          {userBadge.badgeCode}
+                        </p>
+                      </div>
+                      <CreditCard className="h-12 w-12 text-blue-600" />
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Use este código para fazer check-in manualmente em qualquer evento
+                    </p>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="flex flex-col items-center">
+                    <div className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
+                      <img
+                        src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}${userBadge.qrCodeUrl}`}
+                        alt="QR Code do Crachá"
+                        className="w-64 h-64"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = '<p class="text-gray-500">QR Code não disponível</p>';
+                        }}
+                      />
+                    </div>
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-gray-600 flex items-center gap-2 justify-center">
+                        <QrCodeIcon className="h-4 w-4" />
+                        Apresente este QR Code na entrada dos eventos
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Estatísticas */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Award className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
+                          <p className="text-2xl font-bold">{userBadge._count?.userCheckins || 0}</p>
+                          <p className="text-sm text-gray-600">Check-ins Realizados</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <CreditCard className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                          <p className="text-2xl font-bold">
+                            {new Date(userBadge.issuedAt).toLocaleDateString("pt-BR")}
+                          </p>
+                          <p className="text-sm text-gray-600">Data de Emissão</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Informações */}
+                  <Alert>
+                    <Shield className="h-4 w-4" />
+                    <AlertDescription>
+                      Seu crachá é único e pessoal. Não compartilhe seu código ou QR code com outras pessoas.
+                      Este crachá pode ser usado em qualquer evento que você esteja inscrito e aprovado.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CreditCard className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500">Carregando crachá...</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
