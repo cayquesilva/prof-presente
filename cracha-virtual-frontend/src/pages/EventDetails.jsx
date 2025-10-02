@@ -13,7 +13,16 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Calendar, MapPin, Users, Clock, ArrowLeft, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Clock,
+  ArrowLeft,
+  CircleCheck as CheckCircle,
+  Circle as XCircle,
+  CircleAlert as AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const EventDetails = () => {
@@ -22,7 +31,11 @@ const EventDetails = () => {
   const queryClient = useQueryClient();
   const [enrollmentStatus, setEnrollmentStatus] = useState(null);
 
-  const { data: event, isLoading, error } = useQuery({
+  const {
+    data: event,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["event", id],
     queryFn: async () => {
       const response = await api.get(`/events/${id}`);
@@ -44,7 +57,7 @@ const EventDetails = () => {
       const response = await api.post("/enrollments", { eventId: id });
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       setEnrollmentStatus("enrolled");
       queryClient.invalidateQueries(["enrollment-status", id]);
       queryClient.invalidateQueries(["enrollments"]);
@@ -114,8 +127,8 @@ const EventDetails = () => {
   const canEnroll = (event) => {
     if (!event) return false;
     const now = new Date();
-    const start = new Date(event.startDate);
-    return now < start;
+    const end = new Date(event.endDate);
+    return now < end;
   };
 
   if (isLoading) {
@@ -148,7 +161,8 @@ const EventDetails = () => {
 
   const eventStatus = getEventStatus(event.startDate, event.endDate);
   const StatusIcon = eventStatus.icon;
-  const isEnrolled = enrollmentData?.enrolled || enrollmentStatus === "enrolled";
+  const isEnrolled =
+    enrollmentData?.enrolled &&  enrollmentData?.status !== "CANCELLED" || enrollmentStatus === "enrolled" || enrollmentStatus !== null;
   const canUserEnroll = canEnroll(event) && !isEnrolled;
 
   return (
