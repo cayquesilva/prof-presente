@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { CreditCard, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { CreditCard, Eye, EyeOff, Loader as Loader2 } from 'lucide-react';
 import api from '../lib/api';
 import '../App.css';
 
