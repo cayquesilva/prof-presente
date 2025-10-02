@@ -18,6 +18,7 @@ const MyBadges = lazy(() => import('./pages/MyBadges'));
 const CheckIn = lazy(() => import('./pages/CheckIn'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Evaluations = lazy(() => import('./pages/Evaluations'));
+const EvaluateEnrollment = lazy(() => import('./pages/EvaluateEnrollment'));
 const Profile = lazy(() => import('./pages/Profile'));
 const TeacherRanking = lazy(() => import('./pages/TeacherRanking'));
 
@@ -159,6 +160,19 @@ function App() {
                   <Layout>
                     <LazyWrapper>
                       <Evaluations />
+                    </LazyWrapper>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/evaluate/:enrollmentId"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <LazyWrapper>
+                      <EvaluateEnrollment />
                     </LazyWrapper>
                   </Layout>
                 </ProtectedRoute>

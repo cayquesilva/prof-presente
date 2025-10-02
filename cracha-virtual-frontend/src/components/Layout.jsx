@@ -30,7 +30,9 @@ const Layout = ({ children }) => {
     { name: 'Minhas Inscrições', href: '/my-enrollments', icon: FileText },
     { name: 'Meus Crachás', href: '/my-badges', icon: CreditCard },
     { name: 'Avaliações', href: '/evaluations', icon: Star },
-    { name: 'Check-in', href: '/check-in', icon: QrCode },
+    ...(isAdmin || user?.role === 'CHECKIN_COORDINATOR' ? [
+      { name: 'Check-in', href: '/check-in', icon: QrCode },
+    ] : []),
     { name: 'Ranking Professores', href: '/teacher-ranking', icon: Trophy },
     ...(isAdmin ? [
       { name: 'Administração', href: '/admin', icon: Shield },

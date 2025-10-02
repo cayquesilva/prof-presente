@@ -8,14 +8,15 @@ const {
   getEventCheckinStats,
 } = require('../controllers/checkinController');
 
-const { 
-  authenticateToken, 
+const {
+  authenticateToken,
   requireAdmin,
-  requireOwnershipOrAdmin 
+  requireOwnershipOrAdmin,
+  requireCheckinPermission
 } = require('../middleware/auth');
 
-// Realizar check-in
-router.post('/', authenticateToken, performCheckin);
+// Realizar check-in (apenas ADMIN ou CHECKIN_COORDINATOR)
+router.post('/', authenticateToken, requireCheckinPermission, performCheckin);
 
 // Listar check-ins de um evento (apenas admin)
 router.get('/events/:eventId', authenticateToken, requireAdmin, getEventCheckins);

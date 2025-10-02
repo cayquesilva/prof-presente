@@ -13,6 +13,7 @@ const checkinRoutes = require('./checkins');
 const awardRoutes = require('./awards');
 const evaluationRoutes = require('./evaluations');
 const reportRoutes = require('./reports');
+const workplaceRoutes = require('./workplaces');
 
 // Configurar rotas
 router.use('/auth', authRoutes);
@@ -26,6 +27,7 @@ router.use('/checkins', checkinRoutes);
 router.use('/awards', awardRoutes);
 router.use('/evaluations', evaluationRoutes);
 router.use('/reports', reportRoutes);
+router.use('/workplaces', workplaceRoutes);
 
 // Rota de status da API
 router.get('/status', (req, res) => {

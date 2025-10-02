@@ -258,48 +258,42 @@ const getFrequencyRanking = async (req, res) => {
       }
     }
 
-    // Buscar usuários com contagem de check-ins
-    const userStats = await prisma.user.findMany({
+    // Buscar todos os usuários com crachá universal
+    const usersWithBadge = await prisma.userBadge.findMany({
       select: {
-        id: true,
-        name: true,
-        photoUrl: true,
-        _count: {
+        userId: true,
+        user: {
           select: {
-            enrollments: {
-              where: { status: 'APPROVED' }
-            }
+            id: true,
+            name: true,
+            photoUrl: true,
           }
         }
-      },
-      orderBy: {
-        name: 'asc'
       }
     });
 
     // Calcular check-ins para cada usuário
     const rankingData = [];
-    for (const user of userStats) {
-      const checkinCount = await prisma.checkin.count({
+    for (const userBadge of usersWithBadge) {
+      const checkinCount = await prisma.userCheckin.count({
         where: {
-          badge: {
-            enrollment: {
-              userId: user.id
-            }
-          },
+          userBadgeId: userBadge.userId,
           ...dateFilter
+        }
+      });
+
+      const eventCount = await prisma.enrollment.count({
+        where: {
+          userId: userBadge.userId,
+          status: 'APPROVED'
         }
       });
 
       if (checkinCount > 0) {
         rankingData.push({
-          user: {
-            id: user.id,
-            name: user.name,
-            photoUrl: user.photoUrl,
-          },
+          user: userBadge.user,
           checkinCount,
-          eventCount: user._count.enrollments,
+          eventCount,
         });
       }
     }
