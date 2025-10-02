@@ -34,20 +34,6 @@ const enrollInEvent = async (req, res) => {
       });
     }
 
-    // Verificar se o evento ainda não começou
-    if (new Date() > event.endDate) {
-      return res.status(400).json({
-        error: "Não é possível se inscrever em evento que já terminou",
-      });
-    }
-
-    // Verificar se há vagas disponíveis
-    if (event.maxAttendees && event._count.enrollments >= event.maxAttendees) {
-      return res.status(400).json({
-        error: "Evento lotado. Não há mais vagas disponíveis.",
-      });
-    }
-
     // Verificar se o usuário já está inscrito
     const existingEnrollment = await prisma.enrollment.findUnique({
       where: {
@@ -61,6 +47,20 @@ const enrollInEvent = async (req, res) => {
     // Se existe inscrição cancelada ou rejeitada, permitir reativar
     if (existingEnrollment) {
       if (existingEnrollment.status === 'CANCELLED' || existingEnrollment.status === 'REJECTED') {
+        // Verificar se o evento ainda não terminou (permite reativar durante o evento)
+        if (new Date() > event.endDate) {
+          return res.status(400).json({
+            error: "Não é possível se inscrever em evento que já terminou",
+          });
+        }
+
+        // Verificar se há vagas disponíveis
+        if (event.maxAttendees && event._count.enrollments >= event.maxAttendees) {
+          return res.status(400).json({
+            error: "Evento lotado. Não há mais vagas disponíveis.",
+          });
+        }
+
         // Reativar inscrição
         const enrollment = await prisma.enrollment.update({
           where: { id: existingEnrollment.id },
@@ -106,6 +106,20 @@ const enrollInEvent = async (req, res) => {
           enrollment: existingEnrollment,
         });
       }
+    }
+
+    // Verificar se o evento ainda não terminou (para novas inscrições)
+    if (new Date() > event.endDate) {
+      return res.status(400).json({
+        error: "Não é possível se inscrever em evento que já terminou",
+      });
+    }
+
+    // Verificar se há vagas disponíveis
+    if (event.maxAttendees && event._count.enrollments >= event.maxAttendees) {
+      return res.status(400).json({
+        error: "Evento lotado. Não há mais vagas disponíveis.",
+      });
     }
 
     // Criar nova inscrição

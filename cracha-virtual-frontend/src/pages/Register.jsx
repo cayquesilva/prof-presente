@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { Button } from '../components/ui/button';
@@ -6,7 +6,9 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { CreditCard, Eye, EyeOff, Loader2 } from 'lucide-react';
+import api from '../lib/api';
 import '../App.css';
 
 const Register = () => {
@@ -19,15 +21,29 @@ const Register = () => {
     birthDate: '',
     phone: '',
     address: '',
+    workplaceId: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [workplaces, setWorkplaces] = useState([]);
 
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchWorkplaces = async () => {
+      try {
+        const response = await api.get('/workplaces?limit=100');
+        setWorkplaces(response.data.workplaces || []);
+      } catch (error) {
+        console.error('Erro ao carregar localidades:', error);
+      }
+    };
+    fetchWorkplaces();
+  }, []);
 
   const handleChange = (e) => {
     let value = e.target.value;
@@ -272,6 +288,22 @@ const Register = () => {
                     value={formData.address}
                     onChange={handleChange}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="workplaceId">Localidade de Trabalho (Opcional)</Label>
+                  <Select value={formData.workplaceId} onValueChange={(value) => setFormData({ ...formData, workplaceId: value })}>
+                    <SelectTrigger id="workplaceId">
+                      <SelectValue placeholder="Selecione sua localidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workplaces.map((workplace) => (
+                        <SelectItem key={workplace.id} value={workplace.id}>
+                          {workplace.name} - {workplace.city}/{workplace.state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

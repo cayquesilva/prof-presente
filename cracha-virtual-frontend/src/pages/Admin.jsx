@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Badge } from "../components/ui/badge";
 import { Plus, CreditCard as Edit, Trash2, Users, Calendar, Award, ChartBar as BarChart } from "lucide-react";
 import { toast } from "sonner";
+import UserManagement from "../components/UserManagement";
 
 const Admin = () => {
   const queryClient = useQueryClient();
@@ -65,14 +66,6 @@ const Admin = () => {
     },
   });
 
-  const { data: users, isLoading: usersLoading } = useQuery({
-    queryKey: ["admin-users"],
-    queryFn: async () => {
-      const response = await api.get("/users?limit=100");
-      return response.data.users;
-    },
-    enabled: activeTab === "users",
-  });
 
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
@@ -483,61 +476,7 @@ const Admin = () => {
         </TabsContent>
 
         <TabsContent value="users" className="space-y-4">
-          <h2 className="text-2xl font-bold">Usuários Cadastrados</h2>
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>CPF</TableHead>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Data de Cadastro</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {usersLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        Carregando...
-                      </TableCell>
-                    </TableRow>
-                  ) : users?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center">
-                        Nenhum usuário cadastrado
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    users?.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          {user.name}
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.cpf}</TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              user.role === "admin"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-blue-100 text-blue-800"
-                            }
-                          >
-                            {user.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(user.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <UserManagement />
         </TabsContent>
       </Tabs>
     </div>

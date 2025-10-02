@@ -31,11 +31,11 @@ const upload = multer({
   }
 });
 
-// Listar localidades (público para usuários autenticados)
-router.get('/', authenticateToken, getWorkplaces);
+// Listar localidades (público - necessário para formulário de registro)
+router.get('/', getWorkplaces);
 
-// Obter localidade por ID
-router.get('/:id', authenticateToken, getWorkplaceById);
+// Obter localidade por ID (público - necessário para exibir informações)
+router.get('/:id', getWorkplaceById);
 
 // Criar localidade (apenas admin)
 router.post('/', authenticateToken, requireAdmin, createWorkplace);
