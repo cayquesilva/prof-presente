@@ -69,9 +69,9 @@ const TeacherRanking = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6 max-w-7xl">
+    <div className="p-6 space-y-6">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold mb-2 ">
           Ranking de Professores
         </h1>
         <p className="text-gray-600">

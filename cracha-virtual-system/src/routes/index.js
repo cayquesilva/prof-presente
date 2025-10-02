@@ -15,6 +15,7 @@ const evaluationRoutes = require('./evaluations');
 const reportRoutes = require('./reports');
 const workplaceRoutes = require('./workplaces');
 
+
 // Configurar rotas
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
