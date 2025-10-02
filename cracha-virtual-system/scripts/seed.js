@@ -49,7 +49,7 @@ async function main() {
         address: "Rua Admin, 123, São Paulo, SP",
       },
     });
-
+    /*
     const users = [];
     const userNames = [
       "João Silva",
@@ -93,7 +93,7 @@ async function main() {
     }
 
     console.log(`✅ Criados ${users.length + 1} usuários`);
-
+*/
     // Criar eventos
     console.log("📅 Criando eventos...");
 
@@ -191,7 +191,7 @@ async function main() {
     }
 
     console.log(`✅ Criadas ${awards.length} premiações`);
-
+    /*
     // Criar inscrições
     console.log("📝 Criando inscrições...");
 
@@ -361,6 +361,7 @@ async function main() {
 
     console.log(`✅ Concedidas ${userAwards.length} premiações`);
 
+   
     // Criar algumas avaliações
     console.log("⭐ Criando avaliações...");
 
@@ -392,19 +393,17 @@ async function main() {
     }
 
     console.log(`✅ Criadas ${evaluations.length} avaliações`);
-
+*/
     // Estatísticas finais
     console.log("\n📊 Resumo dos dados criados:");
-    console.log(
-      `👥 Usuários: ${users.length + 1} (${users.length} usuários + 1 admin)`
-    );
+    //console.log(`👥 Usuários: ${users.length + 1} (${users.length} usuários + 1 admin)`);
     console.log(`📅 Eventos: ${events.length}`);
     console.log(`🏆 Premiações: ${awards.length}`);
-    console.log(`📝 Inscrições: ${enrollments.length}`);
-    console.log(`🎫 Crachás: ${badges.length}`);
-    console.log(`✅ Check-ins: ${checkins.length}`);
-    console.log(`🏅 Premiações concedidas: ${userAwards.length}`);
-    console.log(`⭐ Avaliações: ${evaluations.length}`);
+    //console.log(`📝 Inscrições: ${enrollments.length}`);
+    //console.log(`🎫 Crachás: ${badges.length}`);
+    //console.log(`✅ Check-ins: ${checkins.length}`);
+    //console.log(`🏅 Premiações concedidas: ${userAwards.length}`);
+    //console.log(`⭐ Avaliações: ${evaluations.length}`);
 
     console.log("\n🎉 Seed concluído com sucesso!");
     console.log("\n📋 Credenciais de acesso:");
