@@ -48,7 +48,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, password, cpf, birthDate, phone, address } = req.body;
+    const { name, email, password, cpf, birthDate, phone, address, workplaceId } = req.body;
 
     // Verificar se o email já existe
     const existingUser = await prisma.user.findUnique({
@@ -74,6 +74,19 @@ const register = async (req, res) => {
       }
     }
 
+    // Verificar se a localidade existe (se fornecida)
+    if (workplaceId) {
+      const workplace = await prisma.workplace.findUnique({
+        where: { id: workplaceId }
+      });
+
+      if (!workplace) {
+        return res.status(404).json({
+          error: 'Localidade de trabalho não encontrada'
+        });
+      }
+    }
+
     // Hash da senha
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -88,6 +101,7 @@ const register = async (req, res) => {
         birthDate: new Date(birthDate),
         phone: phone || null,
         address: address || null,
+        workplaceId: workplaceId || null,
       },
       select: {
         id: true,

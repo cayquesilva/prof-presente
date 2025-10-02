@@ -290,6 +290,101 @@ const updateProfilePhoto = async (req, res) => {
   }
 };
 
+// Atualizar role do usuário (apenas admin)
+const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validar role
+    const validRoles = ['ADMIN', 'ORGANIZER', 'CHECKIN_COORDINATOR', 'TEACHER', 'USER'];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({
+        error: 'Role inválido. Valores permitidos: ' + validRoles.join(', ')
+      });
+    }
+
+    // Verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    // Atualizar role
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      }
+    });
+
+    res.json({
+      message: 'Role do usuário atualizado com sucesso',
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar role do usuário:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+// Redefinir senha do usuário (apenas admin)
+const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        error: 'Nova senha deve ter pelo menos 6 caracteres'
+      });
+    }
+
+    // Verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    // Hash da nova senha
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Atualizar senha
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+
+    res.json({
+      message: 'Senha redefinida com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao redefinir senha:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -297,5 +392,7 @@ module.exports = {
   deleteUser,
   updateProfilePhoto,
   updateUserValidation,
+  updateUserRole,
+  resetUserPassword,
 };
 

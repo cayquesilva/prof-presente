@@ -288,7 +288,44 @@ const getUserCheckins = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    const checkins = await prisma.checkin.findMany({
+    // Buscar check-ins do crachá universal (novo sistema)
+    const userBadge = await prisma.userBadge.findUnique({
+      where: { userId }
+    });
+
+    let universalCheckins = [];
+    let universalTotal = 0;
+
+    if (userBadge) {
+      universalCheckins = await prisma.userCheckin.findMany({
+        where: {
+          userBadgeId: userBadge.id
+        },
+        include: {
+          userBadge: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                }
+              }
+            }
+          }
+        },
+        orderBy: { checkinTime: 'desc' }
+      });
+
+      universalTotal = await prisma.userCheckin.count({
+        where: {
+          userBadgeId: userBadge.id
+        }
+      });
+    }
+
+    // Buscar check-ins antigos (por evento)
+    const oldCheckins = await prisma.checkin.findMany({
       where: {
         badge: {
           enrollment: {
@@ -315,12 +352,10 @@ const getUserCheckins = async (req, res) => {
           }
         }
       },
-      skip: parseInt(skip),
-      take: parseInt(limit),
       orderBy: { checkinTime: 'desc' }
     });
 
-    const total = await prisma.checkin.count({
+    const oldTotal = await prisma.checkin.count({
       where: {
         badge: {
           enrollment: {
@@ -330,8 +365,17 @@ const getUserCheckins = async (req, res) => {
       }
     });
 
+    // Combinar e ordenar por data
+    const allCheckins = [...universalCheckins, ...oldCheckins].sort((a, b) =>
+      new Date(b.checkinTime) - new Date(a.checkinTime)
+    );
+
+    // Aplicar paginação
+    const paginatedCheckins = allCheckins.slice(parseInt(skip), parseInt(skip) + parseInt(limit));
+    const total = universalTotal + oldTotal;
+
     res.json({
-      checkins,
+      checkins: paginatedCheckins,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),

@@ -8,6 +8,8 @@ const {
   deleteUser,
   updateProfilePhoto,
   updateUserValidation,
+  updateUserRole,
+  resetUserPassword,
 } = require('../controllers/userController');
 
 const { 
@@ -34,13 +36,19 @@ router.put('/:id', authenticateToken, requireOwnershipOrAdmin, updateUserValidat
 router.delete('/:id', authenticateToken, requireAdmin, deleteUser);
 
 // Upload de foto do perfil
-router.post('/:id/photo', 
-  authenticateToken, 
+router.post('/:id/photo',
+  authenticateToken,
   requireOwnershipOrAdmin,
   uploadProfilePhoto,
   handleUploadError,
   updateProfilePhoto
 );
+
+// Atualizar role do usuário (apenas admin)
+router.patch('/:id/role', authenticateToken, requireAdmin, updateUserRole);
+
+// Redefinir senha do usuário (apenas admin)
+router.post('/:id/reset-password', authenticateToken, requireAdmin, resetUserPassword);
 
 module.exports = router;
 

@@ -58,14 +58,57 @@ const enrollInEvent = async (req, res) => {
       },
     });
 
+    // Se existe inscrição cancelada ou rejeitada, permitir reativar
     if (existingEnrollment) {
-      return res.status(409).json({
-        error: "Usuário já está inscrito neste evento",
-        enrollment: existingEnrollment,
-      });
+      if (existingEnrollment.status === 'CANCELLED' || existingEnrollment.status === 'REJECTED') {
+        // Reativar inscrição
+        const enrollment = await prisma.enrollment.update({
+          where: { id: existingEnrollment.id },
+          data: {
+            status: "APPROVED",
+            enrollmentDate: new Date(),
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            event: {
+              select: {
+                id: true,
+                title: true,
+                startDate: true,
+                endDate: true,
+                location: true,
+              },
+            },
+          },
+        });
+
+        // Gerar crachá se não existir
+        const badge = await prisma.badge.findUnique({
+          where: { enrollmentId: enrollment.id }
+        });
+        if (!badge) {
+          await generateBadgeForEnrollment(enrollment.id);
+        }
+
+        return res.status(200).json({
+          message: "Inscrição reativada com sucesso",
+          enrollment,
+        });
+      } else {
+        return res.status(409).json({
+          error: "Usuário já está inscrito neste evento",
+          enrollment: existingEnrollment,
+        });
+      }
     }
 
-    // Criar inscrição
+    // Criar nova inscrição
     const enrollment = await prisma.enrollment.create({
       data: {
         userId,

@@ -261,6 +261,7 @@ const getFrequencyRanking = async (req, res) => {
     // Buscar todos os usuários com crachá universal
     const usersWithBadge = await prisma.userBadge.findMany({
       select: {
+        id: true,
         userId: true,
         user: {
           select: {
@@ -277,7 +278,7 @@ const getFrequencyRanking = async (req, res) => {
     for (const userBadge of usersWithBadge) {
       const checkinCount = await prisma.userCheckin.count({
         where: {
-          userBadgeId: userBadge.userId,
+          userBadgeId: userBadge.id,
           ...dateFilter
         }
       });
