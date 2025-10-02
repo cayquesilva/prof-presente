@@ -1,16 +1,12 @@
-const CACHE_NAME = 'cracha-virtual-v1';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = "cracha-virtual-v1";
+const OFFLINE_URL = "/offline.html";
 
-const STATIC_ASSETS = [
-  '/',
-  '/offline.html',
-  '/manifest.json',
-];
+const STATIC_ASSETS = ["/", "/offline.html", "/manifest.json"];
 
-const API_CACHE_NAME = 'cracha-virtual-api-v1';
-const IMAGE_CACHE_NAME = 'cracha-virtual-images-v1';
+const API_CACHE_NAME = "cracha-virtual-api-v1";
+const IMAGE_CACHE_NAME = "cracha-virtual-images-v1";
 
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
@@ -20,7 +16,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const cacheNames = await caches.keys();
@@ -40,15 +36,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
-  const url = new URL(request.url);
 
-  if (request.method !== 'GET') {
+  // CORREÇÃO: Ignora requisições que não são da web (ex: chrome-extension://)
+  if (!request.url.startsWith("http")) {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
+  const url = new URL(request.url);
+
+  if (request.method !== "GET") {
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
     event.respondWith(
       (async () => {
         try {
@@ -69,12 +71,12 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (
-    request.destination === 'image' ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.jpeg') ||
-    url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.webp')
+    request.destination === "image" ||
+    url.pathname.endsWith(".png") ||
+    url.pathname.endsWith(".jpg") ||
+    url.pathname.endsWith(".jpeg") ||
+    url.pathname.endsWith(".svg") ||
+    url.pathname.endsWith(".webp")
   ) {
     event.respondWith(
       (async () => {
@@ -88,7 +90,7 @@ self.addEventListener('fetch', (event) => {
           cache.put(request, response.clone());
           return response;
         } catch (error) {
-          console.error('Failed to fetch image:', error);
+          console.error("Failed to fetch image:", error);
           throw error;
         }
       })()
@@ -107,7 +109,7 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
 
-        if (request.mode === 'navigate') {
+        if (request.mode === "navigate") {
           const offlineCache = await caches.match(OFFLINE_URL);
           if (offlineCache) {
             return offlineCache;
@@ -120,8 +122,8 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });

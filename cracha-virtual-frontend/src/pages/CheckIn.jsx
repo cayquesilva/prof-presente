@@ -3,9 +3,36 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
 
-import { CircleCheck as CheckCircle, Circle as XCircle, MapPin, QrCode, Keyboard, Camera, Calendar } from "lucide-react";
+import {
+  CircleCheck as CheckCircle,
+  Circle as XCircle,
+  MapPin,
+  QrCode,
+  Keyboard,
+  Camera,
+  Calendar,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "../hooks/useDebounce";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const CheckIn = () => {
   const [scanner, setScanner] = useState(null);
@@ -21,7 +48,7 @@ const CheckIn = () => {
     queryKey: ["events-for-checkin"],
     queryFn: async () => {
       const response = await api.get("/events", {
-        params: { limit: 100 }
+        params: { limit: 100 },
       });
       return response.data;
     },
@@ -88,19 +115,20 @@ const CheckIn = () => {
     );
 
     html5QrcodeScanner.render(
-(decodedText) => {
+      (decodedText) => {
         try {
           // Tentar parsear como JSON primeiro
           let qrData;
           try {
             qrData = JSON.parse(decodedText);
-          } catch (parseError) {
+          } catch {
             // Se não for JSON, usar como está
             qrData = decodedText;
           }
-          
+
           checkInMutation.mutate({
-            qrCodeValue: typeof qrData === 'string' ? qrData : JSON.stringify(qrData),
+            qrCodeValue:
+              typeof qrData === "string" ? qrData : JSON.stringify(qrData),
             eventId: selectedEvent,
           });
           html5QrcodeScanner.clear();
@@ -174,7 +202,8 @@ const CheckIn = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Check-in de Participantes</h1>
         <p className="text-gray-600">
-          Realize check-in usando QR code, código do crachá ou nome do participante
+          Realize check-in usando QR code, código do crachá ou nome do
+          participante
         </p>
       </div>
 
@@ -197,7 +226,8 @@ const CheckIn = () => {
             <SelectContent>
               {eventsData?.events?.map((event) => (
                 <SelectItem key={event.id} value={event.id}>
-                  {event.title} - {new Date(event.startDate).toLocaleDateString("pt-BR")}
+                  {event.title} -{" "}
+                  {new Date(event.startDate).toLocaleDateString("pt-BR")}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -298,7 +328,9 @@ const CheckIn = () => {
                       id="manual-badge"
                       placeholder="Ex: JOAO-SILVA-1234"
                       value={manualInput}
-                      onChange={(e) => setManualInput(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setManualInput(e.target.value.toUpperCase())
+                      }
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           handleManualCheckIn();
@@ -348,7 +380,9 @@ const CheckIn = () => {
                         >
                           <div>
                             <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-gray-600">{user.email}</p>
+                            <p className="text-sm text-gray-600">
+                              {user.email}
+                            </p>
                             {user.badgeCode && (
                               <p className="text-xs text-gray-500 font-mono mt-1">
                                 {user.badgeCode}
