@@ -35,9 +35,9 @@ const enrollInEvent = async (req, res) => {
     }
 
     // Verificar se o evento ainda não começou
-    if (new Date() > event.startDate) {
+    if (new Date() > event.endDate) {
       return res.status(400).json({
-        error: "Não é possível se inscrever em evento que já começou",
+        error: "Não é possível se inscrever em evento que já terminou",
       });
     }
 
