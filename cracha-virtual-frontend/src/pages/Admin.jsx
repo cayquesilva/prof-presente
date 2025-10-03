@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
+import BadgePreview from "../components/BadgePreview";
 
 const Admin = () => {
   const queryClient = useQueryClient();
@@ -56,12 +57,6 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
-
-  useEffect(() => {
-    if (tabFromUrl) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [tabFromUrl]);
 
   const [eventForm, setEventForm] = useState({
     title: "",
@@ -82,6 +77,9 @@ const Admin = () => {
     qrY: "",
     qrSize: "",
   });
+
+  // NOVO: Estado para armazenar a URL da imagem para a pré-visualização.
+  const [badgeTemplatePreviewUrl, setBadgeTemplatePreviewUrl] = useState(null);
 
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ["admin-events"],
@@ -186,6 +184,7 @@ const Admin = () => {
     });
     // NOVO: Reseta também os formulários do crachá.
     setBadgeTemplateFile(null);
+    setBadgeTemplatePreviewUrl(null);
     setBadgeConfig({
       nameX: "",
       nameY: "",
@@ -223,6 +222,11 @@ const Admin = () => {
       endDate: new Date(event.endDate).toISOString().slice(0, 16),
       maxAttendees: event.maxAttendees || "",
     });
+
+    // Limpa a preview anterior ao abrir o modal
+    setBadgeTemplatePreviewUrl(null);
+    setBadgeTemplateFile(null);
+
     // NOVO: Preenche os campos de configuração do crachá se eles existirem no evento.
     if (event.badgeTemplateConfig) {
       const config = event.badgeTemplateConfig;
@@ -238,6 +242,20 @@ const Admin = () => {
     }
   };
 
+  // NOVO: Função para lidar com a mudança no input de arquivo.
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setBadgeTemplateFile(file);
+      // Cria uma URL temporária para o arquivo de imagem poder ser exibido.
+      if (badgeTemplatePreviewUrl) {
+        // Limpa a URL do objeto anterior para evitar memory leak
+        URL.revokeObjectURL(badgeTemplatePreviewUrl);
+      }
+      setBadgeTemplatePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleDelete = (id) => {
     if (window.confirm("Tem certeza que deseja excluir este evento?")) {
       deleteEventMutation.mutate(id);
@@ -249,22 +267,20 @@ const Admin = () => {
     e.preventDefault();
     if (!editingEvent) return;
 
-    // Constrói um objeto JSON com a configuração.
     const config = {
       name: {
-        x: parseInt(badgeConfig.nameX),
-        y: parseInt(badgeConfig.nameY),
-        fontSize: parseInt(badgeConfig.nameFontSize),
+        x: parseInt(badgeConfig.nameX) || 0,
+        y: parseInt(badgeConfig.nameY) || 0,
+        fontSize: parseInt(badgeConfig.nameFontSize) || 24,
         color: badgeConfig.nameColor,
       },
       qrCode: {
-        x: parseInt(badgeConfig.qrX),
-        y: parseInt(badgeConfig.qrY),
-        size: parseInt(badgeConfig.qrSize),
+        x: parseInt(badgeConfig.qrX) || 0,
+        y: parseInt(badgeConfig.qrY) || 0,
+        size: parseInt(badgeConfig.qrSize) || 100,
       },
     };
 
-    // Usa FormData para enviar o arquivo e os dados de texto juntos.
     const formData = new FormData();
     if (badgeTemplateFile) {
       formData.append("badgeTemplate", badgeTemplateFile);
@@ -283,6 +299,14 @@ const Admin = () => {
       minute: "2-digit",
     });
   };
+
+  useEffect(() => {
+    return () => {
+      if (badgeTemplatePreviewUrl) {
+        URL.revokeObjectURL(badgeTemplatePreviewUrl);
+      }
+    };
+  }, [badgeTemplatePreviewUrl]);
 
   return (
     <div className="p-6 space-y-6">
@@ -384,7 +408,7 @@ const Admin = () => {
                   Novo Evento
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="min-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingEvent ? "Editar Evento" : "Criar Novo Evento"}
@@ -518,136 +542,151 @@ const Admin = () => {
                 {/* NOVO: Formulário para o Modelo do Crachá, visível apenas na edição. */}
                 {editingEvent && (
                   <>
-                    <Separator className="my-6" />
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">
-                        Modelo do Crachá Impresso
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Envie uma imagem de fundo e defina onde o nome e o QR
-                        code do participante aparecerão.
-                      </p>
-                      <form
-                        onSubmit={handleTemplateSubmit}
-                        className="space-y-4 p-4 border rounded-lg"
-                      >
-                        <div className="space-y-2">
-                          <Label htmlFor="badgeTemplate">
-                            Imagem de Fundo do Crachá
-                          </Label>
-                          <Input
-                            id="badgeTemplate"
-                            type="file"
-                            onChange={(e) =>
-                              setBadgeTemplateFile(e.target.files[0])
-                            }
-                            accept="image/*"
-                          />
-                          {editingEvent.badgeTemplateUrl &&
-                            !badgeTemplateFile && (
-                              <p className="text-xs text-gray-500">
-                                Um modelo já foi enviado. Envie um novo para
-                                substituir.
-                              </p>
-                            )}
-                        </div>
+                    <Separator className="my-4" />
+                    {/* CORREÇÃO: O grid agora envolve as duas seções (formulário de config e preview) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Coluna 1: Formulário de Configuração */}
+                      {/* CORREÇÃO: Removido o <form> aninhado. Agora é um <div>. */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">
+                          Modelo do Crachá Impresso
+                        </h3>
+                        <div className="space-y-4 p-4 border rounded-lg">
+                          <div className="space-y-2">
+                            <Label htmlFor="badgeTemplate">
+                              Imagem de Fundo
+                            </Label>
+                            <Input
+                              id="badgeTemplate"
+                              type="file"
+                              onChange={handleFileChange}
+                              accept="image/*"
+                            />
+                            {editingEvent.badgeTemplateUrl &&
+                              !badgeTemplateFile && (
+                                <p className="text-xs text-gray-500">
+                                  Um modelo já foi enviado. Envie um novo para
+                                  substituir.
+                                </p>
+                              )}
+                          </div>
 
-                        <h4 className="font-medium">Posição do Nome</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <Input
-                            type="number"
-                            placeholder="Posição X"
-                            value={badgeConfig.nameX}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                nameX: e.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Posição Y"
-                            value={badgeConfig.nameY}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                nameY: e.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Tam. Fonte"
-                            value={badgeConfig.nameFontSize}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                nameFontSize: e.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            type="color"
-                            value={badgeConfig.nameColor}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                nameColor: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
+                          <h4 className="font-medium text-sm">
+                            Posição do Nome
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <Input
+                              type="number"
+                              placeholder="X"
+                              value={badgeConfig.nameX}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  nameX: e.target.value,
+                                })
+                              }
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Y"
+                              value={badgeConfig.nameY}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  nameY: e.target.value,
+                                })
+                              }
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Fonte"
+                              value={badgeConfig.nameFontSize}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  nameFontSize: e.target.value,
+                                })
+                              }
+                            />
+                            <Input
+                              type="color"
+                              title="Cor da fonte"
+                              value={badgeConfig.nameColor}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  nameColor: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
 
-                        <h4 className="font-medium">Posição do QR Code</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Input
-                            type="number"
-                            placeholder="Posição X"
-                            value={badgeConfig.qrX}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                qrX: e.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Posição Y"
-                            value={badgeConfig.qrY}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                qrY: e.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            placeholder="Tamanho (px)"
-                            value={badgeConfig.qrSize}
-                            onChange={(e) =>
-                              setBadgeConfig({
-                                ...badgeConfig,
-                                qrSize: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
+                          <h4 className="font-medium text-sm">
+                            Posição do QR Code
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <Input
+                              type="number"
+                              placeholder="X"
+                              value={badgeConfig.qrX}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  qrX: e.target.value,
+                                })
+                              }
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Y"
+                              value={badgeConfig.qrY}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  qrY: e.target.value,
+                                })
+                              }
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Tamanho"
+                              value={badgeConfig.qrSize}
+                              onChange={(e) =>
+                                setBadgeConfig({
+                                  ...badgeConfig,
+                                  qrSize: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
 
-                        <div className="flex justify-end">
-                          <Button
-                            type="submit"
-                            disabled={uploadTemplateMutation.isPending}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            {uploadTemplateMutation.isPending
-                              ? "Salvando Modelo..."
-                              : "Salvar Modelo do Crachá"}
-                          </Button>
+                          <div className="flex justify-end pt-2">
+                            {/* CORREÇÃO: O botão agora é type="button" e chama a função no onClick. */}
+                            <Button
+                              type="button"
+                              onClick={handleTemplateSubmit}
+                              disabled={uploadTemplateMutation.isPending}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {uploadTemplateMutation.isPending
+                                ? "Salvando..."
+                                : "Salvar Modelo"}
+                            </Button>
+                          </div>
                         </div>
-                      </form>
+                      </div>
+
+                      {/* Coluna 2: Pré-visualização */}
+                      <div className="space-y-4">
+                        <BadgePreview
+                          templateImage={
+                            badgeTemplatePreviewUrl ||
+                            editingEvent.badgeTemplateUrl
+                          }
+                          config={badgeConfig}
+                          qrCodeImageSrc="/sample-qrcode.png"
+                        />
+                      </div>
                     </div>
                   </>
                 )}
