@@ -24,13 +24,11 @@ import {
   CircleAlert as AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "../hooks/useAuth";
 
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   const [enrollmentStatus, setEnrollmentStatus] = useState(null);
 
@@ -285,23 +283,6 @@ const EventDetails = () => {
                   ? "Cancelando..."
                   : "Cancelar inscrição"}
               </Button>
-            )}
-
-            {/* NOVO: Botão de Impressão em Lote para Admins */}
-            {user?.role === "ADMIN" && event?.badgeTemplateUrl && (
-              <a
-                href={`${
-                  import.meta.env.VITE_API_URL
-                }/events/${id}/print-badges`}
-                target="_blank" // Abre em nova aba, o que é bom para downloads
-                rel="noopener noreferrer"
-                className="flex-1"
-              >
-                <Button variant="outline" className="w-full">
-                  <Printer className="h-4 w-4 mr-2" />
-                  Imprimir Crachás em Lote
-                </Button>
-              </a>
             )}
 
             {!canEnroll(event) && !isEnrolled && (

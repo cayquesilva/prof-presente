@@ -45,10 +45,13 @@ import {
   Award,
   ChartBar as BarChart,
   Upload,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
 import BadgePreview from "../components/BadgePreview";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
 const Admin = () => {
   const queryClient = useQueryClient();
@@ -124,8 +127,9 @@ const Admin = () => {
       queryClient.invalidateQueries(["admin-events"]);
       queryClient.invalidateQueries(["events"]);
       toast.success("Evento atualizado com sucesso!");
-      setEditingEvent(null);
-      resetForm();
+      // ALTERAÇÃO: Não fecha mais o modal ao atualizar dados, apenas ao salvar o template.
+      //setEditingEvent(null);
+      //resetForm();
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || "Erro ao atualizar evento");
@@ -298,6 +302,39 @@ const Admin = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // NOVO: Função para lidar com a impressão de crachás
+  const handlePrintBadges = async (eventId, eventTitle) => {
+    toast.info("Gerando PDF com os crachás... Isso pode levar um momento.");
+    try {
+      const response = await api.get(`/events/${eventId}/print-badges`, {
+        responseType: "blob", // Importante: espera uma resposta de arquivo binário
+      });
+
+      // Cria uma URL temporária para o arquivo recebido
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      // Define o nome do arquivo para download
+      link.setAttribute(
+        "download",
+        `crachas_${eventTitle.replace(/\s+/g, "_")}.pdf`
+      );
+
+      // Simula o clique no link para iniciar o download
+      document.body.appendChild(link);
+      link.click();
+
+      // Limpa a URL temporária
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao gerar PDF de crachás:", error);
+      toast.error(
+        "Não foi possível gerar o PDF. Verifique se o evento tem um modelo configurado."
+      );
+    }
   };
 
   useEffect(() => {
@@ -681,7 +718,9 @@ const Admin = () => {
                         <BadgePreview
                           templateImage={
                             badgeTemplatePreviewUrl ||
-                            editingEvent.badgeTemplateUrl
+                            (editingEvent.badgeTemplateUrl
+                              ? `${API_BASE_URL}${editingEvent.badgeTemplateUrl}`
+                              : null)
                           }
                           config={badgeConfig}
                           qrCodeImageSrc="/sample-qrcode.png"
@@ -733,11 +772,25 @@ const Admin = () => {
                           {event.maxAttendees || "Ilimitado"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end items-center gap-1">
+                            {/* NOVO: Botão de Impressão em Lote */}
+                            {event.badgeTemplateUrl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handlePrintBadges(event.id, event.title)
+                                }
+                                title="Imprimir Crachás em Lote"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(event)}
+                              title="Editar Evento"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -745,6 +798,7 @@ const Admin = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDelete(event.id)}
+                              title="Excluir Evento"
                             >
                               <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>

@@ -63,6 +63,8 @@ const getAllEvents = async (req, res) => {
         maxAttendees: true,
         imageUrl: true,
         createdAt: true,
+        badgeTemplateUrl: true,
+        badgeTemplateConfig: true,
         _count: {
           select: {
             enrollments: {
@@ -347,11 +349,9 @@ const uploadEventBadgeTemplate = async (req, res) => {
       try {
         updateData.badgeTemplateConfig = JSON.parse(badgeTemplateConfig);
       } catch (e) {
-        return res
-          .status(400)
-          .json({
-            error: "Formato de badgeTemplateConfig inválido. Deve ser um JSON.",
-          });
+        return res.status(400).json({
+          error: "Formato de badgeTemplateConfig inválido. Deve ser um JSON.",
+        });
       }
     }
 
@@ -378,12 +378,10 @@ const generatePrintableBadges = async (req, res) => {
     const event = await prisma.event.findUnique({ where: { id } });
 
     if (!event || !event.badgeTemplateUrl || !event.badgeTemplateConfig) {
-      return res
-        .status(404)
-        .json({
-          error:
-            "Evento não encontrado ou não possui um modelo de crachá configurado.",
-        });
+      return res.status(404).json({
+        error:
+          "Evento não encontrado ou não possui um modelo de crachá configurado.",
+      });
     }
 
     // Busca todos os usuários com inscrição aprovada no evento
