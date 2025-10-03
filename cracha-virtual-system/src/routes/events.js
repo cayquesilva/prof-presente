@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const {
@@ -8,27 +8,50 @@ const {
   updateEvent,
   deleteEvent,
   eventValidation,
-} = require('../controllers/eventController');
+  uploadEventBadgeTemplate,
+  generatePrintableBadges,
+} = require("../controllers/eventController");
 
-const { 
-  authenticateToken, 
-  requireAdmin 
-} = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require("../middleware/auth");
+
+const { uploadBadgeTemplate } = require("../middleware/upload");
 
 // Listar todos os eventos (público)
-router.get('/', getAllEvents);
+router.get("/", getAllEvents);
 
 // Obter evento por ID (público)
-router.get('/:id', getEventById);
+router.get("/:id", getEventById);
+
+// Rota para gerar o PDF com os crachás para impressão em lote
+router.get(
+  "/:id/print-badges",
+  authenticateToken,
+  requireAdmin,
+  generatePrintableBadges
+);
 
 // Criar evento (apenas admin)
-router.post('/', authenticateToken, requireAdmin, eventValidation, createEvent);
+router.post("/", authenticateToken, requireAdmin, eventValidation, createEvent);
+
+// Rota para criar/atualizar o modelo de crachá de um evento
+router.post(
+  "/:id/badge-template",
+  authenticateToken,
+  requireAdmin,
+  uploadBadgeTemplate, // Middleware para o upload da imagem
+  uploadEventBadgeTemplate
+);
 
 // Atualizar evento (apenas admin)
-router.put('/:id', authenticateToken, requireAdmin, eventValidation, updateEvent);
+router.put(
+  "/:id",
+  authenticateToken,
+  requireAdmin,
+  eventValidation,
+  updateEvent
+);
 
 // Deletar evento (apenas admin)
-router.delete('/:id', authenticateToken, requireAdmin, deleteEvent);
+router.delete("/:id", authenticateToken, requireAdmin, deleteEvent);
 
 module.exports = router;
-

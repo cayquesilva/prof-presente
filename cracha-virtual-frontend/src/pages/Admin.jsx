@@ -29,9 +29,23 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Badge } from "../components/ui/badge";
-import { Plus, CreditCard as Edit, Trash2, Users, Calendar, Award, ChartBar as BarChart } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Separator } from "../components/ui/separator"; // NOVO: Importado para separar visualmente os formulários.
+import {
+  Plus,
+  CreditCard as Edit,
+  Trash2,
+  Users,
+  Calendar,
+  Award,
+  ChartBar as BarChart,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
 
@@ -58,6 +72,17 @@ const Admin = () => {
     maxAttendees: "",
   });
 
+  const [badgeTemplateFile, setBadgeTemplateFile] = useState(null);
+  const [badgeConfig, setBadgeConfig] = useState({
+    nameX: "",
+    nameY: "",
+    nameFontSize: "",
+    nameColor: "#000000",
+    qrX: "",
+    qrY: "",
+    qrSize: "",
+  });
+
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ["admin-events"],
     queryFn: async () => {
@@ -65,7 +90,6 @@ const Admin = () => {
       return response.data.events;
     },
   });
-
 
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
@@ -124,6 +148,33 @@ const Admin = () => {
     },
   });
 
+  // NOVO: Mutação para fazer o upload do template e da configuração do crachá.
+  const uploadTemplateMutation = useMutation({
+    mutationFn: async ({ id, formData }) => {
+      const response = await api.post(
+        `/events/${id}/badge-template`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin-events"]);
+      toast.success("Modelo do crachá salvo com sucesso!");
+      setEditingEvent(null); // Fecha o modal
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.error || "Erro ao salvar modelo do crachá"
+      );
+    },
+  });
+
   const resetForm = () => {
     setEventForm({
       title: "",
@@ -132,6 +183,17 @@ const Admin = () => {
       startDate: "",
       endDate: "",
       maxAttendees: "",
+    });
+    // NOVO: Reseta também os formulários do crachá.
+    setBadgeTemplateFile(null);
+    setBadgeConfig({
+      nameX: "",
+      nameY: "",
+      nameFontSize: "",
+      nameColor: "#000000",
+      qrX: "",
+      qrY: "",
+      qrSize: "",
     });
   };
 
@@ -161,12 +223,55 @@ const Admin = () => {
       endDate: new Date(event.endDate).toISOString().slice(0, 16),
       maxAttendees: event.maxAttendees || "",
     });
+    // NOVO: Preenche os campos de configuração do crachá se eles existirem no evento.
+    if (event.badgeTemplateConfig) {
+      const config = event.badgeTemplateConfig;
+      setBadgeConfig({
+        nameX: config.name?.x || "",
+        nameY: config.name?.y || "",
+        nameFontSize: config.name?.fontSize || "",
+        nameColor: config.name?.color || "#000000",
+        qrX: config.qrCode?.x || "",
+        qrY: config.qrCode?.y || "",
+        qrSize: config.qrCode?.size || "",
+      });
+    }
   };
 
   const handleDelete = (id) => {
     if (window.confirm("Tem certeza que deseja excluir este evento?")) {
       deleteEventMutation.mutate(id);
     }
+  };
+
+  // NOVO: Função para lidar com o envio do formulário do modelo do crachá.
+  const handleTemplateSubmit = (e) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+
+    // Constrói um objeto JSON com a configuração.
+    const config = {
+      name: {
+        x: parseInt(badgeConfig.nameX),
+        y: parseInt(badgeConfig.nameY),
+        fontSize: parseInt(badgeConfig.nameFontSize),
+        color: badgeConfig.nameColor,
+      },
+      qrCode: {
+        x: parseInt(badgeConfig.qrX),
+        y: parseInt(badgeConfig.qrY),
+        size: parseInt(badgeConfig.qrSize),
+      },
+    };
+
+    // Usa FormData para enviar o arquivo e os dados de texto juntos.
+    const formData = new FormData();
+    if (badgeTemplateFile) {
+      formData.append("badgeTemplate", badgeTemplateFile);
+    }
+    formData.append("badgeTemplateConfig", JSON.stringify(config));
+
+    uploadTemplateMutation.mutate({ id: editingEvent.id, formData });
   };
 
   const formatDate = (dateString) => {
@@ -353,7 +458,10 @@ const Admin = () => {
                         type="datetime-local"
                         value={eventForm.endDate}
                         onChange={(e) =>
-                          setEventForm({ ...eventForm, endDate: e.target.value })
+                          setEventForm({
+                            ...eventForm,
+                            endDate: e.target.value,
+                          })
                         }
                         required
                       />
@@ -406,6 +514,143 @@ const Admin = () => {
                     </Button>
                   </div>
                 </form>
+
+                {/* NOVO: Formulário para o Modelo do Crachá, visível apenas na edição. */}
+                {editingEvent && (
+                  <>
+                    <Separator className="my-6" />
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">
+                        Modelo do Crachá Impresso
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Envie uma imagem de fundo e defina onde o nome e o QR
+                        code do participante aparecerão.
+                      </p>
+                      <form
+                        onSubmit={handleTemplateSubmit}
+                        className="space-y-4 p-4 border rounded-lg"
+                      >
+                        <div className="space-y-2">
+                          <Label htmlFor="badgeTemplate">
+                            Imagem de Fundo do Crachá
+                          </Label>
+                          <Input
+                            id="badgeTemplate"
+                            type="file"
+                            onChange={(e) =>
+                              setBadgeTemplateFile(e.target.files[0])
+                            }
+                            accept="image/*"
+                          />
+                          {editingEvent.badgeTemplateUrl &&
+                            !badgeTemplateFile && (
+                              <p className="text-xs text-gray-500">
+                                Um modelo já foi enviado. Envie um novo para
+                                substituir.
+                              </p>
+                            )}
+                        </div>
+
+                        <h4 className="font-medium">Posição do Nome</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <Input
+                            type="number"
+                            placeholder="Posição X"
+                            value={badgeConfig.nameX}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                nameX: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Posição Y"
+                            value={badgeConfig.nameY}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                nameY: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Tam. Fonte"
+                            value={badgeConfig.nameFontSize}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                nameFontSize: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            type="color"
+                            value={badgeConfig.nameColor}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                nameColor: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        <h4 className="font-medium">Posição do QR Code</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Input
+                            type="number"
+                            placeholder="Posição X"
+                            value={badgeConfig.qrX}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                qrX: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Posição Y"
+                            value={badgeConfig.qrY}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                qrY: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Tamanho (px)"
+                            value={badgeConfig.qrSize}
+                            onChange={(e) =>
+                              setBadgeConfig({
+                                ...badgeConfig,
+                                qrSize: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button
+                            type="submit"
+                            disabled={uploadTemplateMutation.isPending}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            {uploadTemplateMutation.isPending
+                              ? "Salvando Modelo..."
+                              : "Salvar Modelo do Crachá"}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </>
+                )}
               </DialogContent>
             </Dialog>
           </div>

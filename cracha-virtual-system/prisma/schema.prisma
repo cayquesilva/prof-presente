@@ -64,6 +64,10 @@ model Event {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+   // NOVOS CAMPOS: Para o crachá impresso personalizado
+  badgeTemplateUrl    String?   @map("badge_template_url")
+  badgeTemplateConfig Json?     @map("badge_template_config")
+
   // Relacionamentos
   enrollments Enrollment[]
 
