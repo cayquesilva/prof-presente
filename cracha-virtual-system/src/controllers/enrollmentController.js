@@ -1,81 +1,60 @@
 const { prisma } = require("../config/database");
-const { generateQRCode } = require("../utils/qrcode");
+// ALTERAÇÃO: generateQRCode não é mais necessário aqui.
 
 // Inscrever usuário em evento
 const enrollInEvent = async (req, res) => {
   try {
-    // Suporta tanto via params quanto via body
     const eventId = req.params.eventId || req.body.eventId;
     const userId = req.user.id;
 
     if (!eventId) {
-      return res.status(400).json({
-        error: "eventId é obrigatório",
-      });
+      return res.status(400).json({ error: "eventId é obrigatório" });
     }
 
-    // Verificar se o evento existe
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: {
         _count: {
           select: {
-            enrollments: {
-              where: { status: "APPROVED" },
-            },
+            enrollments: { where: { status: "APPROVED" } },
           },
         },
       },
     });
 
     if (!event) {
-      return res.status(404).json({
-        error: "Evento não encontrado",
-      });
+      return res.status(404).json({ error: "Evento não encontrado" });
     }
 
-    // Verificar se o usuário já está inscrito
     const existingEnrollment = await prisma.enrollment.findUnique({
       where: {
-        userId_eventId: {
-          userId,
-          eventId,
-        },
+        userId_eventId: { userId, eventId },
       },
     });
 
-    // Se existe inscrição cancelada ou rejeitada, permitir reativar
     if (existingEnrollment) {
-      if (existingEnrollment.status === 'CANCELLED' || existingEnrollment.status === 'REJECTED') {
-        // Verificar se o evento ainda não terminou (permite reativar durante o evento)
-        if (new Date() > event.endDate) {
-          return res.status(400).json({
-            error: "Não é possível se inscrever em evento que já terminou",
-          });
+      if (["CANCELLED", "REJECTED"].includes(existingEnrollment.status)) {
+        if (new Date() > new Date(event.endDate)) {
+          return res
+            .status(400)
+            .json({
+              error: "Não é possível se inscrever em evento que já terminou",
+            });
+        }
+        if (
+          event.maxAttendees &&
+          event._count.enrollments >= event.maxAttendees
+        ) {
+          return res
+            .status(400)
+            .json({ error: "Evento lotado. Não há mais vagas disponíveis." });
         }
 
-        // Verificar se há vagas disponíveis
-        if (event.maxAttendees && event._count.enrollments >= event.maxAttendees) {
-          return res.status(400).json({
-            error: "Evento lotado. Não há mais vagas disponíveis.",
-          });
-        }
-
-        // Reativar inscrição
         const enrollment = await prisma.enrollment.update({
           where: { id: existingEnrollment.id },
-          data: {
-            status: "APPROVED",
-            enrollmentDate: new Date(),
-          },
+          data: { status: "APPROVED", enrollmentDate: new Date() },
           include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+            user: { select: { id: true, name: true, email: true } },
             event: {
               select: {
                 id: true,
@@ -88,55 +67,42 @@ const enrollInEvent = async (req, res) => {
           },
         });
 
-        // Gerar crachá se não existir
-        const badge = await prisma.badge.findUnique({
-          where: { enrollmentId: enrollment.id }
-        });
-        if (!badge) {
-          await generateBadgeForEnrollment(enrollment.id);
-        }
-
-        return res.status(200).json({
-          message: "Inscrição reativada com sucesso",
-          enrollment,
-        });
+        // ALTERAÇÃO: A geração de crachá foi removida daqui.
+        return res
+          .status(200)
+          .json({ message: "Inscrição reativada com sucesso", enrollment });
       } else {
-        return res.status(409).json({
-          error: "Usuário já está inscrito neste evento",
-          enrollment: existingEnrollment,
-        });
+        return res
+          .status(409)
+          .json({
+            error: "Usuário já está inscrito neste evento",
+            enrollment: existingEnrollment,
+          });
       }
     }
 
-    // Verificar se o evento ainda não terminou (para novas inscrições)
-    if (new Date() > event.endDate) {
-      return res.status(400).json({
-        error: "Não é possível se inscrever em evento que já terminou",
-      });
+    if (new Date() > new Date(event.endDate)) {
+      return res
+        .status(400)
+        .json({
+          error: "Não é possível se inscrever em evento que já terminou",
+        });
     }
 
-    // Verificar se há vagas disponíveis
     if (event.maxAttendees && event._count.enrollments >= event.maxAttendees) {
-      return res.status(400).json({
-        error: "Evento lotado. Não há mais vagas disponíveis.",
-      });
+      return res
+        .status(400)
+        .json({ error: "Evento lotado. Não há mais vagas disponíveis." });
     }
 
-    // Criar nova inscrição
     const enrollment = await prisma.enrollment.create({
       data: {
         userId,
         eventId,
-        status: "APPROVED", // Por padrão, aprovamos automaticamente
+        status: "APPROVED",
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        user: { select: { id: true, name: true, email: true } },
         event: {
           select: {
             id: true,
@@ -149,8 +115,8 @@ const enrollInEvent = async (req, res) => {
       },
     });
 
-    // Gerar crachá virtual automaticamente
-    await generateBadgeForEnrollment(enrollment.id);
+    // ALTERAÇÃO: A geração automática de crachá foi removida daqui.
+    // O crachá universal do usuário será usado.
 
     res.status(201).json({
       message: "Inscrição realizada com sucesso",
@@ -158,59 +124,11 @@ const enrollInEvent = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao inscrever usuário:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
-// Função auxiliar para gerar crachá
-const generateBadgeForEnrollment = async (enrollmentId) => {
-  try {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { id: enrollmentId },
-      include: {
-        user: true,
-        event: true,
-      },
-    });
-
-    if (!enrollment) {
-      throw new Error("Inscrição não encontrada");
-    }
-
-    // Dados para o QR code (JSON com informações da inscrição)
-    const qrData = JSON.stringify({
-      enrollmentId: enrollment.id,
-      userId: enrollment.user.id,
-      eventId: enrollment.event.id,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Gerar QR code
-    const qrCodeFilename = `badge_${enrollment.id}`;
-    const qrCodePath = await generateQRCode(qrData, qrCodeFilename);
-    const qrCodeUrl = `/uploads/qrcodes/${qrCodeFilename}.png`;
-
-    // URL da imagem do crachá (será gerada posteriormente)
-    const badgeImageUrl = `/api/badges/${enrollment.id}/image`;
-
-    // Criar registro do crachá
-    const badge = await prisma.badge.create({
-      data: {
-        enrollmentId: enrollment.id,
-        qrCodeUrl,
-        badgeImageUrl,
-        validUntil: enrollment.event.endDate,
-      },
-    });
-
-    return badge;
-  } catch (error) {
-    console.error("Erro ao gerar crachá:", error);
-    throw error;
-  }
-};
+// ALTERAÇÃO: A função auxiliar "generateBadgeForEnrollment" foi completamente removida.
 
 // Listar inscrições do usuário
 const getUserEnrollments = async (req, res) => {
@@ -221,7 +139,7 @@ const getUserEnrollments = async (req, res) => {
 
     const where = { userId };
     if (status) {
-      where.status = status;
+      where.status = status.toUpperCase(); // Garante consistência
     }
 
     const enrollments = await prisma.enrollment.findMany({
@@ -238,17 +156,8 @@ const getUserEnrollments = async (req, res) => {
             imageUrl: true,
           },
         },
-        badge: {
-          select: {
-            id: true,
-            qrCodeUrl: true,
-            badgeImageUrl: true,
-            issuedAt: true,
-          },
-        },
-        courseEvaluation: {
-          select: { id: true },
-        },
+        // ALTERAÇÃO: A inclusão do Badge foi removida.
+        courseEvaluation: { select: { id: true } },
       },
       skip: parseInt(skip),
       take: parseInt(limit),
@@ -268,9 +177,7 @@ const getUserEnrollments = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao listar inscrições do usuário:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
@@ -283,35 +190,16 @@ const getEventEnrollments = async (req, res) => {
 
     const where = { eventId };
     if (status) {
-      where.status = status;
+      where.status = status.toUpperCase();
     }
 
     const enrollments = await prisma.enrollment.findMany({
       where,
       include: {
         user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            photoUrl: true,
-          },
+          select: { id: true, name: true, email: true, photoUrl: true },
         },
-        badge: {
-          select: {
-            id: true,
-            issuedAt: true,
-          },
-        },
-        _count: {
-          select: {
-            badge: {
-              select: {
-                checkins: true,
-              },
-            },
-          },
-        },
+        // ALTERAÇÃO: A inclusão do Badge foi removida daqui também.
       },
       skip: parseInt(skip),
       take: parseInt(limit),
@@ -331,9 +219,7 @@ const getEventEnrollments = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao listar inscrições do evento:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
@@ -343,36 +229,29 @@ const cancelEnrollment = async (req, res) => {
     const { enrollmentId } = req.params;
     const userId = req.user.id;
 
-    // Buscar inscrição
     const enrollment = await prisma.enrollment.findUnique({
       where: { id: enrollmentId },
-      include: {
-        event: true,
-        user: true,
-      },
+      include: { event: true },
     });
 
     if (!enrollment) {
-      return res.status(404).json({
-        error: "Inscrição não encontrada",
-      });
+      return res.status(404).json({ error: "Inscrição não encontrada" });
     }
 
-    // Verificar se o usuário pode cancelar (próprio usuário ou admin)
     if (req.user.role !== "ADMIN" && enrollment.userId !== userId) {
-      return res.status(403).json({
-        error: "Você não tem permissão para cancelar esta inscrição",
-      });
+      return res
+        .status(403)
+        .json({ error: "Você não tem permissão para cancelar esta inscrição" });
     }
 
-    // Verificar se o evento ainda não começou
-    if (new Date() > enrollment.event.startDate) {
-      return res.status(400).json({
-        error: "Não é possível cancelar inscrição de evento que já começou",
-      });
+    if (new Date() > new Date(enrollment.event.startDate)) {
+      return res
+        .status(400)
+        .json({
+          error: "Não é possível cancelar inscrição de evento que já começou",
+        });
     }
 
-    // Atualizar status da inscrição
     const updatedEnrollment = await prisma.enrollment.update({
       where: { id: enrollmentId },
       data: { status: "CANCELLED" },
@@ -384,9 +263,7 @@ const cancelEnrollment = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao cancelar inscrição:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
@@ -396,39 +273,23 @@ const updateEnrollmentStatus = async (req, res) => {
     const { enrollmentId } = req.params;
     const { status } = req.body;
 
-    if (!["PENDING", "APPROVED", "CANCELLED"].includes(status)) {
-      return res.status(400).json({
-        error: "Status inválido",
-      });
+    if (!["PENDING", "APPROVED", "CANCELLED", "REJECTED"].includes(status)) {
+      return res.status(400).json({ error: "Status inválido" });
     }
 
     const enrollment = await prisma.enrollment.findUnique({
       where: { id: enrollmentId },
     });
-
     if (!enrollment) {
-      return res.status(404).json({
-        error: "Inscrição não encontrada",
-      });
+      return res.status(404).json({ error: "Inscrição não encontrada" });
     }
 
     const updatedEnrollment = await prisma.enrollment.update({
       where: { id: enrollmentId },
       data: { status },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
+        user: { select: { id: true, name: true, email: true } },
+        event: { select: { id: true, title: true } },
       },
     });
 
@@ -438,13 +299,11 @@ const updateEnrollmentStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao atualizar status da inscrição:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
-// Listar inscrições do usuário logado (NOVA FUNÇÃO)
+// Listar inscrições do usuário logado
 const getMyEnrollments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -452,8 +311,9 @@ const getMyEnrollments = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const where = { userId };
-    if (status) {
-      where.status = status;
+    if (status && status.toLowerCase() !== "all") {
+      // ALTERAÇÃO: Garante que "all" não filtre
+      where.status = status.toUpperCase();
     }
 
     const enrollments = await prisma.enrollment.findMany({
@@ -470,19 +330,8 @@ const getMyEnrollments = async (req, res) => {
             imageUrl: true,
           },
         },
-        badge: {
-          select: {
-            id: true,
-            qrCodeUrl: true,
-            badgeImageUrl: true,
-            issuedAt: true,
-          },
-        },
-        courseEvaluation: {
-          select: {
-            id: true,
-          },
-        },
+        // ALTERAÇÃO: A inclusão do Badge foi removida.
+        courseEvaluation: { select: { id: true } },
       },
       orderBy: { enrollmentDate: "desc" },
       skip: parseInt(skip),
@@ -502,9 +351,7 @@ const getMyEnrollments = async (req, res) => {
     });
   } catch (error) {
     console.error("Erro ao listar minhas inscrições:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 

@@ -48,13 +48,11 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { prisma } = require('../config/database');
 
+    // ALTERAÇÃO: Removido o "include: { badge: true }"
     const enrollment = await prisma.enrollment.findFirst({
       where: {
         eventId: eventId,
         userId: userId,
-      },
-      include: {
-        badge: true,
       },
     });
 
@@ -77,7 +75,7 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
       enrolled: true,
       enrollmentId: enrollment.id,
       status: enrollment.status,
-      badge: enrollment.badge,
+      // ALTERAÇÃO: A propriedade "badge" foi removida da resposta.
       enrollmentCount,
     });
   } catch (error) {

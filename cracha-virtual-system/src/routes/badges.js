@@ -1,49 +1,40 @@
+// NOVO: Este arquivo substitui userBadges.js e agora é a rota principal para crachás.
 const express = require("express");
 const router = express.Router();
 
+// ALTERAÇÃO: O controller importado agora é o novo badgeController unificado.
 const {
-  getBadgeByEnrollment,
-  generateBadgeImage,
-  getQRCode,
-  validateQRCode,
-  getAllBadges,
-  getMyBadges,
-  downloadBadgeImage,
-  regenerateQRCode,
+  createUserBadge,
+  getUserBadge,
+  getMyUserBadge,
+  validateUserBadge,
+  searchUsersByName,
 } = require("../controllers/badgeController");
 
-const { authenticateToken, requireAdmin } = require("../middleware/auth");
-
-// NOVA ROTA: Listar crachás do usuário logado
-router.get("/my-badges", authenticateToken, getMyBadges);
-
-// Obter crachá por ID da inscrição
-router.get(
-  "/enrollment/:enrollmentId",
+const {
   authenticateToken,
-  getBadgeByEnrollment
-);
+  requireAdmin,
+  requireOwnershipOrAdmin,
+} = require("../middleware/auth");
 
-// Gerar imagem do crachá virtual
+// Rota para buscar usuários por nome (autocomplete no check-in).
+router.get("/search", authenticateToken, searchUsersByName);
+
+// Rota para validar um crachá (código manual ou QR Code).
+router.post("/validate", authenticateToken, validateUserBadge);
+
+// Rota para o usuário logado obter seu próprio crachá universal.
+router.get("/my-badge", authenticateToken, getMyUserBadge);
+
+// Rota para um admin criar um crachá para um usuário.
+router.post("/:userId", authenticateToken, requireAdmin, createUserBadge);
+
+// Rota para obter o crachá de um usuário específico.
 router.get(
-  "/enrollment/:enrollmentId/image",
+  "/:userId",
   authenticateToken,
-  generateBadgeImage
+  requireOwnershipOrAdmin,
+  getUserBadge
 );
-
-// Obter QR code do crachá
-router.get("/enrollment/:enrollmentId/qrcode", authenticateToken, getQRCode);
-
-// NOVA ROTA: Download da imagem do crachá
-router.get("/:badgeId/download", authenticateToken, downloadBadgeImage);
-
-// Validar QR code (para check-in)
-router.post("/validate-qr", authenticateToken, validateQRCode);
-
-// Listar todos os crachás (apenas admin)
-router.get("/", authenticateToken, requireAdmin, getAllBadges);
-
-// Regenerar QR Code de um crachá (apenas admin)
-router.post("/:badgeId/regenerate-qr", authenticateToken, requireAdmin, regenerateQRCode);
 
 module.exports = router;

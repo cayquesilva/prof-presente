@@ -15,7 +15,6 @@ enum UserRole {
   ORGANIZER
   CHECKIN_COORDINATOR
   TEACHER
-  USER
 }
 
 enum EnrollmentStatus {
@@ -43,7 +42,6 @@ model User {
   // Relacionamentos
   enrollments   Enrollment[]
   userAwards    UserAward[]
-  teacherBadge  TeacherBadge?
   userBadge     UserBadge?
   workplace     Workplace? @relation(fields: [workplaceId], references: [id], onDelete: SetNull)
 
@@ -80,14 +78,13 @@ model Enrollment {
   userId         String
   eventId        String
   enrollmentDate DateTime         @default(now())
-  status         EnrollmentStatus @default(PENDING)
+  status         EnrollmentStatus @default(APPROVED)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   // Relacionamentos
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   event            Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  badge            Badge?
   courseEvaluation CourseEvaluation?
 
   @@unique([userId, eventId])
@@ -96,43 +93,6 @@ model Enrollment {
   @@index([status])
   @@index([enrollmentDate])
   @@map("enrollments")
-}
-
-model Badge {
-  id             String    @id @default(uuid())
-  enrollmentId   String    @unique
-  qrCodeUrl      String
-  badgeImageUrl  String
-  issuedAt       DateTime  @default(now())
-  validUntil     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  // Relacionamentos
-  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  checkins   Checkin[]
-
-  @@index([issuedAt])
-  @@index([validUntil])
-  @@index([createdAt])
-  @@map("badges")
-}
-
-model Checkin {
-  id          String   @id @default(uuid())
-  badgeId     String
-  checkinTime DateTime @default(now())
-  location    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relacionamentos
-  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-
-  @@index([badgeId])
-  @@index([checkinTime])
-  @@index([createdAt])
-  @@map("checkins")
 }
 
 model Award {
@@ -186,43 +146,6 @@ model CourseEvaluation {
   @@index([evaluatedAt])
   @@index([createdAt])
   @@map("course_evaluations")
-}
-
-model TeacherBadge {
-  id            String    @id @default(uuid())
-  userId        String    @unique
-  qrCodeUrl     String
-  badgeImageUrl String
-  issuedAt      DateTime  @default(now())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relacionamentos
-  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  teacherCheckins TeacherCheckin[]
-
-  @@index([issuedAt])
-  @@index([createdAt])
-  @@map("teacher_badges")
-}
-
-model TeacherCheckin {
-  id               String       @id @default(uuid())
-  teacherBadgeId   String
-  eventId          String
-  checkinTime      DateTime     @default(now())
-  location         String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-
-  // Relacionamentos
-  teacherBadge TeacherBadge @relation(fields: [teacherBadgeId], references: [id], onDelete: Cascade)
-
-  @@index([teacherBadgeId])
-  @@index([eventId])
-  @@index([checkinTime])
-  @@index([createdAt])
-  @@map("teacher_checkins")
 }
 
 model UserBadge {
