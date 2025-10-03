@@ -1,8 +1,8 @@
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.jsx';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth.jsx";
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user, loading, isAuthenticated, isAdmin } = useAuth();
+  const { loading, isAuthenticated, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -24,4 +24,3 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 };
 
 export default ProtectedRoute;
-

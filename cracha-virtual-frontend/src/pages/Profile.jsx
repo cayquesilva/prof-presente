@@ -13,7 +13,12 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import {
   User,
@@ -44,9 +49,11 @@ const Profile = () => {
   });
 
   const { data: userBadge } = useQuery({
-    queryKey: ["user-badge"],
+    // ALTERAÇÃO: Renomeado de user-badge para my-badge para consistência com a URL.
+    queryKey: ["my-badge"],
     queryFn: async () => {
-      const response = await api.get("/user-badges/my-badge");
+      // ALTERAÇÃO: A URL agora é /badges/my-badge.
+      const response = await api.get("/badges/my-badge");
       return response.data;
     },
   });
@@ -54,12 +61,13 @@ const Profile = () => {
   const exportUserData = async () => {
     setIsExporting(true);
     try {
-      const [enrollments, badges, evaluations, checkins] = await Promise.all([
-        api.get("/enrollments"),
-        api.get("/badges/my-badges"),
-        api.get("/evaluations/my"),
-        api.get("/checkins/my"),
-      ]);
+      const [enrollments, userBadgeData, evaluations, checkins] =
+        await Promise.all([
+          api.get("/enrollments/my-enrollments"), // Usando rota correta
+          api.get("/badges/my-badge"),
+          api.get("/evaluations/my"),
+          api.get("/checkins/my"),
+        ]);
 
       const exportData = {
         exportDate: new Date().toISOString(),
@@ -73,15 +81,14 @@ const Profile = () => {
           createdAt: userData.createdAt,
         },
         statistics: {
-          totalEnrollments: enrollments.data.length,
-          totalBadges: badges.data.data?.length || 0,
+          totalEnrollments: enrollments.data.enrollments?.length || 0,
           totalEvaluations: evaluations.data.length,
-          totalCheckins: checkins.data.length,
+          totalCheckins: checkins.data.checkins?.length || 0,
         },
-        enrollments: enrollments.data,
-        badges: badges.data.data || [],
+        userBadge: userBadgeData.data, // Adiciona o crachá universal aos dados
+        enrollments: enrollments.data.enrollments || [],
         evaluations: evaluations.data,
-        checkins: checkins.data,
+        checkins: checkins.data.checkins || [],
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -90,7 +97,9 @@ const Profile = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `meus-dados-${new Date().toISOString().split("T")[0]}.json`;
+      link.download = `meus-dados-${
+        new Date().toISOString().split("T")[0]
+      }.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -239,7 +248,8 @@ const Profile = () => {
             <CardHeader>
               <CardTitle>Meu Crachá Universal</CardTitle>
               <CardDescription>
-                Use este crachá para fazer check-in em qualquer evento que você esteja inscrito
+                Use este crachá para fazer check-in em qualquer evento que você
+                esteja inscrito
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -249,7 +259,9 @@ const Profile = () => {
                   <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-lg border-2 border-blue-200">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">Código do Crachá</p>
+                        <p className="text-sm text-gray-600 mb-1">
+                          Código do Crachá
+                        </p>
                         <p className="text-3xl font-bold font-mono text-blue-900">
                           {userBadge.badgeCode}
                         </p>
@@ -257,7 +269,8 @@ const Profile = () => {
                       <CreditCard className="h-12 w-12 text-blue-600" />
                     </div>
                     <p className="text-sm text-gray-600">
-                      Use este código para fazer check-in manualmente em qualquer evento
+                      Use este código para fazer check-in manualmente em
+                      qualquer evento
                     </p>
                   </div>
 
@@ -265,12 +278,16 @@ const Profile = () => {
                   <div className="flex flex-col items-center">
                     <div className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
                       <img
-                        src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000'}${userBadge.qrCodeUrl}`}
+                        src={`${
+                          import.meta.env.VITE_API_URL?.replace("/api", "") ||
+                          "http://localhost:3000"
+                        }${userBadge.qrCodeUrl}`}
                         alt="QR Code do Crachá"
                         className="w-64 h-64"
                         onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<p class="text-gray-500">QR Code não disponível</p>';
+                          e.target.style.display = "none";
+                          e.target.parentElement.innerHTML =
+                            '<p class="text-gray-500">QR Code não disponível</p>';
                         }}
                       />
                     </div>
@@ -288,8 +305,12 @@ const Profile = () => {
                       <CardContent className="pt-6">
                         <div className="text-center">
                           <Award className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
-                          <p className="text-2xl font-bold">{userBadge._count?.userCheckins || 0}</p>
-                          <p className="text-sm text-gray-600">Check-ins Realizados</p>
+                          <p className="text-2xl font-bold">
+                            {userBadge._count?.userCheckins || 0}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Check-ins Realizados
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
@@ -298,9 +319,13 @@ const Profile = () => {
                         <div className="text-center">
                           <CreditCard className="h-8 w-8 mx-auto mb-2 text-blue-600" />
                           <p className="text-2xl font-bold">
-                            {new Date(userBadge.issuedAt).toLocaleDateString("pt-BR")}
+                            {new Date(userBadge.issuedAt).toLocaleDateString(
+                              "pt-BR"
+                            )}
                           </p>
-                          <p className="text-sm text-gray-600">Data de Emissão</p>
+                          <p className="text-sm text-gray-600">
+                            Data de Emissão
+                          </p>
                         </div>
                       </CardContent>
                     </Card>
@@ -310,8 +335,9 @@ const Profile = () => {
                   <Alert>
                     <Shield className="h-4 w-4" />
                     <AlertDescription>
-                      Seu crachá é único e pessoal. Não compartilhe seu código ou QR code com outras pessoas.
-                      Este crachá pode ser usado em qualquer evento que você esteja inscrito e aprovado.
+                      Seu crachá é único e pessoal. Não compartilhe seu código
+                      ou QR code com outras pessoas. Este crachá pode ser usado
+                      em qualquer evento que você esteja inscrito e aprovado.
                     </AlertDescription>
                   </Alert>
                 </div>
@@ -338,8 +364,9 @@ const Profile = () => {
               <Alert>
                 <FileJson className="h-4 w-4" />
                 <AlertDescription>
-                  O arquivo exportado conterá todas as suas informações pessoais,
-                  inscrições, crachás, avaliações e check-ins em formato JSON.
+                  O arquivo exportado conterá todas as suas informações
+                  pessoais, inscrições, crachás, avaliações e check-ins em
+                  formato JSON.
                 </AlertDescription>
               </Alert>
 
@@ -415,9 +442,7 @@ const Profile = () => {
                 <Separator />
 
                 <div>
-                  <h4 className="font-semibold text-sm mb-2">
-                    Seus direitos:
-                  </h4>
+                  <h4 className="font-semibold text-sm mb-2">Seus direitos:</h4>
                   <ul className="space-y-2 text-sm text-gray-600">
                     <li>• Exportar seus dados a qualquer momento</li>
                     <li>• Solicitar correção de dados incorretos</li>

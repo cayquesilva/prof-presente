@@ -2,8 +2,8 @@
 const express = require("express");
 const router = express.Router();
 
-const { getCheckinRanking } = require("../controllers/rankingController");
 const { authenticateToken } = require("../middleware/auth");
+const { getCheckinRanking } = require("../controllers/RankingController");
 
 // Rota pública para obter o ranking geral de check-ins.
 router.get("/checkins", getCheckinRanking);
