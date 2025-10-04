@@ -10,9 +10,10 @@ const {
 } = require('../controllers/authController');
 
 const { authenticateToken } = require('../middleware/auth');
+const { uploadProfilePhoto } = require('../middleware/upload');
 
 // Rotas públicas
-router.post('/register', registerValidation, register);
+router.post('/register', uploadProfilePhoto, registerValidation, register);
 router.post('/login', loginValidation, login);
 
 // Rotas protegidas

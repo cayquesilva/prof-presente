@@ -1,39 +1,29 @@
-const bcrypt = require('bcryptjs');
-const { body, validationResult } = require('express-validator');
-const { prisma } = require('../config/database');
-const { generateToken } = require('../utils/jwt');
+const bcrypt = require("bcryptjs");
+const { body, validationResult } = require("express-validator");
+const { prisma } = require("../config/database");
+const { generateToken } = require("../utils/jwt");
 
 // Validações para registro
 const registerValidation = [
-  body('name')
+  body("name")
     .trim()
     .isLength({ min: 2, max: 255 })
-    .withMessage('Nome deve ter entre 2 e 255 caracteres'),
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Email inválido'),
-  body('password')
+    .withMessage("Nome deve ter entre 2 e 255 caracteres"),
+  body("email").isEmail().normalizeEmail().withMessage("Email inválido"),
+  body("password")
     .isLength({ min: 6 })
-    .withMessage('Senha deve ter pelo menos 6 caracteres'),
-  body('birthDate')
-    .isISO8601()
-    .withMessage('Data de nascimento inválida'),
-  body('cpf')
+    .withMessage("Senha deve ter pelo menos 6 caracteres"),
+  body("birthDate").isISO8601().withMessage("Data de nascimento inválida"),
+  body("cpf")
     .optional()
     .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
-    .withMessage('CPF deve estar no formato XXX.XXX.XXX-XX'),
+    .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
 ];
 
 // Validações para login
 const loginValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Email inválido'),
-  body('password')
-    .notEmpty()
-    .withMessage('Senha é obrigatória'),
+  body("email").isEmail().normalizeEmail().withMessage("Email inválido"),
+  body("password").notEmpty().withMessage("Senha é obrigatória"),
 ];
 
 // Registrar usuário
@@ -43,33 +33,42 @@ const register = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
-        error: 'Dados inválidos',
-        details: errors.array()
+        error: "Dados inválidos",
+        details: errors.array(),
       });
     }
 
-    const { name, email, password, cpf, birthDate, phone, address, workplaceId } = req.body;
+    const {
+      name,
+      email,
+      password,
+      cpf,
+      birthDate,
+      phone,
+      address,
+      workplaceId,
+    } = req.body;
 
     // Verificar se o email já existe
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
       return res.status(409).json({
-        error: 'Email já está em uso'
+        error: "Email já está em uso",
       });
     }
 
     // Verificar se o CPF já existe (se fornecido)
     if (cpf) {
       const existingCpf = await prisma.user.findUnique({
-        where: { cpf }
+        where: { cpf },
       });
 
       if (existingCpf) {
         return res.status(409).json({
-          error: 'CPF já está em uso'
+          error: "CPF já está em uso",
         });
       }
     }
@@ -77,19 +76,25 @@ const register = async (req, res) => {
     // Verificar se a localidade existe (se fornecida)
     if (workplaceId) {
       const workplace = await prisma.workplace.findUnique({
-        where: { id: workplaceId }
+        where: { id: workplaceId },
       });
 
       if (!workplace) {
         return res.status(404).json({
-          error: 'Localidade de trabalho não encontrada'
+          error: "Localidade de trabalho não encontrada",
         });
       }
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'A foto de perfil é obrigatória.' });
     }
 
     // Hash da senha
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const photoUrl = `/uploads/profiles/${req.file.filename}`;
 
     // Criar usuário
     const user = await prisma.user.create({
@@ -102,6 +107,7 @@ const register = async (req, res) => {
         phone: phone || null,
         address: address || null,
         workplaceId: workplaceId || null,
+        photoUrl: photoUrl,
       },
       select: {
         id: true,
@@ -109,18 +115,18 @@ const register = async (req, res) => {
         email: true,
         role: true,
         createdAt: true,
-      }
+        photoUrl: true,
+      },
     });
 
     res.status(201).json({
-      message: 'Usuário registrado com sucesso',
-      user
+      message: "Usuário registrado com sucesso",
+      user,
     });
-
   } catch (error) {
-    console.error('Erro no registro:', error);
+    console.error("Erro no registro:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -132,8 +138,8 @@ const login = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
-        error: 'Dados inválidos',
-        details: errors.array()
+        error: "Dados inválidos",
+        details: errors.array(),
       });
     }
 
@@ -141,12 +147,12 @@ const login = async (req, res) => {
 
     // Buscar usuário
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
       return res.status(401).json({
-        error: 'Credenciais inválidas'
+        error: "Credenciais inválidas",
       });
     }
 
@@ -155,7 +161,7 @@ const login = async (req, res) => {
 
     if (!passwordMatch) {
       return res.status(401).json({
-        error: 'Credenciais inválidas'
+        error: "Credenciais inválidas",
       });
     }
 
@@ -166,15 +172,14 @@ const login = async (req, res) => {
     const { password: _, ...userWithoutPassword } = user;
 
     res.json({
-      message: 'Login realizado com sucesso',
+      message: "Login realizado com sucesso",
       token,
-      user: userWithoutPassword
+      user: userWithoutPassword,
     });
-
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error("Erro no login:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -196,21 +201,20 @@ const getProfile = async (req, res) => {
         role: true,
         createdAt: true,
         updatedAt: true,
-      }
+      },
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
     }
 
     res.json(user);
-
   } catch (error) {
-    console.error('Erro ao obter perfil:', error);
+    console.error("Erro ao obter perfil:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -222,4 +226,3 @@ module.exports = {
   registerValidation,
   loginValidation,
 };
-

@@ -1,0 +1,45 @@
+/* src/Auth.css */
+
+.auth-container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: hidden;
+
+  /* Cor de fundo principal (dark) */
+  background-color: #0D1117; 
+}
+
+/* Efeito de fundo com formas abstratas */
+.auth-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.15) 0%, transparent 30%),
+    radial-gradient(circle at 80% 70%, rgba(22, 163, 74, 0.1) 0%, transparent 30%);
+  animation: auth-background-pan 15s linear infinite;
+  z-index: 0;
+}
+
+@keyframes auth-background-pan {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Garante que o conteúdo do formulário fique sobre o fundo */
+.auth-card-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}

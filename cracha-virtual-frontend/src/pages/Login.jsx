@@ -1,69 +1,65 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.jsx';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { CreditCard, Eye, EyeOff, Loader2 } from 'lucide-react';
-import '../App.css';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import Logo from "../assets/logo-prof-presente-white.svg"; // Importe o seu logo
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-
+    setError("");
     const result = await login(formData);
-
     if (result.success) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     } else {
       setError(result.error);
     }
-
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="w-full max-w-md">
+    <div className="auth-container">
+      <div className="auth-card-container max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
-            <CreditCard className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Crachás Virtuais
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Sistema de gestão de eventos e check-ins
+          <img
+            src={Logo}
+            alt="Prof Presente Logo"
+            className="w-48 mx-auto mb-4"
+          />
+          <p className="text-gray-400">
+            Gestão de presença para formações de professores.
           </p>
         </div>
 
-        <Card>
+        <Card className="bg-card/80 backdrop-blur-sm border-white/10">
           <CardHeader>
-            <CardTitle>Entrar na sua conta</CardTitle>
+            <CardTitle>Acesse sua conta</CardTitle>
             <CardDescription>
-              Digite suas credenciais para acessar o sistema
+              Use suas credenciais para entrar no sistema.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -93,7 +89,7 @@ const Login = () => {
                   <Input
                     id="password"
                     name="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Sua senha"
                     value={formData.password}
                     onChange={handleChange}
@@ -123,7 +119,7 @@ const Login = () => {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Não tem uma conta?{' '}
+                Não tem uma conta?{" "}
                 <Link
                   to="/register"
                   className="font-medium text-primary hover:underline"
@@ -136,8 +132,8 @@ const Login = () => {
         </Card>
 
         <div className="mt-8 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            © 2024 Sistema de Crachás Virtuais. Todos os direitos reservados.
+          <p className="text-xs text-gray-500">
+            © 2025 Prof Presente | Todos os direitos reservados.
           </p>
         </div>
       </div>
@@ -146,4 +142,3 @@ const Login = () => {
 };
 
 export default Login;
-
