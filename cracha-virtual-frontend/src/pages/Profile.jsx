@@ -86,14 +86,15 @@ const Profile = () => {
   });
 
   const { data: enrollmentsData } = useQuery({
-    queryKey: ['my-enrollments-stats', user?.id],
-    queryFn: () => api.get('/enrollments/my-enrollments?limit=1').then(res => res.data),
+    queryKey: ["my-enrollments-stats", user?.id],
+    queryFn: () =>
+      api.get("/enrollments/my-enrollments?limit=1").then((res) => res.data),
     enabled: !!user?.id,
   });
 
   const { data: checkinsData } = useQuery({
-    queryKey: ['my-checkins-stats', user?.id],
-    queryFn: () => api.get('/checkins/my?limit=1').then(res => res.data),
+    queryKey: ["my-checkins-stats", user?.id],
+    queryFn: () => api.get("/checkins/my?limit=1").then((res) => res.data),
     enabled: !!user?.id,
   });
 
@@ -104,8 +105,9 @@ const Profile = () => {
   });
 
   const { data: awardsData } = useQuery({
-    queryKey: ['my-awards-stats', user?.id],
-    queryFn: () => api.get(`/awards/users/${user.id}?limit=1`).then(res => res.data),
+    queryKey: ["my-awards-stats", user?.id],
+    queryFn: () =>
+      api.get(`/awards/users/${user.id}?limit=1`).then((res) => res.data),
     enabled: !!user?.id,
   });
 
@@ -406,14 +408,16 @@ const Profile = () => {
                   Carregando crachá...
                 </div>
               ) : userBadge && userData ? (
-                <UniversalBadge user={userData} badge={userBadge} />
+                <UniversalBadge
+                  user={userData}
+                  badge={userBadge}
+                  awards={userAwards}
+                />
               ) : (
                 <div className="text-center text-red-500">
                   Não foi possível carregar os dados do crachá.
                 </div>
               )}
-
-              
             </CardContent>
           </Card>
           <Card>
@@ -421,21 +425,27 @@ const Profile = () => {
               <CardTitle>Resumo da sua Atividade</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
-                    <Calendar className="h-8 w-8 mb-2 text-blue-500"/>
-                    <p className="text-2xl font-bold">{enrollmentsData?.pagination?.total || 0}</p>
-                    <p className="text-sm text-gray-600">Inscrições</p>
-                </div>
-                <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
-                    <CheckCircle className="h-8 w-8 mb-2 text-green-500"/>
-                    <p className="text-2xl font-bold">{checkinsData?.pagination?.total || 0}</p>
-                    <p className="text-sm text-gray-600">Check-ins</p>
-                </div>
-                <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
-                    <Award className="h-8 w-8 mb-2 text-yellow-500"/>
-                    <p className="text-2xl font-bold">{awardsData?.pagination?.total || 0}</p>
-                    <p className="text-sm text-gray-600">Insígnias</p>
-                </div>
+              <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
+                <Calendar className="h-8 w-8 mb-2 text-blue-500" />
+                <p className="text-2xl font-bold">
+                  {enrollmentsData?.pagination?.total || 0}
+                </p>
+                <p className="text-sm text-gray-600">Inscrições</p>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
+                <CheckCircle className="h-8 w-8 mb-2 text-green-500" />
+                <p className="text-2xl font-bold">
+                  {checkinsData?.pagination?.total || 0}
+                </p>
+                <p className="text-sm text-gray-600">Check-ins</p>
+              </div>
+              <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
+                <Award className="h-8 w-8 mb-2 text-yellow-500" />
+                <p className="text-2xl font-bold">
+                  {awardsData?.pagination?.total || 0}
+                </p>
+                <p className="text-sm text-gray-600">Insígnias</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

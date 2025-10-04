@@ -7,6 +7,8 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+
 // Componente para um ícone de logo genérico
 const LogoPlaceholder = () => (
   <svg
@@ -34,7 +36,7 @@ const LogoPlaceholder = () => (
   </svg>
 );
 
-const UniversalBadge = ({ user, badge }) => {
+const UniversalBadge = ({ user, badge, awards = [] }) => {
   const badgeRef = useRef(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
@@ -80,6 +82,8 @@ const UniversalBadge = ({ user, badge }) => {
     return <p>Carregando dados do crachá...</p>;
   }
 
+  const latestAwards = Array.isArray(awards) ? awards.slice(0, 5) : [];
+
   return (
     <div className="flex flex-col items-center gap-6">
       {/* Componente visual do crachá */}
@@ -88,21 +92,46 @@ const UniversalBadge = ({ user, badge }) => {
         className={`relative w-[320px] h-[512px] rounded-2xl shadow-lg overflow-hidden text-white
                    ${
                      isPrinting
-                       ? "bg-gray-900" // Cor sólida simples para o html2canvas
-                       : "bg-gradient-to-br from-gray-800 via-gray-900 to-black" // Gradiente para visualização
+                       ? "bg-gray-900" // Cor sólida simples que o html2canvas entende
+                       : "bg-gradient-to-br from-gray-800 via-gray-900 to-black" // Gradiente visualmente atraente
                    }`}
       >
         <div className="relative z-10 flex flex-col items-center justify-between h-full p-6">
           {/* SEÇÃO SUPERIOR: Logo e Título */}
-          <div className="flex items-center text-left w-full">
+          <div className="flex items-center justify-between w-full">
             <LogoPlaceholder />
+            {latestAwards.length > 0 && (
+              <div className="flex justify-center gap-2">
+                {latestAwards.map(({ award }) => (
+                  <img
+                    key={award.id}
+                    src={`${API_BASE_URL}${award.imageUrl}`}
+                    alt={award.name}
+                    title={award.name}
+                    className="h-8 w-8 p-1 rounded-full border-2 border-white/50"
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* SEÇÃO CENTRAL: Foto e Nome */}
           <div className="flex flex-col items-center text-center mt-2">
-            <Avatar className="w-24 h-24 border-2 border-white/80 shadow-lg mb-1">
-              <AvatarImage src={user.photoUrl || ""} alt={user.name} />
-              <AvatarFallback className="text-3xl bg-gray-700">
+            <Avatar
+              className={`w-24 h-24 border-2 border-white/80 mb-1 ${
+                isPrinting ? "shadow-none" : "shadow-lg" // Remove a sombra durante a impressão
+              }`}
+            >
+              <AvatarImage
+                src={user.photoUrl || ""}
+                alt={user.name}
+                crossOrigin="anonymous"
+              />
+              <AvatarFallback
+                className={`text-3xl ${
+                  isPrinting ? "bg-[#374151]" : "bg-gray-700"
+                }`} // #374151 é o código hexadecimal para 'gray-700'
+              >
                 {user.name
                   ?.split(" ")
                   .map((n) => n[0])
@@ -127,7 +156,11 @@ const UniversalBadge = ({ user, badge }) => {
               })}
               viewBox={`0 0 256 256`}
             />
-            <p className="mt-2 font-mono text-sm font-bold text-gray-800 tracking-wider">
+            <p
+              className={`mt-2 font-mono text-sm font-bold tracking-wider ${
+                isPrinting ? "text-[#1f2937]" : "text-gray-800"
+              }`} // #1f2937 é o código hexadecimal para 'gray-800'
+            >
               {badge.badgeCode}
             </p>
           </div>
