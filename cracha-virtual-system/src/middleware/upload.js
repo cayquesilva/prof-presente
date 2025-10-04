@@ -118,10 +118,32 @@ const uploadBadgeTemplate = multer({
   limits: { fileSize: 1024 * 1024 * 5 }, // Limite de 5MB
 }).single("badgeTemplate"); // 'badgeTemplate' é o nome do campo no formulário
 
+// NOVA CONFIGURAÇÃO: Armazenamento para imagens de insígnias
+const insigniaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/insignias'; // Salvará em uma pasta dedicada
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    cb(null, `insignia-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+// NOVO: Middleware de upload para a imagem da insígnia
+const uploadInsignia = multer({
+  storage: insigniaStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 1024 * 1024 * 2 } // Limite de 2MB por imagem
+}).single('imageUrl'); // 'imageUrl' será o nome do campo no formulário de upload
+
+
 module.exports = {
   upload,
   uploadProfilePhoto,
   uploadEventImage,
   handleUploadError,
   uploadBadgeTemplate,
+  uploadInsignia,
 };

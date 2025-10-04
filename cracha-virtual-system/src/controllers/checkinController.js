@@ -1,5 +1,6 @@
 // ALTERAÇÃO: Este controller foi massivamente simplificado para usar apenas o crachá universal.
 const { prisma } = require("../config/database");
+const { checkAndGrantAutomaticAwards } = require("./awardController");
 
 // Função principal para realizar o check-in.
 const performCheckin = async (req, res) => {
@@ -90,12 +91,10 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
     });
 
     if (!enrollment) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Usuário não está inscrito ou a inscrição não foi aprovada para este evento",
-        });
+      return res.status(400).json({
+        error:
+          "Usuário não está inscrito ou a inscrição não foi aprovada para este evento",
+      });
     }
 
     // Verifica se o evento está em andamento.
@@ -143,6 +142,8 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
         },
       },
     });
+
+    checkAndGrantAutomaticAwards(userId);
 
     res.status(201).json({
       message: "Check-in realizado com sucesso",

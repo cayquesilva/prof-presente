@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "../hooks/useAuth";
-import api from "../lib/api";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -12,34 +10,53 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
-import { Alert, AlertDescription } from "../components/ui/alert";
 import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Download,
-  FileJson,
-  Database,
-  Shield,
-  CreditCard,
-  QrCode as QrCodeIcon,
-  Award,
-} from "lucide-react";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 import { toast } from "sonner";
+import api from "../lib/api";
+// NOVO: Importa os ícones para as estatísticas
+import {
+  Users,
+  CheckCircle,
+  Star,
+  Download,
+  AlertTriangle,
+  Trash2,
+  Award,
+  Calendar,
+} from "lucide-react";
+// Importa o novo componente de crachá
+import UniversalBadge from "../components/UniversalBadge";
+import { useAuth } from "../hooks/useAuth"; // NOVO: Para deslogar o usuário após exclusão
+
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
 const Profile = () => {
+  const queryClient = useQueryClient();
+  const { logout } = useAuth(); // NOVO: Pega a função de logout do hook de autenticação
   const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
   const [isExporting, setIsExporting] = useState(false);
 
-  const { data: userData } = useQuery({
+  // Busca os dados do perfil do usuário
+  const { data: userData, isLoading: isUserLoading } = useQuery({
     queryKey: ["user-profile", user?.id],
     queryFn: async () => {
       const response = await api.get(`/users/${user.id}`);
@@ -48,27 +65,83 @@ const Profile = () => {
     enabled: !!user?.id,
   });
 
-  const { data: userBadge } = useQuery({
-    // ALTERAÇÃO: Renomeado de user-badge para my-badge para consistência com a URL.
+  // NOVO: Query para buscar as premiações (insígnias) do usuário
+  const { data: userAwards, isLoading: areAwardsLoading } = useQuery({
+    queryKey: ["user-awards", userData?.id],
+    queryFn: async () => {
+      const response = await api.get(`/awards/users/${userData.id}`);
+      // A API retorna o objeto userAwards, que tem a premiação dentro de `award`
+      return response.data.userAwards;
+    },
+    enabled: !!userData?.id, // A query só roda quando o ID do usuário estiver disponível
+  });
+
+  // Busca o crachá universal do usuário
+  const { data: userBadge, isLoading: isBadgeLoading } = useQuery({
     queryKey: ["my-badge"],
     queryFn: async () => {
-      // ALTERAÇÃO: A URL agora é /badges/my-badge.
       const response = await api.get("/badges/my-badge");
       return response.data;
     },
   });
 
+  const { data: enrollmentsData } = useQuery({
+    queryKey: ['my-enrollments-stats', user?.id],
+    queryFn: () => api.get('/enrollments/my-enrollments?limit=1').then(res => res.data),
+    enabled: !!user?.id,
+  });
+
+  const { data: checkinsData } = useQuery({
+    queryKey: ['my-checkins-stats', user?.id],
+    queryFn: () => api.get('/checkins/my?limit=1').then(res => res.data),
+    enabled: !!user?.id,
+  });
+
+  const { data: evaluationsData } = useQuery({
+    queryKey: ["my-evaluations-stats"],
+    queryFn: () => api.get("/evaluations/my"),
+    enabled: !!userData,
+  });
+
+  const { data: awardsData } = useQuery({
+    queryKey: ['my-awards-stats', user?.id],
+    queryFn: () => api.get(`/awards/users/${user.id}?limit=1`).then(res => res.data),
+    enabled: !!user?.id,
+  });
+
+  // Popula o formulário quando os dados do usuário são carregados
+  useEffect(() => {
+    if (userData) {
+      setFormData({
+        name: userData.name || "",
+        email: userData.email || "",
+        phone: userData.phone || "",
+        address: userData.address || "",
+      });
+    }
+  }, [userData]);
+
+  const updateUserMutation = useMutation({
+    mutationFn: (updatedData) => api.put(`/users/${userData.id}`, updatedData),
+    onSuccess: () => {
+      toast.success("Perfil atualizado com sucesso!");
+      queryClient.invalidateQueries(["profile"]);
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao atualizar perfil");
+    },
+  });
+
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    updateUserMutation.mutate(formData);
+  };
+
   const exportUserData = async () => {
     setIsExporting(true);
+    toast.info("Exportando seus dados...");
     try {
-      const [enrollments, userBadgeData, evaluations, checkins] =
-        await Promise.all([
-          api.get("/enrollments/my-enrollments"), // Usando rota correta
-          api.get("/badges/my-badge"),
-          api.get("/evaluations/my"),
-          api.get("/checkins/my"),
-        ]);
-
       const exportData = {
         exportDate: new Date().toISOString(),
         user: {
@@ -81,375 +154,362 @@ const Profile = () => {
           createdAt: userData.createdAt,
         },
         statistics: {
-          totalEnrollments: enrollments.data.enrollments?.length || 0,
-          totalEvaluations: evaluations.data.length,
-          totalCheckins: checkins.data.checkins?.length || 0,
+          totalEnrollments: enrollmentsData?.pagination?.total || 0,
+          totalCheckins: checkinsData?.pagination?.total || 0,
+          totalEvaluations: evaluationsData?.length || 0,
         },
-        userBadge: userBadgeData.data, // Adiciona o crachá universal aos dados
-        enrollments: enrollments.data.enrollments || [],
-        evaluations: evaluations.data,
-        checkins: checkins.data.checkins || [],
+        userBadge: userBadge || null,
+        enrollments: enrollmentsData?.enrollments || [],
+        evaluations: evaluationsData || [],
+        checkins: checkinsData?.checkins || [],
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: "application/json",
       });
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `meus-dados-${
-        new Date().toISOString().split("T")[0]
-      }.json`;
+      link.download = `dados_usuario_${userData.name.replace(
+        /\s+/g,
+        "_"
+      )}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
+      URL.revokeObjectURL(url);
       toast.success("Dados exportados com sucesso!");
     } catch (error) {
       console.error("Erro ao exportar dados:", error);
-      toast.error("Erro ao exportar dados");
+      toast.error("Ocorreu um erro ao exportar seus dados.");
     } finally {
       setIsExporting(false);
     }
   };
 
-  if (!userData) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
+  // NOVO: Mutação para deletar a conta do usuário
+  const deleteUserMutation = useMutation({
+    mutationFn: () => api.delete(`/users/${userData.id}`),
+    onSuccess: () => {
+      toast.success("Sua conta foi excluída com sucesso.");
+      logout(); // Desloga o usuário e redireciona para a home/login
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao excluir a conta.");
+    },
+  });
+
+  // NOVO: Função para confirmar e deletar a conta
+  const handleDeleteAccount = () => {
+    if (
+      window.confirm(
+        "ATENÇÃO: Esta ação é irreversível. Você tem certeza que deseja excluir sua conta e todos os seus dados?"
+      )
+    ) {
+      deleteUserMutation.mutate();
+    }
+  };
+
+  if (isUserLoading) {
+    return <div className="p-6">Carregando perfil...</div>;
   }
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Meu Perfil</h1>
-        <p className="text-gray-600">
-          Gerencie suas informações pessoais e dados da conta
-        </p>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-4">
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={userData.photoUrl} alt={userData.name} />
+            <AvatarFallback className="text-2xl">
+              {userData.name
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <CardTitle className="text-2xl">{userData.name}</CardTitle>
+            <CardDescription>{userData.email}</CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList>
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Perfil
-          </TabsTrigger>
-          <TabsTrigger value="badge">
-            <CreditCard className="h-4 w-4 mr-2" />
-            Meu Crachá
-          </TabsTrigger>
-          <TabsTrigger value="data">
-            <Database className="h-4 w-4 mr-2" />
-            Meus Dados
-          </TabsTrigger>
-          <TabsTrigger value="privacy">
-            <Shield className="h-4 w-4 mr-2" />
-            Privacidade
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="profile">Perfil</TabsTrigger>
+          <TabsTrigger value="badge">Meu Crachá</TabsTrigger>
+          <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="profile" className="space-y-6">
+        <TabsContent value="profile" className="space-y-3">
           <Card>
             <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
+              <CardTitle>Informações do Perfil</CardTitle>
               <CardDescription>
-                Suas informações básicas cadastradas no sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo</Label>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <Input
-                      id="name"
-                      value={userData.name}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <Input
-                      id="email"
-                      value={userData.email}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <Input
-                    id="cpf"
-                    value={userData.cpf}
-                    disabled
-                    className="bg-gray-50"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <Input
-                      id="phone"
-                      value={userData.phone || "Não informado"}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address">Endereço</Label>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  <Input
-                    id="address"
-                    value={userData.address || "Não informado"}
-                    disabled
-                    className="bg-gray-50"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label>Membro desde</Label>
-                <p className="text-sm text-gray-600">
-                  {new Date(userData.createdAt).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="badge" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Meu Crachá Universal</CardTitle>
-              <CardDescription>
-                Use este crachá para fazer check-in em qualquer evento que você
-                esteja inscrito
+                Visualize ou edite suas informações pessoais.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {userBadge ? (
-                <div className="space-y-6">
-                  {/* Código do Crachá */}
-                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-lg border-2 border-blue-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          Código do Crachá
-                        </p>
-                        <p className="text-3xl font-bold font-mono text-blue-900">
-                          {userBadge.badgeCode}
-                        </p>
-                      </div>
-                      <CreditCard className="h-12 w-12 text-blue-600" />
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      Use este código para fazer check-in manualmente em
-                      qualquer evento
-                    </p>
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      disabled={!isEditing}
+                    />
                   </div>
-
-                  {/* QR Code */}
-                  <div className="flex flex-col items-center">
-                    <div className="bg-white p-6 rounded-xl border-2 border-gray-200 shadow-sm">
-                      <img
-                        src={`${
-                          import.meta.env.VITE_API_URL?.replace("/api", "") ||
-                          "http://localhost:3000"
-                        }${userBadge.qrCodeUrl}`}
-                        alt="QR Code do Crachá"
-                        className="w-64 h-64"
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                          e.target.parentElement.innerHTML =
-                            '<p class="text-gray-500">QR Code não disponível</p>';
-                        }}
-                      />
-                    </div>
-                    <div className="mt-4 text-center">
-                      <p className="text-sm text-gray-600 flex items-center gap-2 justify-center">
-                        <QrCodeIcon className="h-4 w-4" />
-                        Apresente este QR Code na entrada dos eventos
-                      </p>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                      disabled={!isEditing}
+                    />
                   </div>
-
-                  {/* Estatísticas */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <Award className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
-                          <p className="text-2xl font-bold">
-                            {userBadge._count?.userCheckins || 0}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Check-ins Realizados
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <CreditCard className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                          <p className="text-2xl font-bold">
-                            {new Date(userBadge.issuedAt).toLocaleDateString(
-                              "pt-BR"
-                            )}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Data de Emissão
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      disabled={!isEditing}
+                    />
                   </div>
-
-                  {/* Informações */}
-                  <Alert>
-                    <Shield className="h-4 w-4" />
-                    <AlertDescription>
-                      Seu crachá é único e pessoal. Não compartilhe seu código
-                      ou QR code com outras pessoas. Este crachá pode ser usado
-                      em qualquer evento que você esteja inscrito e aprovado.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      disabled={!isEditing}
+                    />
+                  </div>
                 </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  {isEditing ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsEditing(false)}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={updateUserMutation.isPending}
+                      >
+                        {updateUserMutation.isPending
+                          ? "Salvando..."
+                          : "Salvar Alterações"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button type="button" onClick={() => setIsEditing(true)}>
+                      Editar Perfil
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="h-5 w-5 mr-2" />
+                Minhas Insígnias
+              </CardTitle>
+              <CardDescription>
+                Suas conquistas e premiações por participação nos eventos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {areAwardsLoading ? (
+                <p className="text-sm text-gray-500">Carregando insígnias...</p>
+              ) : userAwards && userAwards.length > 0 ? (
+                <TooltipProvider delayDuration={100}>
+                  <div className="flex flex-wrap gap-4">
+                    {userAwards.map(({ award, awardedAt }) => (
+                      <Tooltip key={award.id}>
+                        <TooltipTrigger asChild>
+                          <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-110">
+                            <Avatar className="h-16 w-16 border-2 border-yellow-400">
+                              <AvatarImage
+                                src={
+                                  award.imageUrl
+                                    ? `${API_BASE_URL}${award.imageUrl}`
+                                    : ""
+                                }
+                                alt={award.name}
+                                className="object-contain p-2"
+                              />
+                              <AvatarFallback>
+                                <Award />
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs font-medium text-center w-20 truncate">
+                              {award.name}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="max-w-xs p-1">
+                            <p className="font-bold text-base">{award.name}</p>
+                            <p className="text-sm text-gray-600 mb-2">
+                              {award.description}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Conquistada em:{" "}
+                              {new Date(awardedAt).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </TooltipProvider>
               ) : (
-                <div className="text-center py-8">
-                  <CreditCard className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-500">Carregando crachá...</p>
-                </div>
+                <p className="text-sm text-gray-500">
+                  Você ainda não conquistou nenhuma insígnia. Participe dos
+                  eventos para ganhar!
+                </p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
-
-        <TabsContent value="data" className="space-y-6">
+        <TabsContent value="badge">
           <Card>
             <CardHeader>
-              <CardTitle>Exportar Meus Dados</CardTitle>
+              <CardTitle>Meu Crachá Universal</CardTitle>
               <CardDescription>
-                Baixe uma cópia completa de todos os seus dados armazenados no
-                sistema
+                Use este crachá para fazer check-in em todos os eventos. Você
+                pode salvá-lo como PDF para impressão.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <FileJson className="h-4 w-4" />
-                <AlertDescription>
-                  O arquivo exportado conterá todas as suas informações
-                  pessoais, inscrições, crachás, avaliações e check-ins em
-                  formato JSON.
-                </AlertDescription>
-              </Alert>
+            <CardContent className="flex flex-col items-center gap-8 p-6">
+              {isBadgeLoading ? (
+                <div className="text-center text-gray-500">
+                  Carregando crachá...
+                </div>
+              ) : userBadge && userData ? (
+                <UniversalBadge user={userData} badge={userBadge} />
+              ) : (
+                <div className="text-center text-red-500">
+                  Não foi possível carregar os dados do crachá.
+                </div>
+              )}
 
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm">O que será exportado:</h4>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Informações pessoais (nome, email, CPF, telefone, endereço)
+              
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumo da sua Atividade</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
+                    <Calendar className="h-8 w-8 mb-2 text-blue-500"/>
+                    <p className="text-2xl font-bold">{enrollmentsData?.pagination?.total || 0}</p>
+                    <p className="text-sm text-gray-600">Inscrições</p>
+                </div>
+                <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
+                    <CheckCircle className="h-8 w-8 mb-2 text-green-500"/>
+                    <p className="text-2xl font-bold">{checkinsData?.pagination?.total || 0}</p>
+                    <p className="text-sm text-gray-600">Check-ins</p>
+                </div>
+                <div className="flex flex-col items-center justify-center p-4 border rounded-lg text-center">
+                    <Award className="h-8 w-8 mb-2 text-yellow-500"/>
+                    <p className="text-2xl font-bold">{awardsData?.pagination?.total || 0}</p>
+                    <p className="text-sm text-gray-600">Insígnias</p>
+                </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações e Dados</CardTitle>
+              <CardDescription>
+                Gerencie seus dados e preferências da conta.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* Seção de Direitos do Usuário */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Seus Direitos</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Você tem controle total sobre suas informações em nossa
+                  plataforma. De acordo com a Lei Geral de Proteção de Dados
+                  (LGPD), garantimos os seguintes direitos:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-sm">
+                  <li>
+                    <strong>Acesso e Retificação:</strong> Você pode visualizar
+                    e editar suas informações pessoais a qualquer momento na aba
+                    "Perfil".
                   </li>
-                  <li className="flex items-center gap-2">
-                    <FileJson className="h-4 w-4" />
-                    Histórico de inscrições em eventos
+                  <li>
+                    <strong>Portabilidade de Dados:</strong> Você pode baixar um
+                    arquivo JSON com todos os seus dados, incluindo inscrições,
+                    check-ins e avaliações.
                   </li>
-                  <li className="flex items-center gap-2">
-                    <FileJson className="h-4 w-4" />
-                    Crachás virtuais emitidos
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <FileJson className="h-4 w-4" />
-                    Avaliações de eventos realizadas
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <FileJson className="h-4 w-4" />
-                    Histórico de check-ins
+                  <li>
+                    <strong>Exclusão (Direito ao Esquecimento):</strong> Você
+                    pode solicitar a exclusão permanente da sua conta e de todos
+                    os dados associados.
                   </li>
                 </ul>
               </div>
 
-              <Button
-                onClick={exportUserData}
-                disabled={isExporting}
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Exportando..." : "Exportar Meus Dados"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="privacy" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Privacidade e Segurança</CardTitle>
-              <CardDescription>
-                Configurações de privacidade e informações sobre seus dados
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <Shield className="h-4 w-4" />
-                <AlertDescription>
-                  Seus dados estão protegidos e são usados apenas para o
-                  funcionamento do sistema de crachás virtuais.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-4">
+              {/* Seção de Exportação de Dados */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
-                  <h4 className="font-semibold text-sm mb-2">
-                    Como seus dados são usados:
-                  </h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li>• Identificação em eventos</li>
-                    <li>• Geração de crachás virtuais</li>
-                    <li>• Registro de check-ins</li>
-                    <li>• Comunicações sobre eventos</li>
-                    <li>• Análises estatísticas (anonimizadas)</li>
-                  </ul>
+                  <h4 className="font-semibold">Exportar Meus Dados</h4>
+                  <p className="text-sm text-gray-500">
+                    Baixe um arquivo JSON com todas as suas informações.
+                  </p>
                 </div>
+                <Button onClick={exportUserData} disabled={isExporting}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {isExporting ? "Exportando..." : "Exportar"}
+                </Button>
+              </div>
 
-                <Separator />
-
-                <div>
-                  <h4 className="font-semibold text-sm mb-2">Seus direitos:</h4>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li>• Exportar seus dados a qualquer momento</li>
-                    <li>• Solicitar correção de dados incorretos</li>
-                    <li>• Solicitar exclusão da sua conta</li>
-                    <li>• Revogar consentimentos</li>
-                  </ul>
-                </div>
+              {/* Seção de Exclusão de Conta */}
+              <div className="p-4 border border-destructive/50 rounded-lg bg-destructive/5">
+                <h4 className="flex items-center font-semibold text-destructive">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Zona de Perigo
+                </h4>
+                <p className="text-sm text-gray-600 mt-2 mb-4">
+                  A exclusão da sua conta é uma ação permanente e não pode ser
+                  desfeita. Todos os seus dados, incluindo histórico de eventos
+                  e certificados, serão removidos.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteUserMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleteUserMutation.isPending
+                    ? "Excluindo..."
+                    : "Excluir minha conta permanentemente"}
+                </Button>
               </div>
             </CardContent>
           </Card>

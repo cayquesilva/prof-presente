@@ -50,6 +50,7 @@ import {
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
 import BadgePreview from "../components/BadgePreview";
+import AwardManagement from "../components/AwardManagement";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
@@ -367,6 +368,10 @@ const Admin = () => {
           <TabsTrigger value="users">
             <Users className="h-4 w-4 mr-2" />
             Usuários
+          </TabsTrigger>
+          <TabsTrigger value="awards">
+            <Award className="h-4 w-4 mr-2" />
+            Premiações
           </TabsTrigger>
         </TabsList>
 
@@ -815,6 +820,10 @@ const Admin = () => {
 
         <TabsContent value="users" className="space-y-4">
           <UserManagement />
+        </TabsContent>
+
+        <TabsContent value="awards" className="space-y-4">
+          <AwardManagement />
         </TabsContent>
       </Tabs>
     </div>
