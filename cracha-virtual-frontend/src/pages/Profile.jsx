@@ -155,12 +155,15 @@ const Profile = () => {
       }),
     onSuccess: (data) => {
       toast.success("Foto de perfil atualizada com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
-      const newPhotoUrl = data.user?.photoUrl;
-      if (newPhotoUrl) {
-        // Passamos apenas o campo que mudou. A função no hook se encarrega de mesclar.
-        updateAuthUser({ photoUrl: newPhotoUrl });
+      const updatedUser = data.data.user;
+
+      // ATUALIZAÇÃO GLOBAL: Notifica o useAuth sobre a nova foto
+      if (updatedUser?.photoUrl) {
+        updateAuthUser({ photoUrl: updatedUser.photoUrl });
       }
+
+      // Invalida a query para recarregar os dados apenas nesta página
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
 
       setPhotoFile(null);
     },
