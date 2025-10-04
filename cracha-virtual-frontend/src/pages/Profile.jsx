@@ -153,18 +153,22 @@ const Profile = () => {
       api.post(`/users/${user.id}/photo`, photoFormData, {
         headers: { "Content-Type": "multipart/form-data" },
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Foto de perfil atualizada com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
-      const updatedUser = { ...userData, photoUrl: photoPreview }; // Supondo que a resposta seja { user: { ... } }
-      const fullNewUser = { ...user, photoUrl: updatedUser.photoUrl };
-      updateAuthUser(fullNewUser);
+      const newPhotoUrl = data.user?.photoUrl;
+      if (newPhotoUrl) {
+        // Passamos apenas o campo que mudou. A função no hook se encarrega de mesclar.
+        updateAuthUser({ photoUrl: newPhotoUrl });
+      }
 
       setPhotoFile(null);
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || "Erro ao atualizar a foto.");
-      setPhotoPreview(userData.photoUrl); // Reverte a preview em caso de erro
+      setPhotoPreview(
+        userData.photoUrl ? `${API_BASE_URL}${userData.photoUrl}` : null
+      );
       setPhotoFile(null);
     },
   });

@@ -7,6 +7,8 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace('/api', '');
+
 // Componente para um ícone de logo genérico
 const LogoPlaceholder = () => (
   <img src="/src/assets/logo-prof-presente-white.svg" className="h-7" />
@@ -99,7 +101,7 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               }`}
             >
               <AvatarImage
-                src={user.photoUrl || ""}
+                src={user.photoUrl ? `${API_BASE_URL}${user.photoUrl}` : ""}
                 alt={user.name}
                 crossOrigin="anonymous"
               />

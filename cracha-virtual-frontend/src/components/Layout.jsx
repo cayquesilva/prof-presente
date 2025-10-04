@@ -30,6 +30,8 @@ import {
   Trophy,
 } from "lucide-react";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+
 const Layout = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
@@ -93,7 +95,10 @@ const Layout = ({ children }) => {
       <div className="px-4 py-4 border-t">
         <div className="flex items-center space-x-3">
           <Avatar className="w-8 h-8">
-            <AvatarImage src={user?.photoUrl} alt={user?.name} />
+            <AvatarImage
+              src={user?.photoUrl ? `${API_BASE_URL}${user.photoUrl}` : ""}
+              alt={user?.name}
+            />
             <AvatarFallback>
               {user?.name
                 ?.split(" ")
@@ -159,7 +164,14 @@ const Layout = ({ children }) => {
                     className="relative h-8 w-8 rounded-full"
                   >
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.photoUrl} alt={user?.name} />
+                      <AvatarImage
+                        src={
+                          user?.photoUrl
+                            ? `${API_BASE_URL}${user.photoUrl}`
+                            : ""
+                        }
+                        alt={user?.name}
+                      />
                       <AvatarFallback>
                         {user?.name
                           ?.split(" ")
