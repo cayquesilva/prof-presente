@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
@@ -35,15 +35,17 @@ import {
   Trash2,
   Award,
   Calendar,
+  Camera,
 } from "lucide-react";
 // Importa o novo componente de crachá
 import UniversalBadge from "../components/UniversalBadge";
 import { useAuth } from "../hooks/useAuth"; // NOVO: Para deslogar o usuário após exclusão
 
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+
 const Profile = () => {
   const queryClient = useQueryClient();
-  const { logout } = useAuth(); // NOVO: Pega a função de logout do hook de autenticação
-  const { user } = useAuth();
+  const { user, logout, updateAuthUser } = useAuth(); // Pega a nova função 'updateAuthUser'
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -52,6 +54,10 @@ const Profile = () => {
     address: "",
   });
   const [isExporting, setIsExporting] = useState(false);
+  // NOVO: Estados para o upload da foto
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Busca os dados do perfil do usuário
   const { data: userData, isLoading: isUserLoading } = useQuery({
@@ -118,6 +124,9 @@ const Profile = () => {
         phone: userData.phone || "",
         address: userData.address || "",
       });
+      setPhotoPreview(
+        userData.photoUrl ? `${API_BASE_URL}${userData.photoUrl}` : null
+      );
     }
   }, [userData]);
 
@@ -136,6 +145,51 @@ const Profile = () => {
   const handleUpdate = (e) => {
     e.preventDefault();
     updateUserMutation.mutate(formData);
+  };
+
+  // NOVO: Mutação para fazer o upload da nova foto de perfil
+  const updatePhotoMutation = useMutation({
+    mutationFn: (photoFormData) =>
+      api.post(`/users/${user.id}/photo`, photoFormData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+    onSuccess: () => {
+      toast.success("Foto de perfil atualizada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+      const updatedUser = { ...userData, photoUrl: photoPreview }; // Supondo que a resposta seja { user: { ... } }
+      const fullNewUser = { ...user, photoUrl: updatedUser.photoUrl };
+      updateAuthUser(fullNewUser);
+
+      setPhotoFile(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao atualizar a foto.");
+      setPhotoPreview(userData.photoUrl); // Reverte a preview em caso de erro
+      setPhotoFile(null);
+    },
+  });
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSavePhoto = () => {
+    if (photoFile) {
+      const formData = new FormData();
+      formData.append("profilePhoto", photoFile); // 'profilePhoto' é o nome que o middleware espera
+      updatePhotoMutation.mutate(formData);
+    }
+  };
+
+  const handleCancelPhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(
+      userData.photoUrl ? `${API_BASE_URL}${userData.photoUrl}` : null
+    );
   };
 
   const exportUserData = async () => {
@@ -218,19 +272,57 @@ const Profile = () => {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center gap-4">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={userData.photoUrl} alt={userData.name} />
-            <AvatarFallback className="text-2xl">
-              {userData.name
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="text-2xl">{userData.name}</CardTitle>
+          <div className="relative group flex-shrink-0">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={photoPreview || ""} alt={userData.name} />
+              <AvatarFallback className="text-3xl">
+                {userData.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => fileInputRef.current.click()}
+              className={`absolute inset-0 bg-black/50 flex items-center justify-center rounded-full transition-opacity
+                         ${
+                           isEditing
+                             ? "opacity-100"
+                             : "opacity-0 group-hover:opacity-100"
+                         }`}
+              title="Alterar foto"
+            >
+              <Camera className="h-8 w-8 text-white" />
+            </button>
+            <Input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handlePhotoChange}
+              accept="image/png, image/jpeg"
+            />
+          </div>
+          <div className="flex-grow text-center sm:text-left">
+            <CardTitle className="text-3xl">{userData.name}</CardTitle>
             <CardDescription>{userData.email}</CardDescription>
+            {/* NOVO: Botões para salvar ou cancelar a edição da foto */}
+            {photoFile && (
+              <div className="flex justify-center sm:justify-start gap-2 mt-4">
+                <Button
+                  size="sm"
+                  onClick={handleSavePhoto}
+                  disabled={updatePhotoMutation.isPending}
+                >
+                  {updatePhotoMutation.isPending
+                    ? "Salvando..."
+                    : "Salvar Foto"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCancelPhoto}>
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
       </Card>

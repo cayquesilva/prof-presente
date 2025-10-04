@@ -1,13 +1,25 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import { authAPI } from '../lib/api';
-import { saveAuthData, getUserData, isAuthenticated, clearAuthData } from '../lib/auth';
+import { useState, useEffect, createContext, useContext } from "react";
+import { authAPI } from "../lib/api";
+import {
+  saveAuthData,
+  getUserData,
+  isAuthenticated,
+  clearAuthData,
+} from "../lib/auth";
+import api from '../lib/api';
+
 
 // Contexto de autenticação
 const AuthContext = createContext();
 
 // Provider de autenticação
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // Tenta carregar o usuário do localStorage ao iniciar
+    const storedUser = localStorage.getItem("user");
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+
   const [loading, setLoading] = useState(true);
 
   // Verificar autenticação ao carregar
@@ -23,7 +35,7 @@ export const AuthProvider = ({ children }) => {
             const response = await authAPI.getProfile();
             setUser(response.data);
           } catch (error) {
-            console.error('Erro ao obter perfil:', error);
+            console.error("Erro ao obter perfil:", error);
             clearAuthData();
           }
         }
@@ -37,18 +49,17 @@ export const AuthProvider = ({ children }) => {
   // Função de login
   const login = async (credentials) => {
     try {
-      const response = await authAPI.login(credentials);
-      const { token, user } = response.data;
-      
-      saveAuthData(token, user);
-      setUser(user);
-      
-      return { success: true, user };
+      const response = await api.post("/auth/login", credentials);
+      const { user: loggedInUser, token } = response.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+      setUser(loggedInUser);
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      return { success: true };
     } catch (error) {
-      console.error('Erro no login:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Erro ao fazer login' 
+      return {
+        success: false,
+        error: error.response?.data?.error || "Erro de login",
       };
     }
   };
@@ -59,19 +70,21 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.register(userData);
       return { success: true, user: response.data.user };
     } catch (error) {
-      console.error('Erro no registro:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Erro ao registrar usuário' 
+      console.error("Erro no registro:", error);
+      return {
+        success: false,
+        error: error.response?.data?.error || "Erro ao registrar usuário",
       };
     }
   };
 
   // Função de logout
   const logout = () => {
-    clearAuthData();
     setUser(null);
-    window.location.href = '/login';
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    delete api.defaults.headers.common['Authorization'];
+    window.location.href = '/login'; // Força o redirecionamento
   };
 
   // Atualizar dados do usuário
@@ -79,6 +92,11 @@ export const AuthProvider = ({ children }) => {
     const updatedUser = { ...user, ...newUserData };
     setUser(updatedUser);
     saveAuthData(getUserData()?.token, updatedUser);
+  };
+
+  const updateAuthUser = (newUserData) => {
+    setUser(newUserData);
+    localStorage.setItem('user', JSON.stringify(newUserData));
   };
 
   const value = {
@@ -89,22 +107,18 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'ADMIN',
+    isAdmin: user?.role === "ADMIN",
+    updateAuthUser,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 // Hook para usar o contexto de autenticação
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
   }
   return context;
 };
-

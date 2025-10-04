@@ -2,108 +2,16 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Configuração de armazenamento
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    let uploadPath = "uploads/";
+// --- FUNÇÕES AUXILIARES (DEFINIDAS UMA VEZ) ---
 
-    // Definir subpasta baseada no tipo de upload
-    if (file.fieldname === "photo" || file.fieldname === "profilePhoto") {
-      uploadPath += "profiles/";
-    } else if (file.fieldname === "eventImage") {
-      uploadPath += "events/";
-    } else {
-      uploadPath += "misc/";
-    }
-
-    // Criar diretório se não existir
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    // Gerar nome único para o arquivo
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const extension = path.extname(file.originalname);
-    cb(null, file.fieldname + "-" + uniqueSuffix + extension);
-  },
-});
-
-// Filtro de arquivos (apenas imagens)
-const fileFilter = (req, file, cb) => {
-  // Verificar se é uma imagem
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Apenas arquivos de imagem são permitidos"), false);
-  }
-};
-
-// Configuração do multer
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB por padrão
-  },
-});
-
-// Middleware para tratar erros de upload
-const handleUploadError = (error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({
-        error: "Arquivo muito grande. Tamanho máximo permitido: 5MB",
-      });
-    } else if (error.code === "LIMIT_FILE_COUNT") {
-      return res.status(400).json({
-        error: "Muitos arquivos enviados",
-      });
-    } else if (error.code === "LIMIT_UNEXPECTED_FILE") {
-      return res.status(400).json({
-        error: "Campo de arquivo inesperado",
-      });
-    }
-  } else if (error) {
-    return res.status(400).json({
-      error: error.message,
-    });
-  }
-
-  next();
-};
-
-// Middleware específicos para diferentes tipos de upload
-const uploadProfilePhoto = upload.single("photo");
-const uploadEventImage = upload.single("eventImage");
-
-// Função para garantir que o diretório de uploads exista
+// Garante que um diretório exista, senão o cria.
 const ensureDirectoryExists = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 };
 
-// Configuração de armazenamento para templates de crachá
-const badgeTemplateStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = "uploads/badge-templates";
-    ensureDirectoryExists(dir);
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    // Ex: event-template-{eventId}-{timestamp}.png
-    const uniqueSuffix = `${req.params.id}-${Date.now()}`;
-    cb(
-      null,
-      `event-template-${uniqueSuffix}${path.extname(file.originalname)}`
-    );
-  },
-});
-
-// Filtro de arquivo para aceitar apenas imagens
+// Filtra arquivos para aceitar apenas imagens.
 const imageFileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
@@ -112,38 +20,96 @@ const imageFileFilter = (req, file, cb) => {
   }
 };
 
-const uploadBadgeTemplate = multer({
-  storage: badgeTemplateStorage,
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 1024 * 1024 * 5 }, // Limite de 5MB
-}).single("badgeTemplate"); // 'badgeTemplate' é o nome do campo no formulário
-
-// NOVA CONFIGURAÇÃO: Armazenamento para imagens de insígnias
-const insigniaStorage = multer.diskStorage({
+// --- CONFIGURAÇÃO PARA FOTOS DE PERFIL ---
+const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = 'uploads/insignias'; // Salvará em uma pasta dedicada
+    const dir = "uploads/profiles";
     ensureDirectoryExists(dir);
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    cb(null, `insignia-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
+    // Usa o ID do usuário (se logado) para um nome mais descritivo
+    const userId = req.user?.id || "new-user";
+    const uniqueSuffix = `${userId}-${Date.now()}`;
+    cb(null, `profile-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
 });
 
-// NOVO: Middleware de upload para a imagem da insígnia
+// CORREÇÃO: O nome do campo agora é 'profilePhoto', correspondendo ao frontend.
+const uploadProfilePhoto = multer({
+  storage: profileStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 1024 * 1024 * 5 }, // 5MB
+}).single("profilePhoto");
+
+// --- CONFIGURAÇÃO PARA TEMPLATES DE CRACHÁ DE EVENTO ---
+const badgeTemplateStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/badge-templates";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${req.params.id}-${Date.now()}`;
+    cb(
+      null,
+      `event-template-${uniqueSuffix}${path.extname(file.originalname)}`
+    );
+  },
+});
+
+const uploadBadgeTemplate = multer({
+  storage: badgeTemplateStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 1024 * 1024 * 5 },
+}).single("badgeTemplate");
+
+// --- CONFIGURAÇÃO PARA IMAGENS DE INSÍGNIAS (PREMIAÇÕES) ---
+const insigniaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/insignias";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `insignia-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
 const uploadInsignia = multer({
   storage: insigniaStorage,
   fileFilter: imageFileFilter,
-  limits: { fileSize: 1024 * 1024 * 2 } // Limite de 2MB por imagem
-}).single('imageUrl'); // 'imageUrl' será o nome do campo no formulário de upload
+  limits: { fileSize: 1024 * 1024 * 2 }, // 2MB
+}).single("imageUrl");
 
+// REMOVIDO: A configuração genérica 'storage' e 'upload' foi removida
+// para evitar confusão e bugs, favorecendo as configurações específicas acima.
+
+// MANTIDO: O middleware de tratamento de erros é útil.
+const handleUploadError = (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ error: "Arquivo muito grande." });
+    }
+    if (error.code === "LIMIT_UNEXPECTED_FILE") {
+      // Mensagem mais clara para o usuário final
+      return res
+        .status(400)
+        .json({
+          error:
+            "Ocorreu um erro com o campo do arquivo. Verifique o nome do campo.",
+        });
+    }
+  } else if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+  next();
+};
 
 module.exports = {
-  upload,
   uploadProfilePhoto,
-  uploadEventImage,
-  handleUploadError,
   uploadBadgeTemplate,
   uploadInsignia,
+  handleUploadError,
 };

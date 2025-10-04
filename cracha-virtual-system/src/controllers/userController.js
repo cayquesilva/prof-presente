@@ -1,27 +1,27 @@
-const bcrypt = require('bcryptjs');
-const { body, validationResult } = require('express-validator');
-const { prisma } = require('../config/database');
+const bcrypt = require("bcryptjs");
+const { body, validationResult } = require("express-validator");
+const { prisma } = require("../config/database");
 
 // Validações para atualização de usuário
 const updateUserValidation = [
-  body('name')
+  body("name")
     .optional()
     .trim()
     .isLength({ min: 2, max: 255 })
-    .withMessage('Nome deve ter entre 2 e 255 caracteres'),
-  body('email')
+    .withMessage("Nome deve ter entre 2 e 255 caracteres"),
+  body("email")
     .optional()
     .isEmail()
     .normalizeEmail()
-    .withMessage('Email inválido'),
-  body('cpf')
+    .withMessage("Email inválido"),
+  body("cpf")
     .optional()
     .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
-    .withMessage('CPF deve estar no formato XXX.XXX.XXX-XX'),
-  body('birthDate')
+    .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
+  body("birthDate")
     .optional()
     .isISO8601()
-    .withMessage('Data de nascimento inválida'),
+    .withMessage("Data de nascimento inválida"),
 ];
 
 // Listar todos os usuários (apenas admin)
@@ -30,12 +30,14 @@ const getAllUsers = async (req, res) => {
     const { page = 1, limit = 10, search } = req.query;
     const skip = (page - 1) * limit;
 
-    const where = search ? {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ]
-    } : {};
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
 
     const users = await prisma.user.findMany({
       where,
@@ -49,12 +51,12 @@ const getAllUsers = async (req, res) => {
         _count: {
           select: {
             enrollments: true,
-          }
-        }
+          },
+        },
       },
       skip: parseInt(skip),
       take: parseInt(limit),
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     const total = await prisma.user.count({ where });
@@ -65,14 +67,13 @@ const getAllUsers = async (req, res) => {
         page: parseInt(page),
         limit: parseInt(limit),
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     });
-
   } catch (error) {
-    console.error('Erro ao listar usuários:', error);
+    console.error("Erro ao listar usuários:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -100,23 +101,22 @@ const getUserById = async (req, res) => {
           select: {
             enrollments: true,
             userAwards: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
     }
 
     res.json(user);
-
   } catch (error) {
-    console.error('Erro ao obter usuário:', error);
+    console.error("Erro ao obter usuário:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -128,8 +128,8 @@ const updateUser = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
-        error: 'Dados inválidos',
-        details: errors.array()
+        error: "Dados inválidos",
+        details: errors.array(),
       });
     }
 
@@ -138,24 +138,24 @@ const updateUser = async (req, res) => {
 
     // Verificar se o usuário existe
     const existingUser = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingUser) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
     }
 
     // Verificar se o email já está em uso por outro usuário
     if (email && email !== existingUser.email) {
       const emailExists = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
       });
 
       if (emailExists) {
         return res.status(409).json({
-          error: 'Email já está em uso'
+          error: "Email já está em uso",
         });
       }
     }
@@ -163,12 +163,12 @@ const updateUser = async (req, res) => {
     // Verificar se o CPF já está em uso por outro usuário
     if (cpf && cpf !== existingUser.cpf) {
       const cpfExists = await prisma.user.findUnique({
-        where: { cpf }
+        where: { cpf },
       });
 
       if (cpfExists) {
         return res.status(409).json({
-          error: 'CPF já está em uso'
+          error: "CPF já está em uso",
         });
       }
     }
@@ -203,18 +203,17 @@ const updateUser = async (req, res) => {
         photoUrl: true,
         role: true,
         updatedAt: true,
-      }
+      },
     });
 
     res.json({
-      message: 'Usuário atualizado com sucesso',
-      user: updatedUser
+      message: "Usuário atualizado com sucesso",
+      user: updatedUser,
     });
-
   } catch (error) {
-    console.error('Erro ao atualizar usuário:', error);
+    console.error("Erro ao atualizar usuário:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -226,28 +225,27 @@ const deleteUser = async (req, res) => {
 
     // Verificar se o usuário existe
     const user = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
     }
 
     // Deletar usuário (cascade irá deletar relacionamentos)
     await prisma.user.delete({
-      where: { id }
+      where: { id },
     });
 
     res.json({
-      message: 'Usuário deletado com sucesso'
+      message: "Usuário deletado com sucesso",
     });
-
   } catch (error) {
-    console.error('Erro ao deletar usuário:', error);
+    console.error("Erro ao deletar usuário:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -256,36 +254,24 @@ const deleteUser = async (req, res) => {
 const updateProfilePhoto = async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!req.file) {
-      return res.status(400).json({
-        error: 'Nenhuma imagem foi enviada'
-      });
-    }
-
-    // Construir URL da foto
     const photoUrl = `/uploads/profiles/${req.file.filename}`;
 
-    // Atualizar usuário com nova foto
     const updatedUser = await prisma.user.update({
       where: { id },
       data: { photoUrl },
-      select: {
-        id: true,
-        name: true,
-        photoUrl: true,
-      }
     });
+
+    // Remova a senha antes de enviar a resposta
+    const { password, ...userWithoutPassword } = updatedUser;
 
     res.json({
-      message: 'Foto do perfil atualizada com sucesso',
-      photoUrl: updatedUser.photoUrl
+      message: "Foto do perfil atualizada com sucesso",
+      user: userWithoutPassword, // Envie o usuário atualizado de volta
     });
-
   } catch (error) {
-    console.error('Erro ao atualizar foto do perfil:', error);
+    console.error("Erro ao atualizar foto do perfil:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -297,21 +283,27 @@ const updateUserRole = async (req, res) => {
     const { role } = req.body;
 
     // Validar role
-    const validRoles = ['ADMIN', 'ORGANIZER', 'CHECKIN_COORDINATOR', 'TEACHER', 'USER'];
+    const validRoles = [
+      "ADMIN",
+      "ORGANIZER",
+      "CHECKIN_COORDINATOR",
+      "TEACHER",
+      "USER",
+    ];
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({
-        error: 'Role inválido. Valores permitidos: ' + validRoles.join(', ')
+        error: "Role inválido. Valores permitidos: " + validRoles.join(", "),
       });
     }
 
     // Verificar se o usuário existe
     const user = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
     }
 
@@ -324,18 +316,17 @@ const updateUserRole = async (req, res) => {
         name: true,
         email: true,
         role: true,
-      }
+      },
     });
 
     res.json({
-      message: 'Role do usuário atualizado com sucesso',
-      user: updatedUser
+      message: "Role do usuário atualizado com sucesso",
+      user: updatedUser,
     });
-
   } catch (error) {
-    console.error('Erro ao atualizar role do usuário:', error);
+    console.error("Erro ao atualizar role do usuário:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -348,39 +339,38 @@ const resetUserPassword = async (req, res) => {
 
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({
-        error: 'Nova senha deve ter pelo menos 6 caracteres'
+        error: "Nova senha deve ter pelo menos 6 caracteres",
       });
     }
 
     // Verificar se o usuário existe
     const user = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: "Usuário não encontrado",
       });
     }
 
     // Hash da nova senha
-    const bcrypt = require('bcryptjs');
+    const bcrypt = require("bcryptjs");
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Atualizar senha
     await prisma.user.update({
       where: { id },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword },
     });
 
     res.json({
-      message: 'Senha redefinida com sucesso'
+      message: "Senha redefinida com sucesso",
     });
-
   } catch (error) {
-    console.error('Erro ao redefinir senha:', error);
+    console.error("Erro ao redefinir senha:", error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: "Erro interno do servidor",
     });
   }
 };
@@ -395,4 +385,3 @@ module.exports = {
   updateUserRole,
   resetUserPassword,
 };
-
