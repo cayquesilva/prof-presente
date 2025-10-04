@@ -24,9 +24,9 @@ async function main() {
     console.log("🧹 Limpando dados existentes...");
 
     await prisma.courseEvaluation.deleteMany();
-    await prisma.checkin.deleteMany();
+    await prisma.userCheckin.deleteMany();
     await prisma.userAward.deleteMany();
-    await prisma.badge.deleteMany();
+    await prisma.userBadge.deleteMany();
     await prisma.enrollment.deleteMany();
     await prisma.award.deleteMany();
     await prisma.event.deleteMany();
