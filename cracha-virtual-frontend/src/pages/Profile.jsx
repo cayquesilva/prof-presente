@@ -40,8 +40,6 @@ import {
 import UniversalBadge from "../components/UniversalBadge";
 import { useAuth } from "../hooks/useAuth"; // NOVO: Para deslogar o usuário após exclusão
 
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
-
 const Profile = () => {
   const queryClient = useQueryClient();
   const { logout } = useAuth(); // NOVO: Pega a função de logout do hook de autenticação
@@ -351,19 +349,15 @@ const Profile = () => {
                           <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-110">
                             <Avatar className="h-16 w-16 border-2 border-yellow-400">
                               <AvatarImage
-                                src={
-                                  award.imageUrl
-                                    ? `${API_BASE_URL}${award.imageUrl}`
-                                    : ""
-                                }
+                                src={award.imageUrl ? `${award.imageUrl}` : ""}
                                 alt={award.name}
-                                className="object-contain p-2"
+                                className="object-contain "
                               />
                               <AvatarFallback>
                                 <Award />
                               </AvatarFallback>
                             </Avatar>
-                            <span className="text-xs font-medium text-center w-20 truncate">
+                            <span className="text-xs font-medium text-center w-20">
                               {award.name}
                             </span>
                           </div>

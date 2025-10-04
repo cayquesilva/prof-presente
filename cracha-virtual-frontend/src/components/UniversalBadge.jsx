@@ -7,33 +7,9 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
-
 // Componente para um ícone de logo genérico
 const LogoPlaceholder = () => (
-  <svg
-    width="32"
-    height="32"
-    viewBox="0 0 100 100"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M50 0L100 28.87V86.6L50 115.47L0 86.6V28.87L50 0Z"
-      fill="rgba(255,255,255,0.1)"
-    />
-    <path
-      d="M50 14.43L85.57 35.58V77.87L50 99.02L14.43 77.87V35.58L50 14.43Z"
-      stroke="rgba(255,255,255,0.5)"
-      strokeWidth="3"
-    />
-    <path
-      d="M2.9 30.5L50 58.3L97.1 30.5"
-      stroke="rgba(255,255,255,0.5)"
-      strokeWidth="3"
-    />
-    <path d="M50 112.5V58.3" stroke="rgba(255,255,255,0.5)" strokeWidth="3" />
-  </svg>
+  <img src="/src/assets/logo-prof-presente-white.svg" className="h-7" />
 );
 
 const UniversalBadge = ({ user, badge, awards = [] }) => {
@@ -105,10 +81,10 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
                 {latestAwards.map(({ award }) => (
                   <img
                     key={award.id}
-                    src={`${API_BASE_URL}${award.imageUrl}`}
+                    src={`${award.imageUrl}`}
                     alt={award.name}
                     title={award.name}
-                    className="h-8 w-8 p-1 rounded-full border-2 border-white/50"
+                    className="h-7 w-7 rounded-full border-1 border-white/50"
                   />
                 ))}
               </div>

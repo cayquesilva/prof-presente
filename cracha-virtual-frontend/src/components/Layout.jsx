@@ -61,10 +61,11 @@ const Layout = ({ children }) => {
     <div className="flex flex-col h-full">
       <div className="flex items-center px-6 py-4 border-b">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <CreditCard className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-semibold">Prof Presente</span>
+          <img
+            src="/src/assets/logo-prof-presente.svg"
+            alt="Logo"
+            className="h-10"
+          />
         </div>
       </div>
 

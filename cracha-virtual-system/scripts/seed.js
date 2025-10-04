@@ -160,26 +160,31 @@ async function main() {
         name: "Primeiro Check-in",
         description: "Parabéns pelo seu primeiro check-in no sistema!",
         criteria: "Realizar o primeiro check-in em qualquer evento",
+        imageUrl: "/insignias/primeiro-checkin.svg",
       },
       {
         name: "Participante Assíduo",
         description: "Você é um participante dedicado!",
         criteria: "Realizar check-in em 3 eventos diferentes",
+        imageUrl: "/insignias/participante-assiduo.svg",
       },
       {
         name: "Frequentador VIP",
         description: "Sua presença é sempre marcante!",
         criteria: "Realizar 5 check-ins ou mais",
+        imageUrl: "/insignias/frequentador-vip.svg",
       },
       {
         name: "Expert em Tecnologia",
         description: "Especialista em eventos de tecnologia",
         criteria: "Participar de 5 eventos de tecnologia",
+        imageUrl: "/insignias/expert-tecnologia.svg",
       },
       {
         name: "Networking Master",
         description: "Mestre em networking e conexões",
         criteria: "Realizar 10 check-ins ou mais",
+        imageUrl: "/insignias/networking-master.svg",
       },
     ];
 
