@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.jsx";
 import { Button } from "../components/ui/button";
@@ -19,14 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Camera, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Logo from "../assets/logo-prof-presente-white.svg"; // Importe o seu logo
 import api from "../lib/api";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar.jsx";
+
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -46,12 +42,6 @@ const Register = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [workplaces, setWorkplaces] = useState([]);
-
-  // NOVO: Estados para o arquivo da foto e a pré-visualização
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const fileInputRef = useRef(null); // Ref para o input de arquivo
-
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -92,10 +82,6 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    if (!photoFile) {
-      setError("Por favor, anexe uma foto para o seu perfil.");
-      return false;
-    }
     if (formData.password !== formData.confirmPassword) {
       setError("As senhas não coincidem");
       return false;
@@ -109,15 +95,6 @@ const Register = () => {
       return false;
     }
     return true;
-  };
-
-  // NOVO: Função para lidar com a seleção do arquivo de foto
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -137,9 +114,6 @@ const Register = () => {
       if (key !== "confirmPassword") {
         submissionData.append(key, formData[key]);
       }
-    }
-    if (photoFile) {
-      submissionData.append("profilePhoto", photoFile); // O nome 'profilePhoto' deve ser o mesmo esperado pelo middleware
     }
 
     const result = await register(submissionData); // O hook register agora recebe um FormData
@@ -186,29 +160,6 @@ const Register = () => {
                   <AlertDescription>{success}</AlertDescription>
                 </Alert>
               )}
-
-              <div className="flex flex-col items-center space-y-4">
-                <Label>Foto de Crachá *</Label>
-                <Avatar
-                  className="w-24 h-24 cursor-pointer"
-                  onClick={() => fileInputRef.current.click()}
-                >
-                  <AvatarImage src={photoPreview} />
-                  <AvatarFallback className="bg-secondary">
-                    <Camera className="h-8 w-8 text-secondary-foreground" />
-                  </AvatarFallback>
-                </Avatar>
-                <Input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handlePhotoChange}
-                  accept="image/png, image/jpeg"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Clique no ícone para enviar uma foto
-                </p>
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">

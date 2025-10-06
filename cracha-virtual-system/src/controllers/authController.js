@@ -86,15 +86,9 @@ const register = async (req, res) => {
       }
     }
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'A foto de perfil é obrigatória.' });
-    }
-
     // Hash da senha
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const photoUrl = `/uploads/profiles/${req.file.filename}`;
 
     // Criar usuário
     const user = await prisma.user.create({
@@ -107,7 +101,7 @@ const register = async (req, res) => {
         phone: phone || null,
         address: address || null,
         workplaceId: workplaceId || null,
-        photoUrl: photoUrl,
+        photoUrl: null,
       },
       select: {
         id: true,

@@ -1,23 +1,22 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const { 
-  register, 
-  login, 
+const {
+  register,
+  login,
   getProfile,
   registerValidation,
-  loginValidation 
-} = require('../controllers/authController');
+  loginValidation,
+} = require("../controllers/authController");
 
-const { authenticateToken } = require('../middleware/auth');
-const { uploadProfilePhoto } = require('../middleware/upload');
+const { authenticateToken } = require("../middleware/auth");
+const { uploadProfilePhoto } = require("../middleware/upload");
 
 // Rotas públicas
-router.post('/register', uploadProfilePhoto, registerValidation, register);
-router.post('/login', loginValidation, login);
+router.post("/register", uploadProfilePhoto, registerValidation, register);
+router.post("/login", loginValidation, login);
 
 // Rotas protegidas
-router.get('/profile', authenticateToken, getProfile);
+router.get("/profile", authenticateToken, getProfile);
 
 module.exports = router;
-

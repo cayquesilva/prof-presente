@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from "react";
-import api from '../lib/api'; // Simplificado, assumindo que authAPI é o mesmo que api
+import api from "../lib/api"; // Simplificado, assumindo que authAPI é o mesmo que api
 
 // Contexto de autenticação
 const AuthContext = createContext();
@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token && user) {
         // Define o header para requisições futuras
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -22,15 +22,15 @@ export const AuthProvider = ({ children }) => {
         // Se tem token mas não tem usuário, busca no perfil
         try {
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          const response = await api.get('/auth/profile');
+          const response = await api.get("/auth/profile");
           setUser(response.data);
-          localStorage.setItem('user', JSON.stringify(response.data));
+          localStorage.setItem("user", JSON.stringify(response.data));
         } catch (error) {
           console.error("Token inválido, limpando autenticação:", error);
           // Limpa se o token for inválido
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          delete api.defaults.headers.common['Authorization'];
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          delete api.defaults.headers.common["Authorization"];
         }
       }
       setLoading(false);
@@ -48,7 +48,10 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.error || "Erro de login" };
+      return {
+        success: false,
+        error: error.response?.data?.error || "Erro de login",
+      };
     }
   };
 
@@ -57,17 +60,20 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post("/auth/register", userData); // Assumindo que a rota é /auth/register
       return { success: true, user: response.data.user };
     } catch (error) {
-      console.error("Erro no registro:", error);
-      return { success: false, error: error.response?.data?.error || "Erro ao registrar usuário" };
+      console.error("Erro no registro:", error.response?.data);
+      return {
+        success: false,
+        error: error.response?.data?.error || "Erro ao registrar usuário",
+      };
     }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    delete api.defaults.headers.common['Authorization'];
-    window.location.href = '/login';
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    delete api.defaults.headers.common["Authorization"];
+    window.location.href = "/login";
   };
 
   // --- FUNÇÃO DE ATUALIZAÇÃO UNIFICADA E APRIMORADA ---
@@ -75,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     // Mescla os dados do usuário atual com os novos dados recebidos
     const updatedUser = { ...user, ...newUserData };
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem("user", JSON.stringify(updatedUser));
   };
 
   const value = {
