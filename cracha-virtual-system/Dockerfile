@@ -30,10 +30,6 @@ FROM node:18-alpine
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Cria um usuário não-root para rodar a aplicação (mais seguro)
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
-
 # Copia apenas o necessário do estágio de 'builder'
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -41,10 +37,6 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/server.js ./server.js
 COPY --from=builder /app/scripts ./scripts
-
-
-# REMOVIDO: A linha 'RUN mkdir -p uploads/...' foi removida.
-# A pasta 'uploads' será criada e gerenciada pelo Volume do Docker.
 
 # Expõe a porta que a aplicação usa
 EXPOSE 3000

@@ -40,8 +40,7 @@ import {
 // Importa o novo componente de crachá
 import UniversalBadge from "../components/UniversalBadge";
 import { useAuth } from "../hooks/useAuth"; // NOVO: Para deslogar o usuário após exclusão
-
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+import { getAssetUrl } from "../lib/utils"; // NOVO: Para resolver a URL da imagem
 
 const Profile = () => {
   const queryClient = useQueryClient();
@@ -124,9 +123,7 @@ const Profile = () => {
         phone: userData.phone || "",
         address: userData.address || "",
       });
-      setPhotoPreview(
-        userData.photoUrl ? `${API_BASE_URL}${userData.photoUrl}` : null
-      );
+      setPhotoPreview(getAssetUrl(userData.photoUrl));
     }
   }, [userData]);
 
@@ -169,9 +166,7 @@ const Profile = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || "Erro ao atualizar a foto.");
-      setPhotoPreview(
-        userData.photoUrl ? `${API_BASE_URL}${userData.photoUrl}` : null
-      );
+      setPhotoPreview(getAssetUrl(userData.photoUrl));
       setPhotoFile(null);
     },
   });
@@ -194,9 +189,7 @@ const Profile = () => {
 
   const handleCancelPhoto = () => {
     setPhotoFile(null);
-    setPhotoPreview(
-      userData.photoUrl ? `${API_BASE_URL}${userData.photoUrl}` : null
-    );
+    setPhotoPreview(getAssetUrl(userData.photoUrl));
   };
 
   const exportUserData = async () => {
@@ -448,7 +441,7 @@ const Profile = () => {
                           <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-110">
                             <Avatar className="h-16 w-16 border-2 border-yellow-400">
                               <AvatarImage
-                                src={award.imageUrl ? `${award.imageUrl}` : ""}
+                                src={getAssetUrl(award.imageUrl)}
                                 alt={award.name}
                                 className="object-contain "
                               />

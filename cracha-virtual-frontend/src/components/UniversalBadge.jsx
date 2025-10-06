@@ -6,13 +6,11 @@ import QRCode from "react-qr-code"; // CORREÇÃO: Importando da nova biblioteca
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace('/api', '');
+import Logo from "../assets/logo-prof-presente-white.svg"; // Importe o seu logo
+import { getAssetUrl } from "../lib/utils"; // NOVO: Importa a função auxiliar
 
 // Componente para um ícone de logo genérico
-const LogoPlaceholder = () => (
-  <img src="/src/assets/logo-prof-presente-white.svg" className="h-7" />
-);
+const LogoPlaceholder = () => <img src={Logo} className="h-7" />;
 
 const UniversalBadge = ({ user, badge, awards = [] }) => {
   const badgeRef = useRef(null);
@@ -83,7 +81,7 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
                 {latestAwards.map(({ award }) => (
                   <img
                     key={award.id}
-                    src={`${award.imageUrl}`}
+                    src={getAssetUrl(award.imageUrl)}
                     alt={award.name}
                     title={award.name}
                     className="h-7 w-7 rounded-full border-1 border-white/50"
@@ -101,7 +99,7 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               }`}
             >
               <AvatarImage
-                src={user.photoUrl ? `${API_BASE_URL}${user.photoUrl}` : ""}
+                src={getAssetUrl(user.photoUrl)}
                 alt={user.name}
                 crossOrigin="anonymous"
               />

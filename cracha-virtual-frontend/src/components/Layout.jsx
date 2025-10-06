@@ -29,8 +29,8 @@ import {
   Shield,
   Trophy,
 } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+import Logo from "../assets/logo-prof-presente.svg"; // Importe o seu logo
+import { getAssetUrl } from "../lib/utils"; // NOVO: Importa a função auxiliar
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
@@ -63,11 +63,7 @@ const Layout = ({ children }) => {
     <div className="flex flex-col h-full">
       <div className="flex items-center px-6 py-4 border-b">
         <div className="flex items-center space-x-2">
-          <img
-            src="/src/assets/logo-prof-presente.svg"
-            alt="Logo"
-            className="h-10"
-          />
+          <img src={Logo} alt="Logo" className="h-10" />
         </div>
       </div>
 
@@ -95,10 +91,7 @@ const Layout = ({ children }) => {
       <div className="px-4 py-4 border-t">
         <div className="flex items-center space-x-3">
           <Avatar className="w-8 h-8">
-            <AvatarImage
-              src={user?.photoUrl ? `${API_BASE_URL}${user.photoUrl}` : ""}
-              alt={user?.name}
-            />
+            <AvatarImage src={getAssetUrl(user?.photoUrl)} alt={user?.name} />
             <AvatarFallback>
               {user?.name
                 ?.split(" ")
@@ -165,11 +158,7 @@ const Layout = ({ children }) => {
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={
-                          user?.photoUrl
-                            ? `${API_BASE_URL}${user.photoUrl}`
-                            : ""
-                        }
+                        src={getAssetUrl(user?.photoUrl)}
                         alt={user?.name}
                       />
                       <AvatarFallback>

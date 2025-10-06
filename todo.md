@@ -148,3 +148,10 @@
 - [ ] 14.1. Gerar novo arquivo ZIP com todas as correções e funcionalidades.
 - [ ] 14.2. Entregar pacote final ao usuário.
 
+### Fase 15: Implementação de Relatórios e Dados para Observação
+- [ ] 15.1. Relatório por evento (lista de frequecia)
+- [ ] 15.2. Relatório por escola
+- [ ] 15.3. Relatório por segmento
+- [ ] 15.2. Relatório por série/ano
+- [ ] 15.4. Relatório por região
+- [ ] 15.4. Relatório por vinculo
