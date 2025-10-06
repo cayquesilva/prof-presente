@@ -14,10 +14,7 @@ connectDatabase();
 // Middleware básico
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? ["https://yourdomain.com"] // Substitua pelo seu domínio em produção
-        : process.env.CORS_ORIGIN || "http://localhost:5173", // Permite qualquer origem em desenvolvimento
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
     credentials: true,
   })
 );

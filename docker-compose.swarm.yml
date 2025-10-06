@@ -1,92 +1,90 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # Banco de dados PostgreSQL
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: cracha_virtual
-      POSTGRES_USER: cracha_user
-      POSTGRES_PASSWORD: cracha123
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - cracha_network
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-
-  # Backend Node.js
+  # Serviço do Backend (API)
   backend:
-    image: seu-usuario/cracha-backend:latest
+    image: cayquesilva/prof-presente-backend:latest
     environment:
-      DATABASE_URL: "postgresql://cracha_user:cracha123@postgres:5432/cracha_virtual"
-      JWT_SECRET: "sua_chave_secreta_super_segura_para_producao"
-      JWT_EXPIRES_IN: "24h"
-      PORT: 3000
-      NODE_ENV: "production"
-      CORS_ORIGIN: "*"
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@prof_presente_db:5432/${POSTGRES_DB}?schema=public
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=${PORT}
+      - NODE_ENV=${NODE_ENV}
+      - CORS_ORIGIN=${CORS_ORIGIN}
     volumes:
       - backend_uploads:/app/uploads
     networks:
-      - cracha_network
-      - traefik_network
-    deploy:
-      replicas: 2
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.cracha-backend.rule=Host(`api.seudominio.com`)"
-        - "traefik.http.routers.cracha-backend.entrypoints=websecure"
-        - "traefik.http.routers.cracha-backend.tls.certresolver=letsencrypt"
-        - "traefik.http.services.cracha-backend.loadbalancer.server.port=3000"
-        - "traefik.docker.network=traefik_network"
+      # Essencial: Conectado a ambas as redes
+      - SimpliSoft
+      - prof-presente-internal
     depends_on:
-      - postgres
+      - prof_presente_db
     command: >
       sh -c "
+        echo 'Aguardando 20 segundos extras para estabilização da rede...' &&
+        sleep 20 &&
+        echo 'Rodando prisma migrade deploy...' &&
         npx prisma migrate deploy &&
+        echo 'Rodando a seed com dados iniciais...' &&
+        npm run db:seed &&
+        echo 'Iniciando container...' &&
         npm start
       "
-
-  # Frontend React
-  frontend:
-    image: seu-usuario/cracha-frontend:latest
-    networks:
-      - traefik_network
     deploy:
-      replicas: 2
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
+      replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.cracha-frontend.rule=Host(`cracha.seudominio.com`)"
-        - "traefik.http.routers.cracha-frontend.entrypoints=websecure"
-        - "traefik.http.routers.cracha-frontend.tls.certresolver=letsencrypt"
-        - "traefik.http.services.cracha-frontend.loadbalancer.server.port=80"
-        - "traefik.docker.network=traefik_network"
+        - "traefik.docker.network=SimpliSoft"
+        - "traefik.http.routers.prof-presente-api.rule=Host(`api.checkin.simplisoft.com.br`)"
+        - "traefik.http.routers.prof-presente-api.entrypoints=websecure"
+        - "traefik.http.routers.prof-presente-api.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.prof-presente-api.loadbalancer.server.port=3000"
+
+  # Serviço do Frontend (React + Nginx)
+  frontend:
+    # ALTERAÇÃO: Aponta para a imagem no Docker Hub e remove a seção 'build'
+    image: cayquesilva/prof-presente-frontend:latest
+    environment:
+      - VITE_API_URL=https://api.checkin.simplisoft.com.br/api
+    networks:
+      - SimpliSoft
     depends_on:
       - backend
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=SimpliSoft"
+        - "traefik.http.routers.prof-presente-app.rule=Host(`checkin.simplisoft.com.br`)"
+        - "traefik.http.routers.prof-presente-app.entrypoints=websecure"
+        - "traefik.http.routers.prof-presente-app.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.prof-presente-app.loadbalancer.server.port=80"
+
+  # Serviço do Banco de Dados (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - prof-presente-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      placement:
+        constraints: [node.role == manager]
 
 volumes:
-  postgres_data:
+  db_data:
   backend_uploads:
 
 networks:
-  cracha_network:
+  prof-presente-internal:
     driver: overlay
-    attachable: true
-  traefik_network:
+  SimpliSoft:
     external: true
-

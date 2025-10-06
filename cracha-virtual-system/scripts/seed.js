@@ -401,7 +401,7 @@ async function main() {
 */
     // Estatísticas finais
     console.log("\n📊 Resumo dos dados criados:");
-    //console.log(`👥 Usuários: ${users.length + 1} (${users.length} usuários + 1 admin)`);
+    console.log(`👥 Usuários: 1 admin)`);
     //console.log(`📅 Eventos: ${events.length}`);
     console.log(`🏆 Premiações: ${awards.length}`);
     //console.log(`📝 Inscrições: ${enrollments.length}`);

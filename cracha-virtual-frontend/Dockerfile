@@ -6,17 +6,16 @@ WORKDIR /app
 
 # Copiar arquivos de dependências
 COPY package*.json ./
-COPY pnpm-lock.yaml* ./
+COPY package-lock.json ./
 
 # Instalar pnpm e dependências
-RUN npm install -g pnpm
-RUN pnpm install --frozen-lockfile
+RUN npm ci --legacy-peer-deps
 
 # Copiar código fonte
 COPY . .
 
 # Build da aplicação
-RUN pnpm run build
+RUN npm run build
 
 # Estágio de produção com Nginx
 FROM nginx:alpine
