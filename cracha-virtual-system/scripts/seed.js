@@ -93,7 +93,7 @@ async function main() {
     }
 
     console.log(`✅ Criados ${users.length + 1} usuários`);
-*/
+
     // Criar eventos
     console.log("📅 Criando eventos...");
 
@@ -150,7 +150,7 @@ async function main() {
     );
     const events = await Promise.all(eventPromises);
     console.log(`✅ Criados ${events.length} eventos`);
-
+*/
     // Criar premiações
     console.log("🏆 Criando premiações...");
 
@@ -402,7 +402,7 @@ async function main() {
     // Estatísticas finais
     console.log("\n📊 Resumo dos dados criados:");
     //console.log(`👥 Usuários: ${users.length + 1} (${users.length} usuários + 1 admin)`);
-    console.log(`📅 Eventos: ${events.length}`);
+    //console.log(`📅 Eventos: ${events.length}`);
     console.log(`🏆 Premiações: ${awards.length}`);
     //console.log(`📝 Inscrições: ${enrollments.length}`);
     //console.log(`🎫 Crachás: ${badges.length}`);
