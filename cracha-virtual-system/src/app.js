@@ -14,7 +14,10 @@ connectDatabase();
 // Middleware básico
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin:
+      process.env.NODE_ENV === "production"
+        ? "https://checkin.simplisoft.com.br" // Sua URL de produção
+        : "http://localhost:5173", // Sua URL de desenvolvimento do frontend
     credentials: true,
   })
 );
