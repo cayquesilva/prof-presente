@@ -223,8 +223,8 @@ const Admin = () => {
       title: event.title,
       description: event.description,
       location: event.location,
-      startDate: new Date(event.startDate).toISOString().slice(0, 16),
-      endDate: new Date(event.endDate).toISOString().slice(0, 16),
+      startDate: event.startDate.slice(0, 16),
+      endDate: event.endDate.slice(0, 16),
       maxAttendees: event.maxAttendees || "",
     });
 
@@ -302,6 +302,7 @@ const Admin = () => {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "UTC",
     });
   };
 
