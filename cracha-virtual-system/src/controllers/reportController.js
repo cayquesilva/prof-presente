@@ -448,7 +448,6 @@ const getWorkplaceReport = async (req, res) => {
     const { workplaceId } = req.params;
     const { startDate, endDate } = req.query;
 
-    // Verificar se a escola existe
     const workplace = await prisma.workplace.findUnique({
       where: { id: workplaceId },
     });
@@ -458,94 +457,80 @@ const getWorkplaceReport = async (req, res) => {
         .json({ error: "Local de trabalho não encontrado" });
     }
 
-    // Definir filtro de data para os check-ins
+    // 1. Buscar todos os usuários da escola
+    const usersInWorkplace = await prisma.user.findMany({
+      where: { workplaces: { some: { id: workplaceId } } },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (usersInWorkplace.length === 0) {
+      // Em vez de retornar uma estrutura diferente, retornamos a estrutura completa com valores vazios/zerados.
+      return res.json({
+        workplace: { id: workplace.id, name: workplace.name },
+        period: {
+          startDate: startDate || "N/A",
+          endDate: endDate || "N/A",
+        },
+        summary: {
+          totalUsers: 0,
+          totalCheckins: 0,
+        },
+        userFrequency: [], // Retorna um array vazio
+        generatedAt: new Date().toISOString(),
+      });
+    }
+    const userIds = usersInWorkplace.map((u) => u.id);
+
+    // 2. Buscar todos os check-ins relevantes para esses usuários
     const dateFilter = {};
     if (startDate) dateFilter.gte = new Date(startDate);
     if (endDate) dateFilter.lte = new Date(endDate);
 
-    // Encontrar todos os usuários daquela escola
-    const usersInWorkplace = await prisma.user.findMany({
+    const checkins = await prisma.userCheckin.findMany({
       where: {
-        workplaces: {
-          some: {
-            id: workplaceId,
-          },
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-    });
-
-    if (usersInWorkplace.length === 0) {
-      return res.json({
-        message: "Nenhum usuário encontrado para esta localidade.",
-        workplace,
-        report: [],
-      });
-    }
-
-    const userIds = usersInWorkplace.map((u) => u.id);
-
-    // Buscar todos os check-ins desses usuários no período
-    const checkins = await prisma.checkin.findMany({
-      where: {
-        badge: {
-          enrollment: {
-            userId: { in: userIds },
-          },
-        },
+        userBadge: { userId: { in: userIds } },
         checkinTime:
           Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       },
-      include: {
-        badge: {
-          include: {
-            enrollment: {
-              include: {
-                user: { select: { id: true, name: true, email: true } },
-                event: { select: { id: true, title: true } },
-              },
-            },
-          },
-        },
+      select: {
+        eventId: true,
+        userBadge: { select: { userId: true } },
       },
     });
 
-    // Agrupar dados para o relatório
-    const userFrequency = usersInWorkplace.map((user) => ({
-      ...user,
-      totalCheckins: 0,
-      events: {},
-    }));
+    // 3. Buscar os detalhes dos eventos a partir dos IDs coletados nos check-ins
+    const eventIds = [...new Set(checkins.map((c) => c.eventId))];
+    const events = await prisma.event.findMany({
+      where: { id: { in: eventIds } },
+      select: { id: true, title: true },
+    });
+    const eventsMap = new Map(events.map((e) => [e.id, e.title]));
 
-    const userMap = new Map(userFrequency.map((u) => [u.id, u]));
+    // 4. Montar o relatório combinando todas as informações
+    const userFrequencyMap = new Map(
+      usersInWorkplace.map((u) => [
+        u.id,
+        { ...u, totalCheckins: 0, events: {} },
+      ])
+    );
 
     checkins.forEach((checkin) => {
-      const userId = checkin.badge.enrollment.user.id;
-      const eventId = checkin.badge.enrollment.event.id;
-      const eventTitle = checkin.badge.enrollment.event.title;
+      const userId = checkin.userBadge.userId;
+      const eventId = checkin.eventId;
+      const userReport = userFrequencyMap.get(userId);
 
-      const userReport = userMap.get(userId);
       if (userReport) {
-        userReport.totalCheckins += 1;
+        userReport.totalCheckins++;
+        const eventTitle = eventsMap.get(eventId) || "Evento Desconhecido";
         if (!userReport.events[eventId]) {
-          userReport.events[eventId] = {
-            title: eventTitle,
-            checkinCount: 0,
-          };
+          userReport.events[eventId] = { title: eventTitle, checkinCount: 0 };
         }
-        userReport.events[eventId].checkinCount += 1;
+        userReport.events[eventId].checkinCount++;
       }
     });
 
     res.json({
-      workplace: {
-        id: workplace.id,
-        name: workplace.name,
-      },
+      workplace: { id: workplace.id, name: workplace.name },
       period: {
         startDate: startDate || "Início",
         endDate: endDate || "Fim",
@@ -554,7 +539,7 @@ const getWorkplaceReport = async (req, res) => {
         totalUsers: usersInWorkplace.length,
         totalCheckins: checkins.length,
       },
-      userFrequency: Array.from(userMap.values()).sort(
+      userFrequency: Array.from(userFrequencyMap.values()).sort(
         (a, b) => b.totalCheckins - a.totalCheckins
       ),
       generatedAt: new Date().toISOString(),

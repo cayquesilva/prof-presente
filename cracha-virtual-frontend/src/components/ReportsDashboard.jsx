@@ -373,65 +373,72 @@ const ReportsDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>
-              Resultados para: {workplaceReportData.workplace.name}
+              Resultados para: {workplaceReportData?.workplace.name}
             </CardTitle>
             <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
               <span>
                 Período:{" "}
                 <strong>
                   {format(
-                    new Date(workplaceReportData.period.startDate),
+                    new Date(workplaceReportData.period?.startDate),
                     "dd/MM/yyyy"
                   )}
                 </strong>{" "}
                 a{" "}
                 <strong>
                   {format(
-                    new Date(workplaceReportData.period.endDate),
+                    new Date(workplaceReportData.period?.endDate),
                     "dd/MM/yyyy"
                   )}
                 </strong>
               </span>
               <span>
                 Total de Usuários na Escola:{" "}
-                <strong>{workplaceReportData.summary.totalUsers}</strong>
+                <strong>{workplaceReportData.summary?.totalUsers}</strong>
               </span>
               <span>
                 Total de Check-ins:{" "}
-                <strong>{workplaceReportData.summary.totalCheckins}</strong>
+                <strong>{workplaceReportData.summary?.totalCheckins}</strong>
               </span>
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Total de Check-ins</TableHead>
-                  <TableHead>Eventos Participados</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workplaceReportData.userFrequency.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{item.totalCheckins}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {Object.values(item.events).map((event, index) => (
-                          <span key={index}>
-                            {event.title}{" "}
-                            <Badge variant="secondary">
-                              {event.checkinCount}x
-                            </Badge>
-                          </span>
-                        ))}
-                      </div>
-                    </TableCell>
+            {workplaceReportData.userFrequency?.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Total de Check-ins</TableHead>
+                    <TableHead>Eventos Participados</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {workplaceReportData.userFrequency.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>{item.totalCheckins}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {Object.values(item.events).map((event, index) => (
+                            <span key={index}>
+                              {event.title}{" "}
+                              <Badge variant="secondary">
+                                {event.checkinCount}x
+                              </Badge>
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum usuário com atividade encontrada para os filtros
+                selecionados.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
