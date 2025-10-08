@@ -30,8 +30,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { cn } from "../lib/utils";
 import { format } from "date-fns";
-import { Loader2, Calendar as CalendarIcon } from "lucide-react";
-
+import { Loader2, Calendar as CalendarIcon, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 const ReportsDashboard = () => {
   // Estados para o Relatório por Evento
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -125,6 +126,54 @@ const ReportsDashboard = () => {
     generateWorkplaceReport(params);
   };
 
+  // NOVO: Função para gerar e baixar o PDF do relatório de evento
+  const handleDownloadEventPdf = () => {
+    if (!eventReportData) {
+      toast.error("Gere um relatório primeiro para poder baixá-lo.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { event, summary, frequencyData } = eventReportData;
+
+    // Título do Documento
+    doc.setFontSize(18);
+    doc.text(`Relatório de Frequência: ${event.title}`, 14, 22);
+
+    // Subtítulo e Informações do Sumário
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    const startDate = format(new Date(event.startDate), "dd/MM/yyyy");
+    doc.text(`Data do Evento: ${startDate}`, 14, 30);
+
+    const summaryText = `Inscritos: ${summary.totalEnrollments} | Presentes: ${summary.usersWithCheckin} | Ausentes: ${summary.usersWithoutCheckin} | Participação: ${summary.attendanceRate}%`;
+    doc.text(summaryText, 14, 36);
+
+    // Definindo as colunas e as linhas para a tabela
+    const tableColumn = ["Participante", "Email", "Check-ins", "Status"];
+    const tableRows = [];
+
+    frequencyData.forEach((item) => {
+      const rowData = [
+        item.user.name,
+        item.user.email,
+        item.checkinCount.toString(),
+        item.hasCheckedIn ? "Presente" : "Ausente",
+      ];
+      tableRows.push(rowData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 42,
+    });
+
+    // Salvando o arquivo
+    const fileName = `Relatorio_${event.title.replace(/\s+/g, "_")}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -172,26 +221,36 @@ const ReportsDashboard = () => {
       {eventReportData && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Resultados para: {eventReportData.event.title}
-            </CardTitle>
-            <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
-              <span>
-                Total de Inscritos:{" "}
-                <strong>{eventReportData.summary.totalEnrollments}</strong>
-              </span>
-              <span>
-                Presentes:{" "}
-                <strong>{eventReportData.summary.usersWithCheckin}</strong>
-              </span>
-              <span>
-                Ausentes:{" "}
-                <strong>{eventReportData.summary.usersWithoutCheckin}</strong>
-              </span>
-              <span>
-                Taxa de Participação:{" "}
-                <Badge>{eventReportData.summary.attendanceRate}%</Badge>
-              </span>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>
+                  Resultados para: {eventReportData.event.title}
+                </CardTitle>
+                <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
+                  <span>
+                    Total de Inscritos:{" "}
+                    <strong>{eventReportData.summary.totalEnrollments}</strong>
+                  </span>
+                  <span>
+                    Presentes:{" "}
+                    <strong>{eventReportData.summary.usersWithCheckin}</strong>
+                  </span>
+                  <span>
+                    Ausentes:{" "}
+                    <strong>
+                      {eventReportData.summary.usersWithoutCheckin}
+                    </strong>
+                  </span>
+                  <span>
+                    Taxa de Participação:{" "}
+                    <Badge>{eventReportData.summary.attendanceRate}%</Badge>
+                  </span>
+                </div>
+              </div>
+              <Button variant="outline" onClick={handleDownloadEventPdf}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
