@@ -19,10 +19,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ChevronsUpDown, X } from "lucide-react";
 import Logo from "../assets/logo-prof-presente-white.svg"; // Importe o seu logo
 import api from "../lib/api";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../components/ui/command";
+import { Badge } from "../components/ui/badge.jsx";
 
+// NOVAS: Opções para os novos selects múltiplos
+const workShiftOptions = [
+  { value: "MANHA", label: "Manhã" },
+  { value: "TARDE", label: "Tarde" },
+  { value: "NOITE", label: "Noite" },
+  { value: "INTEGRAL", label: "Integral" },
+];
+
+const teachingSegmentOptions = [
+  { value: "ADMINISTRATIVO", label: "Administrativo" },
+  { value: "INFANTIL", label: "Ed. Infantil" },
+  { value: "FUNDAMENTAL1", label: "Fundamental I" },
+  { value: "FUNDAMENTAL2", label: "Fundamental II" },
+  { value: "EJA", label: "EJA" },
+];
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -34,7 +63,12 @@ const Register = () => {
     birthDate: "",
     phone: "",
     address: "",
-    workplaceId: "",
+    neighborhood: "", // NOVO
+    professionName: "", // NOVO CAMPO PARA PROFISSÃO DIGITADA
+    workplaceIds: [], // <-- MUDOU para array de IDs
+    workShifts: [], // <-- MUDOU para array
+    contractType: "", // NOVO
+    teachingSegments: [], // <-- MUDOU para array
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -42,16 +76,24 @@ const Register = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [workplaces, setWorkplaces] = useState([]);
+
+  const [selectedWorkplaces, setSelectedWorkplaces] = useState([]);
+  const [openWorkplacePopover, setOpenWorkplacePopover] = useState(false);
+  const [selectedShifts, setSelectedShifts] = useState([]);
+  const [openShiftPopover, setOpenShiftPopover] = useState(false);
+  const [selectedSegments, setSelectedSegments] = useState([]);
+  const [openSegmentPopover, setOpenSegmentPopover] = useState(false);
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchWorkplaces = async () => {
       try {
-        const response = await api.get("/workplaces?limit=100");
+        const response = await api.get("/workplaces?limit=500");
         setWorkplaces(response.data.workplaces || []);
-      } catch (error) {
-        console.error("Erro ao carregar localidades:", error);
+      } catch (err) {
+        console.error("Erro ao carregar localidades:", err);
       }
     };
     fetchWorkplaces();
@@ -78,6 +120,59 @@ const Register = () => {
     setFormData({
       ...formData,
       [e.target.name]: value,
+    });
+  };
+
+  // Função para lidar com a mudança nos Selects
+  const handleSelectChange = (name, value) => {
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleWorkplaceSelect = (workplace) => {
+    const newSelection = [...selectedWorkplaces, workplace];
+    setSelectedWorkplaces(newSelection);
+    setFormData({ ...formData, workplaceIds: newSelection.map((w) => w.id) });
+  };
+
+  const handleWorkplaceRemove = (workplaceToRemove) => {
+    const newSelection = selectedWorkplaces.filter(
+      (w) => w.id !== workplaceToRemove.id
+    );
+    setSelectedWorkplaces(newSelection);
+    setFormData({ ...formData, workplaceIds: newSelection.map((w) => w.id) });
+  };
+
+  // NOVAS Funções para TURNOS
+  const handleShiftSelect = (shift) => {
+    const newSelection = [...selectedShifts, shift];
+    setSelectedShifts(newSelection);
+    setFormData({ ...formData, workShifts: newSelection.map((s) => s.value) });
+  };
+  const handleShiftRemove = (shiftToRemove) => {
+    const newSelection = selectedShifts.filter(
+      (s) => s.value !== shiftToRemove.value
+    );
+    setSelectedShifts(newSelection);
+    setFormData({ ...formData, workShifts: newSelection.map((s) => s.value) });
+  };
+
+  // NOVAS Funções para SEGMENTOS
+  const handleSegmentSelect = (segment) => {
+    const newSelection = [...selectedSegments, segment];
+    setSelectedSegments(newSelection);
+    setFormData({
+      ...formData,
+      teachingSegments: newSelection.map((s) => s.value),
+    });
+  };
+  const handleSegmentRemove = (segmentToRemove) => {
+    const newSelection = selectedSegments.filter(
+      (s) => s.value !== segmentToRemove.value
+    );
+    setSelectedSegments(newSelection);
+    setFormData({
+      ...formData,
+      teachingSegments: newSelection.map((s) => s.value),
     });
   };
 
@@ -108,13 +203,10 @@ const Register = () => {
       return;
     }
 
-    // Constrói um FormData para enviar texto e arquivo juntos
-    const submissionData = new FormData();
-    for (const key in formData) {
-      if (key !== "confirmPassword") {
-        submissionData.append(key, formData[key]);
-      }
-    }
+    // 1. Criamos uma cópia do objeto formData para não alterar o estado original.
+    const submissionData = { ...formData };
+    // 2. Deletamos a propriedade que não será enviada para a API.
+    delete submissionData.confirmPassword;
 
     const result = await register(submissionData); // O hook register agora recebe um FormData
 
@@ -287,39 +379,235 @@ const Register = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
+                  <Label htmlFor="address">Endereço (Rua e Número)</Label>
                   <Input
                     id="address"
                     name="address"
                     type="text"
-                    placeholder="Seu endereço completo"
+                    placeholder="Sua rua e número"
                     value={formData.address}
                     onChange={handleChange}
                   />
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    name="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="professionName">Profissão</Label>
+                  <Input
+                    id="professionName"
+                    name="professionName"
+                    placeholder="Ex: Professor(a), Coordenador(a)"
+                    value={formData.professionName}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="workplaceId">
-                  Localidade de Trabalho (Opcional)
-                </Label>
-                <Select
-                  value={formData.workplaceId}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, workplaceId: value })
-                  }
+                <Label>Unidade(s) Educacional(is)</Label>
+                <Popover
+                  open={openWorkplacePopover}
+                  onOpenChange={setOpenWorkplacePopover}
                 >
-                  <SelectTrigger id="workplaceId">
-                    <SelectValue placeholder="Selecione sua localidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workplaces.map((workplace) => (
-                      <SelectItem key={workplace.id} value={workplace.id}>
-                        {workplace.name} - {workplace.city}/{workplace.state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <PopoverTrigger asChild>
+                    <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                      <div className="flex flex-wrap gap-1">
+                        {selectedWorkplaces.map((w) => (
+                          <Badge key={w.id} variant="secondary">
+                            {w.name}
+                            <button
+                              type="button"
+                              onClick={() => handleWorkplaceRemove(w)}
+                              className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            >
+                              <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Pesquisar unidade..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
+                        <CommandGroup>
+                          {workplaces
+                            .filter(
+                              (w) =>
+                                !selectedWorkplaces.some((s) => s.id === w.id)
+                            )
+                            .map((workplace) => (
+                              <CommandItem
+                                key={workplace.id}
+                                onSelect={() =>
+                                  handleWorkplaceSelect(workplace)
+                                }
+                              >
+                                {workplace.name} - {workplace.city}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Turno(s)</Label>
+                  <Popover
+                    open={openShiftPopover}
+                    onOpenChange={setOpenShiftPopover}
+                  >
+                    <PopoverTrigger asChild>
+                      <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <div className="flex flex-wrap gap-1">
+                          {selectedShifts.length > 0 ? (
+                            selectedShifts.map((shift) => (
+                              <Badge
+                                key={shift.value}
+                                variant="outline"
+                                className="mr-1"
+                              >
+                                {shift.label}
+                                <button
+                                  type="button"
+                                  onClick={() => handleShiftRemove(shift)}
+                                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                >
+                                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                </button>
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Selecione o turno
+                            </span>
+                          )}
+                        </div>
+                        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandList>
+                          <CommandEmpty>Nenhuma opção.</CommandEmpty>
+                          <CommandGroup>
+                            {workShiftOptions
+                              .filter(
+                                (opt) =>
+                                  !selectedShifts.some(
+                                    (s) => s.value === opt.value
+                                  )
+                              )
+                              .map((option) => (
+                                <CommandItem
+                                  key={option.value}
+                                  onSelect={() => handleShiftSelect(option)}
+                                >
+                                  {option.label}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contractType">Vínculo</Label>
+                  <Select
+                    value={formData.contractType}
+                    onValueChange={(value) =>
+                      handleSelectChange("contractType", value)
+                    }
+                  >
+                    <SelectTrigger className="min-h-[40px] w-full">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EFETIVO">Efetivo</SelectItem>
+                      <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Segmento(s) de Ensino</Label>
+                  <Popover
+                    open={openSegmentPopover}
+                    onOpenChange={setOpenSegmentPopover}
+                  >
+                    <PopoverTrigger asChild>
+                      <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <div className="flex flex-wrap gap-1">
+                          {" "}
+                          {selectedSegments.length > 0 ? (
+                            selectedSegments.map((segment) => (
+                              <Badge
+                                key={segment.value}
+                                variant="outline"
+                                className="mr-1"
+                              >
+                                {segment.label}
+                                <button
+                                  type="button"
+                                  onClick={() => handleSegmentRemove(segment)}
+                                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                >
+                                  <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                </button>
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">
+                              Selecione o segmento
+                            </span>
+                          )}
+                        </div>
+                        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                      <Command>
+                        <CommandList>
+                          <CommandEmpty>Nenhuma opção.</CommandEmpty>
+                          <CommandGroup>
+                            {teachingSegmentOptions
+                              .filter(
+                                (opt) =>
+                                  !selectedSegments.some(
+                                    (s) => s.value === opt.value
+                                  )
+                              )
+                              .map((option) => (
+                                <CommandItem
+                                  key={option.value}
+                                  onSelect={() => handleSegmentSelect(option)}
+                                >
+                                  {option.label}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

@@ -46,11 +46,15 @@ import {
   ChartBar as BarChart,
   Upload,
   Printer,
+  Building,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
 import BadgePreview from "../components/BadgePreview";
 import AwardManagement from "../components/AwardManagement";
+import WorkplaceManagement from "../components/WorkplaceManagement";
+import ProfessionManagement from "../components/ProfessionManagement";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
@@ -373,6 +377,14 @@ const Admin = () => {
           <TabsTrigger value="awards">
             <Award className="h-4 w-4 mr-2" />
             Premiações
+          </TabsTrigger>
+          <TabsTrigger value="workplaces">
+            <Building className="h-4 w-4 mr-2" />
+            Localidades
+          </TabsTrigger>
+          <TabsTrigger value="professions">
+            <Briefcase className="h-4 w-4 mr-2" />
+            Profissões
           </TabsTrigger>
         </TabsList>
 
@@ -825,6 +837,14 @@ const Admin = () => {
 
         <TabsContent value="awards" className="space-y-4">
           <AwardManagement />
+        </TabsContent>
+
+        <TabsContent value="workplaces">
+          <WorkplaceManagement />
+        </TabsContent>
+
+        <TabsContent value="professions">
+          <ProfessionManagement />
         </TabsContent>
       </Tabs>
     </div>

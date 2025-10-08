@@ -13,6 +13,7 @@ const evaluationRoutes = require("./evaluations");
 const reportRoutes = require("./reports");
 const workplaceRoutes = require("./workplaces");
 const rankingRoutes = require("./ranking");
+const professionRoutes = require("./professions");
 
 // Configurar rotas
 router.use("/auth", authRoutes);
@@ -26,6 +27,7 @@ router.use("/evaluations", evaluationRoutes);
 router.use("/reports", reportRoutes);
 router.use("/workplaces", workplaceRoutes);
 router.use("/ranking", rankingRoutes);
+router.use("/professions", professionRoutes);
 
 // Rota de status da API
 router.get("/status", (req, res) => {
@@ -55,6 +57,7 @@ router.get("/", (req, res) => {
       reports: "/api/reports",
       workplaces: "/api/workplaces",
       ranking: "/api/ranking",
+      professions: "/api/professions",
     },
   });
 });

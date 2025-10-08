@@ -18,6 +18,25 @@ const registerValidation = [
     .optional()
     .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
     .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
+  body("contractType")
+    .optional()
+    .isIn(["EFETIVO", "PRESTADOR"])
+    .withMessage("Tipo de vínculo inválido"),
+  body("workShifts")
+    .optional()
+    .isArray()
+    .withMessage("Turnos devem ser um array."),
+  body("workShifts.*")
+    .isIn(["MANHA", "TARDE", "NOITE", "INTEGRAL"])
+    .withMessage("Turno inválido."),
+
+  body("teachingSegments")
+    .optional()
+    .isArray()
+    .withMessage("Segmentos de ensino devem ser um array."),
+  body("teachingSegments.*")
+    .isIn(["INFANTIL", "FUNDAMENTAL1", "FUNDAMENTAL2", "EJA", "ADMINISTRATIVO"])
+    .withMessage("Segmento de ensino inválido."),
 ];
 
 // Validações para login
@@ -46,7 +65,12 @@ const register = async (req, res) => {
       birthDate,
       phone,
       address,
-      workplaceId,
+      workplaceIds,
+      neighborhood, // NOVO
+      professionName, // Pode vir como nome
+      workShifts, // NOVO
+      contractType, // NOVO
+      teachingSegments, // NOVO
     } = req.body;
 
     // Verificar se o email já existe
@@ -73,17 +97,23 @@ const register = async (req, res) => {
       }
     }
 
-    // Verificar se a localidade existe (se fornecida)
-    if (workplaceId) {
-      const workplace = await prisma.workplace.findUnique({
-        where: { id: workplaceId },
-      });
+    // LÓGICA PARA MÚLTIPLAS UNIDADES
+    let workplacesConnect = undefined;
+    if (
+      workplaceIds &&
+      Array.isArray(workplaceIds) &&
+      workplaceIds.length > 0
+    ) {
+      workplacesConnect = workplaceIds.map((id) => ({ id }));
+    }
 
-      if (!workplace) {
-        return res.status(404).json({
-          error: "Localidade de trabalho não encontrada",
-        });
-      }
+    // LÓGICA DE PROFISSÃO
+    let professionConnectOrCreate = undefined;
+    if (professionName) {
+      professionConnectOrCreate = {
+        where: { name: professionName.trim() },
+        create: { name: professionName.trim() },
+      };
     }
 
     // Hash da senha
@@ -100,8 +130,17 @@ const register = async (req, res) => {
         birthDate: new Date(birthDate),
         phone: phone || null,
         address: address || null,
-        workplaceId: workplaceId || null,
-        photoUrl: null,
+        neighborhood: neighborhood || null, // NOVO
+        workShifts: workShifts,
+        contractType: contractType || null, // NOVO
+        teachingSegments: teachingSegments,
+        photoUrl: null, // photoUrl será adicionado depois se houver upload
+        profession: professionName
+          ? { connectOrCreate: professionConnectOrCreate }
+          : undefined,
+        workplaces: workplacesConnect
+          ? { connect: workplacesConnect }
+          : undefined,
       },
       select: {
         id: true,
@@ -118,10 +157,14 @@ const register = async (req, res) => {
       user,
     });
   } catch (error) {
+    if (error.code === "P2002") {
+      const field = error.meta.target.join(", ");
+      return res
+        .status(409)
+        .json({ error: `Conflito: O campo '${field}' já está em uso.` });
+    }
     console.error("Erro no registro:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 

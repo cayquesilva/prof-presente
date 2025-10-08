@@ -24,6 +24,25 @@ enum EnrollmentStatus {
   REJECTED
 }
 
+enum WorkShift {
+  MANHA
+  TARDE
+  NOITE
+  INTEGRAL
+}
+
+enum ContractType {
+  EFETIVO
+  PRESTADOR
+}
+
+enum TeachingSegment {
+  INFANTIL
+  FUNDAMENTAL1
+  FUNDAMENTAL2
+  EJA
+}
+
 model User {
   id          String    @id @default(uuid())
   name        String
@@ -35,21 +54,39 @@ model User {
   address     String?
   photoUrl    String?
   role        UserRole  @default(TEACHER)
-  workplaceId String?   @map("workplace_id")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  neighborhood    String?         // Bairro
+  workShifts      WorkShift[]     // <-- ADICIONE ESTA (NO PLURAL)
+  contractType    ContractType?   // Tipo de vínculo
+  teachingSegments TeachingSegment[] // <-- ADICIONE ESTA (NO PLURAL)
+  professionId    String?         @map("profession_id")
 
   // Relacionamentos
   enrollments   Enrollment[]
   userAwards    UserAward[]
   userBadge     UserBadge?
-  workplace     Workplace? @relation(fields: [workplaceId], references: [id], onDelete: SetNull)
+  profession    Profession? @relation(fields: [professionId], references: [id], onDelete: SetNull) // Novo relacionamento
+  workplaces    Workplace[] @relation("UserWorkplaces")
 
   @@index([email])
   @@index([role])
-  @@index([workplaceId])
+  @@index([professionId]) 
   @@index([createdAt])
   @@map("users")
+}
+
+model Profession {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  users User[]
+
+  @@map("professions")
 }
 
 model Event {
@@ -201,7 +238,7 @@ model Workplace {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relacionamentos
-  users User[]
+  users User[] @relation("UserWorkplaces")
 
   @@index([name])
   @@index([city])
