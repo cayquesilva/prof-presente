@@ -5,7 +5,6 @@ import api from "../lib/api";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
@@ -48,6 +47,7 @@ import {
   Printer,
   Building,
   Briefcase,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
@@ -55,6 +55,7 @@ import BadgePreview from "../components/BadgePreview";
 import AwardManagement from "../components/AwardManagement";
 import WorkplaceManagement from "../components/WorkplaceManagement";
 import ProfessionManagement from "../components/ProfessionManagement";
+import ReportsDashboard from "../components/ReportsDashboard";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
@@ -361,7 +362,7 @@ const Admin = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="dashboard">
             <BarChart className="h-4 w-4 mr-2" />
             Dashboard
@@ -385,6 +386,10 @@ const Admin = () => {
           <TabsTrigger value="professions">
             <Briefcase className="h-4 w-4 mr-2" />
             Profissões
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            <FileText className="h-4 w-4 mr-2" />
+            Relatórios
           </TabsTrigger>
         </TabsList>
 
@@ -845,6 +850,10 @@ const Admin = () => {
 
         <TabsContent value="professions">
           <ProfessionManagement />
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <ReportsDashboard />
         </TabsContent>
       </Tabs>
     </div>
