@@ -464,18 +464,11 @@ const getWorkplaceReport = async (req, res) => {
     });
 
     if (usersInWorkplace.length === 0) {
-      // Em vez de retornar uma estrutura diferente, retornamos a estrutura completa com valores vazios/zerados.
       return res.json({
         workplace: { id: workplace.id, name: workplace.name },
-        period: {
-          startDate: startDate || "N/A",
-          endDate: endDate || "N/A",
-        },
-        summary: {
-          totalUsers: 0,
-          totalCheckins: 0,
-        },
-        userFrequency: [], // Retorna um array vazio
+        period: { startDate: startDate || "N/A", endDate: endDate || "N/A" },
+        summary: { totalUsers: 0, totalCheckins: 0 },
+        userFrequency: [],
         generatedAt: new Date().toISOString(),
       });
     }
@@ -483,8 +476,14 @@ const getWorkplaceReport = async (req, res) => {
 
     // 2. Buscar todos os check-ins relevantes para esses usuários
     const dateFilter = {};
-    if (startDate) dateFilter.gte = new Date(startDate);
-    if (endDate) dateFilter.lte = new Date(endDate);
+    if (startDate) {
+      // Garante que a data de início comece à meia-noite UTC
+      dateFilter.gte = new Date(`${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      // Garante que a data de fim termine no último milissegundo do dia UTC
+      dateFilter.lte = new Date(`${endDate}T23:59:59.999Z`);
+    }
 
     const checkins = await prisma.userCheckin.findMany({
       where: {
@@ -492,6 +491,7 @@ const getWorkplaceReport = async (req, res) => {
         checkinTime:
           Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       },
+      // Apenas selecionamos os dados que o UserCheckin realmente tem
       select: {
         eventId: true,
         userBadge: { select: { userId: true } },
@@ -504,6 +504,7 @@ const getWorkplaceReport = async (req, res) => {
       where: { id: { in: eventIds } },
       select: { id: true, title: true },
     });
+    // Criamos um mapa para facilitar a busca do título do evento pelo ID
     const eventsMap = new Map(events.map((e) => [e.id, e.title]));
 
     // 4. Montar o relatório combinando todas as informações
@@ -529,6 +530,17 @@ const getWorkplaceReport = async (req, res) => {
       }
     });
 
+    const userFrequencyArray = Array.from(userFrequencyMap.values());
+
+    // Calcular a taxa de participação da unidade
+    const usersWithCheckin = userFrequencyArray.filter(
+      (u) => u.totalCheckins > 0
+    ).length;
+    const attendanceRate =
+      usersInWorkplace.length > 0
+        ? ((usersWithCheckin / usersInWorkplace.length) * 100).toFixed(2)
+        : "0.00";
+
     res.json({
       workplace: { id: workplace.id, name: workplace.name },
       period: {
@@ -538,8 +550,9 @@ const getWorkplaceReport = async (req, res) => {
       summary: {
         totalUsers: usersInWorkplace.length,
         totalCheckins: checkins.length,
+        attendanceRate: attendanceRate,
       },
-      userFrequency: Array.from(userFrequencyMap.values()).sort(
+      userFrequency: userFrequencyArray.sort(
         (a, b) => b.totalCheckins - a.totalCheckins
       ),
       generatedAt: new Date().toISOString(),
@@ -603,8 +616,12 @@ const getFilteredFrequencyReport = async (req, res) => {
 
     // 3. Construir o filtro para os check-ins desses usuários
     const checkinDateFilter = {};
-    if (startDate) checkinDateFilter.gte = new Date(startDate);
-    if (endDate) checkinDateFilter.lte = new Date(endDate);
+    if (startDate) {
+      checkinDateFilter.gte = new Date(`${startDate}T00:00:00.000Z`);
+    }
+    if (endDate) {
+      checkinDateFilter.lte = new Date(`${endDate}T23:59:59.999Z`);
+    }
 
     const checkins = await prisma.checkin.findMany({
       where: {

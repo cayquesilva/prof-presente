@@ -174,6 +174,63 @@ const ReportsDashboard = () => {
     doc.save(fileName);
   };
 
+  // NOVA FUNÇÃO: Para gerar e baixar o PDF do relatório de escola
+  const handleDownloadWorkplacePdf = () => {
+    if (!workplaceReportData) {
+      toast.error("Gere um relatório de escola primeiro para poder baixá-lo.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { workplace, summary, userFrequency, period } = workplaceReportData;
+
+    // Título
+    doc.setFontSize(18);
+    doc.text(`Relatório de Frequência: ${workplace.name}`, 14, 22);
+
+    // Subtítulo e Sumário
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    const startDateText =
+      period.startDate && period.startDate !== "Início"
+        ? format(new Date(period.startDate), "dd/MM/yyyy")
+        : "Início";
+    const endDateText =
+      period.endDate && period.endDate !== "Fim"
+        ? format(new Date(period.endDate), "dd/MM/yyyy")
+        : "Fim";
+    doc.text(`Período: ${startDateText} a ${endDateText}`, 14, 30);
+    const summaryText = `Usuários: ${summary.totalUsers} | Total de Check-ins: ${summary.totalCheckins} | Participação da Unidade: ${summary.attendanceRate}%`;
+    doc.text(summaryText, 14, 36);
+
+    // Tabela
+    const tableColumn = [
+      "Usuário",
+      "Total de Check-ins",
+      "Eventos Participados",
+    ];
+    const tableRows = [];
+
+    userFrequency.forEach((item) => {
+      // Formata a lista de eventos para caber na célula do PDF, usando quebra de linha
+      const eventsString = Object.values(item.events)
+        .map((event) => `${event.title} (${event.checkinCount}x)`)
+        .join("\n");
+
+      const rowData = [item.name, item.totalCheckins.toString(), eventsString];
+      tableRows.push(rowData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 42,
+    });
+
+    const fileName = `Relatorio_${workplace.name.replace(/\s+/g, "_")}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -372,34 +429,57 @@ const ReportsDashboard = () => {
       {workplaceReportData && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Resultados para: {workplaceReportData?.workplace.name}
-            </CardTitle>
-            <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
-              <span>
-                Período:{" "}
-                <strong>
-                  {format(
-                    new Date(workplaceReportData.period?.startDate),
-                    "dd/MM/yyyy"
-                  )}
-                </strong>{" "}
-                a{" "}
-                <strong>
-                  {format(
-                    new Date(workplaceReportData.period?.endDate),
-                    "dd/MM/yyyy"
-                  )}
-                </strong>
-              </span>
-              <span>
-                Total de Usuários na Escola:{" "}
-                <strong>{workplaceReportData.summary?.totalUsers}</strong>
-              </span>
-              <span>
-                Total de Check-ins:{" "}
-                <strong>{workplaceReportData.summary?.totalCheckins}</strong>
-              </span>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>
+                  Resultados para: {workplaceReportData.workplace?.name}
+                </CardTitle>
+                <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
+                  <span>
+                    Período:
+                    <strong>
+                      {workplaceReportData.period?.startDate &&
+                      workplaceReportData.period.startDate !== "Início"
+                        ? format(
+                            new Date(workplaceReportData.period.startDate),
+                            "dd/MM/yyyy"
+                          )
+                        : "Início"}
+                    </strong>{" "}
+                    a
+                    <strong>
+                      {" "}
+                      {workplaceReportData.period?.endDate &&
+                      workplaceReportData.period.endDate !== "Fim"
+                        ? format(
+                            new Date(workplaceReportData.period.endDate),
+                            "dd/MM/yyyy"
+                          )
+                        : "Fim"}
+                    </strong>
+                  </span>
+                  <span>
+                    Total de Usuários na Escola:{" "}
+                    <strong>{workplaceReportData.summary?.totalUsers}</strong>
+                  </span>
+                  <span>
+                    Total de Check-ins:{" "}
+                    <strong>
+                      {workplaceReportData.summary?.totalCheckins}
+                    </strong>
+                  </span>
+                  <span>
+                    Participação da Unidade:{" "}
+                    <Badge>
+                      {workplaceReportData.summary?.attendanceRate}%
+                    </Badge>
+                  </span>
+                </div>
+              </div>
+              <Button variant="outline" onClick={handleDownloadWorkplacePdf}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
