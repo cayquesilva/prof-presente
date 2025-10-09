@@ -11,13 +11,6 @@ import {
   CardTitle,
 } from "./ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -31,7 +24,12 @@ import { Calendar } from "./ui/calendar";
 import { cn } from "../lib/utils";
 import { format } from "date-fns";
 import { Loader2, Calendar as CalendarIcon, Download } from "lucide-react";
-import { Input } from "./ui/input";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./ui/accordion";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Label } from "./ui/label";
@@ -59,6 +57,7 @@ const ReportsDashboard = () => {
   const [selectedWorkplaceId, setSelectedWorkplaceId] = useState("");
   const [workplaceReportData, setWorkplaceReportData] = useState(null);
   const [dateRange, setDateRange] = useState(undefined);
+  const [awardsReportData, setAwardsReportData] = useState(null);
 
   // NOVOS ESTADOS para o Relatório Filtrado
   const [filters, setFilters] = useState({
@@ -164,6 +163,20 @@ const ReportsDashboard = () => {
       setFilteredReportData(null);
     },
   });
+
+  // NOVA MUTATION: para o relatório de premiações
+  const { mutate: generateAwardsReport, isPending: isGeneratingAwardsReport } =
+    useMutation({
+      mutationFn: () => api.get("/reports/awards"),
+      onSuccess: (response) => {
+        setAwardsReportData(response.data);
+        toast.success("Relatório de premiações gerado com sucesso!");
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.error || "Falha ao gerar relatório.");
+        setAwardsReportData(null);
+      },
+    });
 
   const handleGenerateReport = () => {
     if (!selectedEventId) {
@@ -353,6 +366,59 @@ const ReportsDashboard = () => {
     });
 
     doc.save("Relatorio_Personalizado.pdf");
+  };
+
+  // NOVA FUNÇÃO: para baixar o PDF do relatório de premiações
+  const handleDownloadAwardsPdf = () => {
+    if (!awardsReportData) {
+      toast.error("Gere o relatório de premiações primeiro.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { summary, awardsReport } = awardsReportData;
+
+    doc.setFontSize(18);
+    doc.text("Relatório de Premiações", 14, 22);
+
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    const summaryText = `Total de Prêmios Disponíveis: ${summary.totalAwardsAvailable} | Total de Concessões: ${summary.totalAwardsGiven} | Total de Usuários Premiados: ${summary.totalUniqueRecipients}`;
+    doc.text(summaryText, 14, 30);
+
+    let startY = 40;
+
+    awardsReport.forEach((award) => {
+      if (startY > 260) {
+        // Adiciona nova página se o conteúdo estiver muito baixo
+        doc.addPage();
+        startY = 20;
+      }
+      doc.setFontSize(14);
+      doc.text(
+        `${award.name} (${award.recipients.length} premiados)`,
+        14,
+        startY
+      );
+      startY += 6;
+
+      const tableColumn = ["Usuário", "Email", "Data da Premiação"];
+      const tableRows = award.recipients.map((recipient) => [
+        recipient.user.name,
+        recipient.user.email,
+        format(new Date(recipient.awardedAt), "dd/MM/yyyy HH:mm"),
+      ]);
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: startY,
+      });
+
+      startY = doc.lastAutoTable.finalY + 10; // Pega a posição final da tabela para o próximo item
+    });
+
+    doc.save("Relatorio_Premiacoes.pdf");
   };
 
   return (
@@ -816,6 +882,103 @@ const ReportsDashboard = () => {
                 Nenhuma atividade encontrada para os filtros selecionados.
               </p>
             )}
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* NOVO CARD: Relatório de Premiações */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Relatório de Premiações</CardTitle>
+          <CardDescription>
+            Visualize todos os prêmios concedidos e seus respectivos ganhadores.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={() => generateAwardsReport()}
+            disabled={isGeneratingAwardsReport}
+          >
+            {isGeneratingAwardsReport && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Gerar Relatório de Premiações
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* NOVO CARD: Resultados do Relatório de Premiações */}
+      {awardsReportData && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Resultados do Relatório de Premiações</CardTitle>
+                <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
+                  <span>
+                    Prêmios Disponíveis:{" "}
+                    <strong>
+                      {awardsReportData.summary?.totalAwardsAvailable}
+                    </strong>
+                  </span>
+                  <span>
+                    Total de Concessões:{" "}
+                    <strong>
+                      {awardsReportData.summary?.totalAwardsGiven}
+                    </strong>
+                  </span>
+                  <span>
+                    Usuários Premiados (únicos):{" "}
+                    <strong>
+                      {awardsReportData.summary?.totalUniqueRecipients}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+              <Button variant="outline" onClick={handleDownloadAwardsPdf}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              {awardsReportData.awardsReport?.map((award) => (
+                <AccordionItem value={award.id} key={award.id}>
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-4">
+                      <span className="font-semibold">{award.name}</span>
+                      <Badge>{award.recipients.length} Ganhador(es)</Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Data da Premiação</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {award.recipients.map((recipient) => (
+                          <TableRow key={recipient.user.id}>
+                            <TableCell>{recipient.user.name}</TableCell>
+                            <TableCell>{recipient.user.email}</TableCell>
+                            <TableCell>
+                              {format(
+                                new Date(recipient.awardedAt),
+                                "dd/MM/yyyy HH:mm"
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </CardContent>
         </Card>
       )}
