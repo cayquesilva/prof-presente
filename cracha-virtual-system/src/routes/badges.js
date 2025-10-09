@@ -33,7 +33,7 @@ router.get(
   requireOwnershipOrAdmin,
   getUserBadge
 );
-router.get("/my", authenticateToken, getMyUserBadge);
+router.get("/my-badge", authenticateToken, getMyUserBadge);
 router.post(
   "/validate",
   authenticateToken,
