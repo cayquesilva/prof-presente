@@ -1,40 +1,44 @@
-// NOVO: Este arquivo substitui userBadges.js e agora é a rota principal para crachás.
 const express = require("express");
 const router = express.Router();
 
-// ALTERAÇÃO: O controller importado agora é o novo badgeController unificado.
 const {
   createUserBadge,
   getUserBadge,
   getMyUserBadge,
   validateUserBadge,
-  searchUsersByName,
+  searchUsersByName, // Importe a função de busca
 } = require("../controllers/badgeController");
 
 const {
   authenticateToken,
   requireAdmin,
   requireOwnershipOrAdmin,
+  requireCheckinPermission, // Importe a permissão de check-in
 } = require("../middleware/auth");
 
-// Rota para buscar usuários por nome (autocomplete no check-in).
-router.get("/search", authenticateToken, searchUsersByName);
-
-// Rota para validar um crachá (código manual ou QR Code).
-router.post("/validate", authenticateToken, validateUserBadge);
-
-// Rota para o usuário logado obter seu próprio crachá universal.
-router.get("/my-badge", authenticateToken, getMyUserBadge);
-
-// Rota para um admin criar um crachá para um usuário.
-router.post("/:userId", authenticateToken, requireAdmin, createUserBadge);
-
-// Rota para obter o crachá de um usuário específico.
+// Rota para a busca de usuários por nome para o check-in
+// O frontend está chamando GET /api/badges/search
 router.get(
-  "/:userId",
+  "/search",
+  authenticateToken,
+  requireCheckinPermission,
+  searchUsersByName
+);
+
+// Outras rotas que você já deve ter...
+router.post("/users/:userId", authenticateToken, requireAdmin, createUserBadge);
+router.get(
+  "/users/:userId",
   authenticateToken,
   requireOwnershipOrAdmin,
   getUserBadge
+);
+router.get("/my", authenticateToken, getMyUserBadge);
+router.post(
+  "/validate",
+  authenticateToken,
+  requireCheckinPermission,
+  validateUserBadge
 );
 
 module.exports = router;

@@ -362,36 +362,38 @@ const Admin = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="dashboard">
-            <BarChart className="h-4 w-4 mr-2" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="events">
-            <Calendar className="h-4 w-4 mr-2" />
-            Eventos
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            <Users className="h-4 w-4 mr-2" />
-            Usuários
-          </TabsTrigger>
-          <TabsTrigger value="awards">
-            <Award className="h-4 w-4 mr-2" />
-            Premiações
-          </TabsTrigger>
-          <TabsTrigger value="workplaces">
-            <Building className="h-4 w-4 mr-2" />
-            Localidades
-          </TabsTrigger>
-          <TabsTrigger value="professions">
-            <Briefcase className="h-4 w-4 mr-2" />
-            Profissões
-          </TabsTrigger>
-          <TabsTrigger value="reports">
-            <FileText className="h-4 w-4 mr-2" />
-            Relatórios
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="dashboard">
+              <BarChart className="h-4 w-4 mr-2" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="events">
+              <Calendar className="h-4 w-4 mr-2" />
+              Eventos
+            </TabsTrigger>
+            <TabsTrigger value="users">
+              <Users className="h-4 w-4 mr-2" />
+              Usuários
+            </TabsTrigger>
+            <TabsTrigger value="awards">
+              <Award className="h-4 w-4 mr-2" />
+              Premiações
+            </TabsTrigger>
+            <TabsTrigger value="workplaces">
+              <Building className="h-4 w-4 mr-2" />
+              Localidades
+            </TabsTrigger>
+            <TabsTrigger value="professions">
+              <Briefcase className="h-4 w-4 mr-2" />
+              Profissões
+            </TabsTrigger>
+            <TabsTrigger value="reports">
+              <FileText className="h-4 w-4 mr-2" />
+              Relatórios
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="dashboard" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

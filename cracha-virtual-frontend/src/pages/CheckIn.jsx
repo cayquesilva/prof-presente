@@ -59,7 +59,7 @@ const CheckIn = () => {
     queryKey: ["users-search", debouncedSearch, selectedEvent],
     queryFn: async () => {
       if (!debouncedSearch || debouncedSearch.length < 2) return { users: [] };
-      const response = await api.get("/user-badges/search", {
+      const response = await api.get("/badges/search", {
         params: {
           query: debouncedSearch,
           eventId: selectedEvent,
@@ -110,6 +110,7 @@ const CheckIn = () => {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
+        facingMode: "environment",
       },
       false
     );

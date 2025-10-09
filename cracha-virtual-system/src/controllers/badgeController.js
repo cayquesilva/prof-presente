@@ -56,11 +56,9 @@ const createUserBadge = async (req, res) => {
     }
 
     if (!isUnique) {
-      return res
-        .status(500)
-        .json({
-          error: "Não foi possível gerar um código único para o crachá",
-        });
+      return res.status(500).json({
+        error: "Não foi possível gerar um código único para o crachá",
+      });
     }
 
     const qrData = JSON.stringify({
@@ -186,11 +184,9 @@ const getMyUserBadge = async (req, res) => {
       }
 
       if (!isUnique) {
-        return res
-          .status(500)
-          .json({
-            error: "Não foi possível gerar um código único para o crachá",
-          });
+        return res.status(500).json({
+          error: "Não foi possível gerar um código único para o crachá",
+        });
       }
 
       const qrData = JSON.stringify({
@@ -313,6 +309,7 @@ const searchUsersByName = async (req, res) => {
       name: { contains: query, mode: "insensitive" },
     };
 
+    // Se um eventId for fornecido, filtramos apenas usuários inscritos nele
     if (eventId) {
       where.enrollments = {
         some: {
@@ -322,24 +319,35 @@ const searchUsersByName = async (req, res) => {
       };
     }
 
+    // Consulta única e otimizada que busca o usuário e seu crachá de uma vez
     const users = await prisma.user.findMany({
       where,
-      select: { id: true, name: true, email: true, photoUrl: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        photoUrl: true,
+        userBadge: {
+          // Inclui o crachá relacionado diretamente na consulta
+          select: {
+            badgeCode: true,
+          },
+        },
+      },
       take: 10,
       orderBy: { name: "asc" },
     });
 
-    const usersWithBadges = await Promise.all(
-      users.map(async (user) => {
-        const badge = await prisma.userBadge.findUnique({
-          where: { userId: user.id },
-          select: { badgeCode: true },
-        });
-        return { ...user, badgeCode: badge?.badgeCode || null };
-      })
-    );
+    // Formata o resultado para o frontend
+    const formattedUsers = users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      photoUrl: user.photoUrl,
+      badgeCode: user.userBadge?.badgeCode || null, // Acessa o código do crachá
+    }));
 
-    res.json({ users: usersWithBadges });
+    res.json({ users: formattedUsers });
   } catch (error) {
     console.error("Erro ao buscar usuários:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
