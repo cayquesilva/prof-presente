@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.jsx";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription, // NOVO
+  SheetHeader, // NOVO
+  SheetTitle, // NOVO
+  SheetTrigger,
+} from "./ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // NOVO
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -11,7 +20,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import {
   Hop as Home,
   Calendar,
@@ -123,6 +131,13 @@ const Layout = ({ children }) => {
       {/* Sidebar móvel */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="p-0 w-64">
+          {/* Adicionamos um título e descrição escondidos para acessibilidade */}
+          <VisuallyHidden asChild>
+            <SheetHeader>
+              <SheetTitle>Menu Principal</SheetTitle>
+              <SheetDescription>Navegação principal do site.</SheetDescription>
+            </SheetHeader>
+          </VisuallyHidden>
           <SidebarContent />
         </SheetContent>
       </Sheet>
@@ -133,6 +148,7 @@ const Layout = ({ children }) => {
         <header className="bg-card border-b px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              {/* Esta é a segunda sidebar, que também precisa da correção */}
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="lg:hidden">
@@ -140,6 +156,15 @@ const Layout = ({ children }) => {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 w-64">
+                  {/* Adicionamos um título e descrição escondidos para acessibilidade */}
+                  <VisuallyHidden asChild>
+                    <SheetHeader>
+                      <SheetTitle>Menu Principal</SheetTitle>
+                      <SheetDescription>
+                        Navegação principal do site.
+                      </SheetDescription>
+                    </SheetHeader>
+                  </VisuallyHidden>
                   <SidebarContent />
                 </SheetContent>
               </Sheet>

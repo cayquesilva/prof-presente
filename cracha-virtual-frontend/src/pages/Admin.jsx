@@ -362,8 +362,8 @@ const Admin = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="w-full overflow-x-auto">
-          <TabsList className="grid w-full grid-cols-7">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-max space-x-2">
             <TabsTrigger value="dashboard">
               <BarChart className="h-4 w-4 mr-2" />
               Dashboard
