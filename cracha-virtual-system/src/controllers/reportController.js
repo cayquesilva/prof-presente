@@ -795,49 +795,33 @@ const getEventSummaryReport = async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    // 1. Buscar o evento e suas inscrições aprovadas
+    // 1. Buscar o evento para garantir que ele existe
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: {
-        enrollments: {
-          where: { status: "APPROVED" },
-          include: {
-            _count: {
-              select: {
-                courseEvaluation: true, // Conta se há avaliação
-              },
-            },
-            badge: {
-              include: {
-                _count: {
-                  select: { checkins: true }, // Conta os check-ins
-                },
-              },
-            },
-          },
-        },
-      },
     });
 
     if (!event) {
       return res.status(404).json({ error: "Evento não encontrado" });
     }
 
-    // 2. Calcular estatísticas de participação
-    const totalEnrollments = event.enrollments.length;
-    let usersWithCheckin = 0;
-    event.enrollments.forEach((enrollment) => {
-      if (enrollment.badge && enrollment.badge._count.checkins > 0) {
-        usersWithCheckin++;
-      }
+    // 2. Contar o total de inscrições aprovadas
+    const totalEnrollments = await prisma.enrollment.count({
+      where: { eventId, status: "APPROVED" },
     });
-    const usersWithoutCheckin = totalEnrollments - usersWithCheckin; // Evasões
+
+    // 3. Contar quantos usuários únicos fizeram check-in no evento
+    const uniqueCheckinsResult = await prisma.userCheckin.groupBy({
+      by: ["userBadgeId"],
+      where: { eventId },
+    });
+    const usersWithCheckin = uniqueCheckinsResult.length;
+    const usersWithoutCheckin = totalEnrollments - usersWithCheckin;
     const attendanceRate =
       totalEnrollments > 0
         ? ((usersWithCheckin / totalEnrollments) * 100).toFixed(2)
         : "0.00";
 
-    // 3. Calcular estatísticas de avaliação
+    // 4. Buscar e calcular as estatísticas de avaliação
     const evaluations = await prisma.courseEvaluation.findMany({
       where: {
         enrollment: {
@@ -859,9 +843,9 @@ const getEventSummaryReport = async (req, res) => {
           ).toFixed(2)
         : "0.00";
 
-    const comments = evaluations.map((ev) => ev.comment).filter(Boolean); // Filtra comentários nulos/vazios
+    const comments = evaluations.map((ev) => ev.comment).filter(Boolean);
 
-    // 4. Montar o relatório final
+    // 5. Montar o relatório final
     const report = {
       event: {
         id: event.id,

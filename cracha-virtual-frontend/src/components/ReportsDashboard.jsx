@@ -23,7 +23,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { cn } from "../lib/utils";
 import { format } from "date-fns";
-import { Loader2, Calendar as CalendarIcon, Download } from "lucide-react";
+import {
+  Loader2,
+  Calendar as CalendarIcon,
+  Download,
+  Users,
+  UserCheck,
+  UserX,
+  Star,
+  MessageSquare,
+} from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -34,6 +43,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Label } from "./ui/label";
 import { Combobox } from "./ui/combobox";
+import { Separator } from "./ui/separator";
 
 const teachingSegmentOptions = [
   { value: "ADMINISTRATIVO", label: "Administrativo" },
@@ -53,11 +63,14 @@ const ReportsDashboard = () => {
   const [selectedEventId, setSelectedEventId] = useState("");
   const [eventReportData, setEventReportData] = useState(null);
 
-  // Estados para o Relatório por Escola
+  // Estados para o Relatórios
   const [selectedWorkplaceId, setSelectedWorkplaceId] = useState("");
   const [workplaceReportData, setWorkplaceReportData] = useState(null);
   const [dateRange, setDateRange] = useState(undefined);
   const [awardsReportData, setAwardsReportData] = useState(null);
+  const [selectedEventIdForSummary, setSelectedEventIdForSummary] =
+    useState("");
+  const [eventSummaryData, setEventSummaryData] = useState(null);
 
   // NOVOS ESTADOS para o Relatório Filtrado
   const [filters, setFilters] = useState({
@@ -178,6 +191,20 @@ const ReportsDashboard = () => {
       },
     });
 
+  // NOVA MUTATION: para o resumo do evento
+  const { mutate: generateEventSummary, isPending: isGeneratingEventSummary } =
+    useMutation({
+      mutationFn: (eventId) => api.get(`/reports/event-summary/${eventId}`),
+      onSuccess: (response) => {
+        setEventSummaryData(response.data);
+        toast.success("Resumo do evento gerado com sucesso!");
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.error || "Falha ao gerar resumo.");
+        setEventSummaryData(null);
+      },
+    });
+
   const handleGenerateReport = () => {
     if (!selectedEventId) {
       toast.warning("Por favor, selecione um evento.");
@@ -200,6 +227,15 @@ const ReportsDashboard = () => {
       params.endDate = format(dateRange.to, "yyyy-MM-dd");
     }
     generateWorkplaceReport(params);
+  };
+
+  // NOVA FUNÇÃO: para gerar o resumo do evento
+  const handleGenerateEventSummary = () => {
+    if (!selectedEventIdForSummary) {
+      toast.warning("Por favor, selecione um evento para o resumo.");
+      return;
+    }
+    generateEventSummary(selectedEventIdForSummary);
   };
 
   // NOVO: Função para gerar e baixar o PDF do relatório de evento
@@ -421,8 +457,227 @@ const ReportsDashboard = () => {
     doc.save("Relatorio_Premiacoes.pdf");
   };
 
+  // NOVA FUNÇÃO: para baixar o PDF do resumo do evento
+  const handleDownloadSummaryPdf = () => {
+    if (!eventSummaryData) {
+      toast.error("Gere um resumo primeiro para poder baixá-lo.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { event, participationSummary, evaluationSummary } = eventSummaryData;
+
+    doc.setFontSize(18);
+    doc.text(`Resumo do Evento: ${event.title}`, 14, 22);
+
+    // Seção de Participação
+    doc.setFontSize(12);
+    doc.text("Resumo da Participação", 14, 40);
+    autoTable(doc, {
+      startY: 42,
+      body: [
+        ["Total de Inscritos", participationSummary.totalEnrollments],
+        ["Participantes (com Check-in)", participationSummary.usersWithCheckin],
+        ["Ausentes (sem Check-in)", participationSummary.usersWithoutCheckin],
+        ["Taxa de Participação", `${participationSummary.attendanceRate}%`],
+      ],
+    });
+
+    let startY = doc.lastAutoTable.finalY + 10;
+
+    // Seção de Avaliações
+    doc.text("Resumo das Avaliações", 14, startY);
+    autoTable(doc, {
+      startY: startY + 2,
+      body: [
+        ["Total de Avaliações", evaluationSummary.totalEvaluations],
+        ["Nota Média", `${evaluationSummary.averageRating} / 5.00`],
+      ],
+    });
+
+    startY = doc.lastAutoTable.finalY + 10;
+
+    // Seção de Comentários
+    if (evaluationSummary.comments.length > 0) {
+      doc.text("Comentários", 14, startY);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      // Usamos splitTextToSize para quebrar linhas longas
+      const splitComments = evaluationSummary.comments
+        .map((c) => `- ${c}`)
+        .join("\n\n");
+      const lines = doc.splitTextToSize(splitComments, 180);
+      doc.text(lines, 14, startY + 6);
+    }
+
+    doc.save(`Resumo_${event.title.replace(/\s+/g, "_")}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
+      {/* NOVO CARD: Resumo do Evento */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo do Evento</CardTitle>
+          <CardDescription>
+            Selecione um evento para ver um resumo de participação e avaliações.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Combobox
+              options={
+                events?.map((event) => ({
+                  value: event.id,
+                  label: event.title,
+                })) || []
+              }
+              value={selectedEventIdForSummary}
+              onSelect={setSelectedEventIdForSummary}
+              placeholder={
+                isLoadingEvents ? "Carregando..." : "Selecione um evento"
+              }
+              searchPlaceholder="Pesquisar evento..."
+              className="md:w-[350px]"
+            />
+            <Button
+              onClick={handleGenerateEventSummary}
+              disabled={isGeneratingEventSummary || !selectedEventIdForSummary}
+            >
+              {isGeneratingEventSummary && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Gerar Resumo
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* NOVO CARD: Resultados do Resumo do Evento */}
+      {eventSummaryData && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Resumo: {eventSummaryData.event.title}</CardTitle>
+                <CardDescription>
+                  Gerado em:{" "}
+                  {format(
+                    new Date(eventSummaryData.generatedAt),
+                    "dd/MM/yyyy HH:mm"
+                  )}
+                </CardDescription>
+              </div>
+              <Button variant="outline" onClick={handleDownloadSummaryPdf}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Participação</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Total de Inscritos</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold flex items-center justify-center gap-2">
+                      <Users />{" "}
+                      {eventSummaryData.participationSummary.totalEnrollments}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Presentes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold flex items-center justify-center gap-2">
+                      <UserCheck />{" "}
+                      {eventSummaryData.participationSummary.usersWithCheckin}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Ausentes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold flex items-center justify-center gap-2">
+                      <UserX />{" "}
+                      {
+                        eventSummaryData.participationSummary
+                          .usersWithoutCheckin
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardDescription>Taxa de Participação</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">
+                      <Badge className="text-xl">
+                        {eventSummaryData.participationSummary.attendanceRate}%
+                      </Badge>
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            <Separator />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Avaliações</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="text-center">
+                  <CardHeader>
+                    <CardDescription>Total de Avaliações</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold flex items-center justify-center gap-2">
+                      <MessageSquare />{" "}
+                      {eventSummaryData.evaluationSummary.totalEvaluations}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="text-center">
+                  <CardHeader>
+                    <CardDescription>Nota Média</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold flex items-center justify-center gap-2">
+                      <Star />{" "}
+                      {eventSummaryData.evaluationSummary.averageRating} / 5
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              {eventSummaryData.evaluationSummary.comments.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium mb-2">Comentários:</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto border p-3 rounded-md">
+                    {eventSummaryData.evaluationSummary.comments.map(
+                      (comment, index) => (
+                        <p
+                          key={index}
+                          className="text-sm text-muted-foreground border-b pb-2"
+                        >
+                          "{comment}"
+                        </p>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Relatório de Frequência por Evento</CardTitle>
@@ -885,7 +1140,7 @@ const ReportsDashboard = () => {
           </CardContent>
         </Card>
       )}
-      
+
       {/* NOVO CARD: Relatório de Premiações */}
       <Card>
         <CardHeader>
