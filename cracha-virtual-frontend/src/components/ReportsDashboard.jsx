@@ -35,6 +35,7 @@ import { Input } from "./ui/input";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Label } from "./ui/label";
+import { Combobox } from "./ui/combobox";
 
 const teachingSegmentOptions = [
   { value: "ADMINISTRATIVO", label: "Administrativo" },
@@ -366,24 +367,23 @@ const ReportsDashboard = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <Select onValueChange={setSelectedEventId} value={selectedEventId}>
-              <SelectTrigger disabled={isLoadingEvents}>
-                <SelectValue
-                  placeholder={
-                    isLoadingEvents
-                      ? "Carregando eventos..."
-                      : "Selecione um evento"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {events?.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={
+                events?.map((event) => ({
+                  value: event.id,
+                  label: event.title,
+                })) || []
+              }
+              value={selectedEventId}
+              onSelect={setSelectedEventId}
+              placeholder={
+                isLoadingEvents
+                  ? "Carregando eventos..."
+                  : "Selecione um evento"
+              }
+              searchPlaceholder="Pesquisar evento..."
+              className="md:w-[350px]"
+            />
             <Button
               onClick={handleGenerateReport}
               disabled={isGeneratingEventReport || !selectedEventId}
@@ -479,30 +479,23 @@ const ReportsDashboard = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col md:flex-row items-center gap-4">
-            <Select
-              onValueChange={setSelectedWorkplaceId}
+            <Combobox
+              options={
+                workplaces?.map((wp) => ({
+                  value: wp.id,
+                  label: `${wp.name} - ${wp.city}`,
+                })) || []
+              }
               value={selectedWorkplaceId}
-            >
-              <SelectTrigger
-                disabled={isLoadingWorkplaces}
-                className="md:w-[350px]"
-              >
-                <SelectValue
-                  placeholder={
-                    isLoadingWorkplaces
-                      ? "Carregando escolas..."
-                      : "Selecione uma escola"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {workplaces?.map((wp) => (
-                  <SelectItem key={wp.id} value={wp.id}>
-                    {wp.name} - {wp.city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onSelect={setSelectedWorkplaceId}
+              placeholder={
+                isLoadingWorkplaces
+                  ? "Carregando escolas..."
+                  : "Selecione uma escola"
+              }
+              searchPlaceholder="Pesquisar escola..."
+              className="md:w-[350px]"
+            />
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -660,100 +653,71 @@ const ReportsDashboard = () => {
             {/* Filtro de Segmento */}
             <div className="space-y-2">
               <Label>Segmento de Ensino</Label>
-              <Select
-                value={filters.segment}
-                onValueChange={(value) => handleFilterChange("segment", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {teachingSegmentOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={[
+                  { value: "all", label: "Todos" },
+                  ...teachingSegmentOptions,
+                ]}
+                value={filters.segment || "all"}
+                onSelect={(value) => handleFilterChange("segment", value)}
+                placeholder="Selecione..."
+                searchPlaceholder="Pesquisar segmento..."
+              />
             </div>
 
             {/* Filtro de Vínculo */}
             <div className="space-y-2">
               <Label>Tipo de Vínculo</Label>
-              <Select
-                value={filters.contractType}
-                onValueChange={(value) =>
-                  handleFilterChange("contractType", value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {contractTypeOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={[
+                  { value: "all", label: "Todos" },
+                  ...contractTypeOptions,
+                ]}
+                value={filters.contractType || "all"}
+                onSelect={(value) => handleFilterChange("contractType", value)}
+                placeholder="Selecione..."
+                searchPlaceholder="Pesquisar vínculo..."
+              />
             </div>
 
             {/* Filtro de Profissão */}
             <div className="space-y-2">
               <Label>Profissão</Label>
-              <Select
-                value={filters.professionId}
-                onValueChange={(value) =>
-                  handleFilterChange("professionId", value)
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas" },
+                  ...(professions?.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  })) || []),
+                ]}
+                value={filters.professionId || "all"}
+                onSelect={(value) => handleFilterChange("professionId", value)}
+                placeholder={
+                  isLoadingProfessions ? "Carregando..." : "Selecione..."
                 }
-              >
-                <SelectTrigger
-                  disabled={isLoadingProfessions}
-                  className="w-full"
-                >
-                  <SelectValue
-                    placeholder={
-                      isLoadingProfessions ? "Carregando..." : "Todas"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {professions?.map((prof) => (
-                    <SelectItem key={prof.id} value={prof.id}>
-                      {prof.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                searchPlaceholder="Pesquisar profissão..."
+              />
             </div>
 
             {/* Filtros de Localização */}
             <div className="space-y-2">
               <Label>Bairro</Label>
-              <Select
-                value={filters.neighborhood}
-                onValueChange={(value) =>
-                  handleFilterChange("neighborhood", value)
+              <Combobox
+                options={[
+                  { value: "all", label: "Todos" },
+                  ...(filterOptions?.neighborhoods.map((n) => ({
+                    value: n,
+                    label: n,
+                  })) || []),
+                ]}
+                value={filters.neighborhood || "all"}
+                onSelect={(value) => handleFilterChange("neighborhood", value)}
+                placeholder={
+                  isLoadingFilters ? "Carregando..." : "Selecione..."
                 }
-              >
-                <SelectTrigger disabled={isLoadingFilters} className="w-full">
-                  <SelectValue
-                    placeholder={isLoadingFilters ? "Carregando..." : "Todos"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {filterOptions?.neighborhoods.map((neighborhood) => (
-                    <SelectItem key={neighborhood} value={neighborhood}>
-                      {neighborhood}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                searchPlaceholder="Pesquisar bairro..."
+              />
             </div>
           </div>
           <div className="pt-4">

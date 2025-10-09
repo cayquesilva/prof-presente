@@ -239,11 +239,9 @@ const EventDetails = () => {
                     <p className="text-gray-600">
                       Até {event.maxAttendees} participantes
                     </p>
-                    {enrollmentData?.enrollmentCount !== undefined && (
-                      <p className="text-sm text-gray-500">
-                        {enrollmentData.enrollmentCount} inscritos
-                      </p>
-                    )}
+                    <p className="text-sm text-gray-500">
+                      {event.enrolledCount ? event.enrolledCount : 0} inscritos
+                    </p>
                   </div>
                 </div>
               )}

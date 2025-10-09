@@ -168,7 +168,10 @@ const Events = () => {
                       {event.maxAttendees && (
                         <div className="flex items-center text-sm text-gray-600">
                           <Users className="h-4 w-4 mr-2" />
-                          <span>Até {event.maxAttendees} participantes</span>
+                          <span>
+                            {event.enrolledCount ? event.enrolledCount : 0}{" "}
+                            inscritos de {event.maxAttendees} vagas
+                          </span>
                         </div>
                       )}
                       <div className="pt-2">
