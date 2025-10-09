@@ -36,10 +36,8 @@ import {
   CommandList,
 } from "../components/ui/command";
 import { Badge } from "../components/ui/badge.jsx";
-import { Calendar } from "../components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale"; // Para traduzir o calendário
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { DatePicker } from "../components/ui/date-picker";
 
 // NOVAS: Opções para os novos selects múltiplos
 const workShiftOptions = [
@@ -357,45 +355,22 @@ const Register = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="birthDate">Data de Nascimento *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={`w-full justify-start text-left font-normal ${
-                          !formData.birthDate && "text-muted-foreground"
-                        }`}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.birthDate ? (
-                          format(new Date(formData.birthDate), "dd/MM/yyyy")
-                        ) : (
-                          <span>Selecione uma data</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          formData.birthDate
-                            ? new Date(formData.birthDate)
-                            : null
-                        }
-                        onSelect={(date) =>
-                          handleSelectChange(
-                            "birthDate",
-                            date ? format(date, "yyyy-MM-dd") : ""
-                          )
-                        }
-                        captionLayout="dropdown-buttons" // A mágica para selecionar ano/mês
-                        fromYear={1950} // Ano inicial no seletor
-                        toYear={new Date().getFullYear() - 10} // Ano final (ex: até 10 anos atrás)
-                        locale={ptBR} // Traduz para Português
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label>Data de Nascimento *</Label>
+                  <DatePicker
+                    // CORREÇÃO 1: Converte a string YYYY-MM-DD para uma data no fuso local
+                    value={
+                      formData.birthDate
+                        ? toZonedTime(formData.birthDate, "UTC")
+                        : null
+                    }
+                    onSelect={(date) =>
+                      handleSelectChange(
+                        "birthDate",
+                        // CORREÇÃO 2: Converte a data selecionada (local) de volta para YYYY-MM-DD em UTC
+                        date ? fromZonedTime(date, "UTC") : ""
+                      )
+                    }
+                  />
                 </div>
               </div>
 

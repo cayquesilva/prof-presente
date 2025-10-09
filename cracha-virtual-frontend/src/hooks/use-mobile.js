@@ -1,19 +1,25 @@
-import * as React from "react"
+import { useState, useEffect } from "react";
 
-const MOBILE_BREAKPOINT = 768
+export function useMediaQuery(query) {
+  // Inicializamos o estado lendo o valor atual, evitando um piscar de tela
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(query).matches
+  );
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(undefined)
+  useEffect(() => {
+    const mediaQueryList = window.matchMedia(query);
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange);
-  }, [])
+    // O listener agora é mais simples, apenas atualiza o estado com o valor do evento
+    const listener = (event) => setMatches(event.matches);
 
-  return !!isMobile
+    // Usamos 'addEventListener', que é o padrão mais moderno
+    mediaQueryList.addEventListener("change", listener);
+
+    // Função de limpeza para remover o listener quando o componente desmontar
+    return () => {
+      mediaQueryList.removeEventListener("change", listener);
+    };
+  }, [query]); // O efeito será re-executado se a query mudar
+
+  return matches;
 }
