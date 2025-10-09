@@ -31,8 +31,24 @@ import { Calendar } from "./ui/calendar";
 import { cn } from "../lib/utils";
 import { format } from "date-fns";
 import { Loader2, Calendar as CalendarIcon, Download } from "lucide-react";
+import { Input } from "./ui/input";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Label } from "./ui/label";
+
+const teachingSegmentOptions = [
+  { value: "ADMINISTRATIVO", label: "Administrativo" },
+  { value: "INFANTIL", label: "Ed. Infantil" },
+  { value: "FUNDAMENTAL1", label: "Fundamental I" },
+  { value: "FUNDAMENTAL2", label: "Fundamental II" },
+  { value: "EJA", label: "EJA" },
+];
+
+const contractTypeOptions = [
+  { value: "EFETIVO", label: "Efetivo" },
+  { value: "PRESTADOR", label: "Prestador" },
+];
+
 const ReportsDashboard = () => {
   // Estados para o Relatório por Evento
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -42,6 +58,15 @@ const ReportsDashboard = () => {
   const [selectedWorkplaceId, setSelectedWorkplaceId] = useState("");
   const [workplaceReportData, setWorkplaceReportData] = useState(null);
   const [dateRange, setDateRange] = useState(undefined);
+
+  // NOVOS ESTADOS para o Relatório Filtrado
+  const [filters, setFilters] = useState({
+    segment: "",
+    contractType: "",
+    neighborhood: "",
+    professionId: "",
+  });
+  const [filteredReportData, setFilteredReportData] = useState(null);
 
   // --- BUSCA DE DADOS PARA OS FILTROS ---
 
@@ -62,6 +87,24 @@ const ReportsDashboard = () => {
     queryFn: async () => {
       const response = await api.get("/workplaces?limit=500");
       return response.data.workplaces;
+    },
+  });
+
+  // NOVA BUSCA: Busca a lista de profissões
+  const { data: professions, isLoading: isLoadingProfessions } = useQuery({
+    queryKey: ["allProfessionsForReport"],
+    queryFn: async () => {
+      const response = await api.get("/professions?limit=500");
+      return response.data.professions;
+    },
+  });
+
+  // NOVA BUSCA: Busca a lista de bairros para o filtro
+  const { data: filterOptions, isLoading: isLoadingFilters } = useQuery({
+    queryKey: ["reportFilterOptions"],
+    queryFn: async () => {
+      const response = await api.get("/reports/filters/options");
+      return response.data;
     },
   });
 
@@ -99,6 +142,25 @@ const ReportsDashboard = () => {
     onError: (error) => {
       toast.error(error.response?.data?.error || "Falha ao gerar relatório.");
       setWorkplaceReportData(null);
+    },
+  });
+
+  // NOVA MUTATION: para o relatório filtrado
+  const {
+    mutate: generateFilteredReport,
+    isPending: isGeneratingFilteredReport,
+  } = useMutation({
+    mutationFn: (activeFilters) => {
+      const params = new URLSearchParams(activeFilters);
+      return api.get(`/reports/frequency/by-filter?${params.toString()}`);
+    },
+    onSuccess: (response) => {
+      setFilteredReportData(response.data);
+      toast.success("Relatório personalizado gerado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Falha ao gerar relatório.");
+      setFilteredReportData(null);
     },
   });
 
@@ -229,6 +291,67 @@ const ReportsDashboard = () => {
 
     const fileName = `Relatorio_${workplace.name.replace(/\s+/g, "_")}.pdf`;
     doc.save(fileName);
+  };
+
+  // NOVA FUNÇÃO: para lidar com a mudança nos filtros
+  const handleFilterChange = (key, value) => {
+    const finalValue = value === "all" ? "" : value;
+    setFilters((prev) => ({ ...prev, [key]: finalValue }));
+  };
+
+  // NOVA FUNÇÃO: para gerar o relatório filtrado
+  const handleGenerateFilteredReport = () => {
+    // Remove chaves de filtro vazias para não poluir a URL
+    const activeFilters = Object.fromEntries(
+      Object.entries(filters).filter(([, value]) => value)
+    );
+    // Agora, mesmo que activeFilters esteja vazio, a chamada será feita
+    generateFilteredReport(activeFilters);
+  };
+
+  // NOVA FUNÇÃO: Para baixar o PDF do relatório filtrado
+  const handleDownloadFilteredPdf = () => {
+    if (!filteredReportData) {
+      toast.error("Gere um relatório personalizado primeiro.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { summary, userFrequency, filters } = filteredReportData;
+
+    const filterText = Object.entries(filters)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(" | ");
+
+    doc.setFontSize(18);
+    doc.text("Relatório de Frequência Personalizado", 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Filtros Aplicados: ${filterText}`, 14, 30);
+
+    const summaryText = `Usuários Encontrados: ${summary.totalUsersFound} | Com Check-in: ${summary.usersWithCheckin} | Sem Check-in: ${summary.usersWithoutCheckin} | Participação: ${summary.attendanceRate}%`;
+    doc.text(summaryText, 14, 36);
+
+    const tableColumn = [
+      "Usuário",
+      "Total de Check-ins",
+      "Eventos Participados",
+    ];
+    const tableRows = userFrequency.map((item) => {
+      const eventsString = Object.values(item.events)
+        .map((event) => `${event.title} (${event.checkinCount}x)`)
+        .join("\n");
+      return [item.name, item.totalCheckins.toString(), eventsString];
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 42,
+    });
+
+    doc.save("Relatorio_Personalizado.pdf");
   };
 
   return (
@@ -517,6 +640,216 @@ const ReportsDashboard = () => {
               <p className="text-sm text-muted-foreground text-center py-4">
                 Nenhum usuário com atividade encontrada para os filtros
                 selecionados.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* CARD: Relatório Personalizado (Filtrado) - COM ALTERAÇÕES */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Relatório Geral Personalizado</CardTitle>
+          <CardDescription>
+            Combine diferentes filtros para gerar um relatório de frequência
+            específico.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Filtro de Segmento */}
+            <div className="space-y-2">
+              <Label>Segmento de Ensino</Label>
+              <Select
+                value={filters.segment}
+                onValueChange={(value) => handleFilterChange("segment", value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {teachingSegmentOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro de Vínculo */}
+            <div className="space-y-2">
+              <Label>Tipo de Vínculo</Label>
+              <Select
+                value={filters.contractType}
+                onValueChange={(value) =>
+                  handleFilterChange("contractType", value)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {contractTypeOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro de Profissão */}
+            <div className="space-y-2">
+              <Label>Profissão</Label>
+              <Select
+                value={filters.professionId}
+                onValueChange={(value) =>
+                  handleFilterChange("professionId", value)
+                }
+              >
+                <SelectTrigger
+                  disabled={isLoadingProfessions}
+                  className="w-full"
+                >
+                  <SelectValue
+                    placeholder={
+                      isLoadingProfessions ? "Carregando..." : "Todas"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {professions?.map((prof) => (
+                    <SelectItem key={prof.id} value={prof.id}>
+                      {prof.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtros de Localização */}
+            <div className="space-y-2">
+              <Label>Bairro</Label>
+              <Select
+                value={filters.neighborhood}
+                onValueChange={(value) =>
+                  handleFilterChange("neighborhood", value)
+                }
+              >
+                <SelectTrigger disabled={isLoadingFilters} className="w-full">
+                  <SelectValue
+                    placeholder={isLoadingFilters ? "Carregando..." : "Todos"}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {filterOptions?.neighborhoods.map((neighborhood) => (
+                    <SelectItem key={neighborhood} value={neighborhood}>
+                      {neighborhood}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="pt-4">
+            <Button
+              onClick={handleGenerateFilteredReport}
+              disabled={isGeneratingFilteredReport}
+            >
+              {isGeneratingFilteredReport && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Gerar Relatório Personalizado
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* NOVO CARD: Resultados do Relatório Filtrado */}
+      {filteredReportData && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>
+                  Resultados do Relatório Geral Personalizado
+                </CardTitle>
+                {/* SUMÁRIO ATUALIZADO */}
+                <div className="text-sm text-muted-foreground flex flex-wrap gap-4 pt-2">
+                  <span>
+                    Usuários no Filtro:{" "}
+                    <strong>
+                      {filteredReportData.summary?.totalUsersFound}
+                    </strong>
+                  </span>
+                  <span>
+                    Com Check-in:{" "}
+                    <strong>
+                      {filteredReportData.summary?.usersWithCheckin}
+                    </strong>
+                  </span>
+                  <span>
+                    Sem Check-in:{" "}
+                    <strong>
+                      {filteredReportData.summary?.usersWithoutCheckin}
+                    </strong>
+                  </span>
+                  <span>
+                    Participação:{" "}
+                    <Badge>{filteredReportData.summary?.attendanceRate}%</Badge>
+                  </span>
+                  <span>
+                    Total de Check-ins:{" "}
+                    <strong>{filteredReportData.summary?.totalCheckins}</strong>
+                  </span>
+                </div>
+              </div>
+              {/* NOVO BOTÃO DE DOWNLOAD */}
+              <Button variant="outline" onClick={handleDownloadFilteredPdf}>
+                <Download className="mr-2 h-4 w-4" />
+                Baixar PDF
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredReportData.userFrequency?.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Total de Check-ins</TableHead>
+                    <TableHead>Eventos Participados</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReportData.userFrequency.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>{item.totalCheckins}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {Object.values(item.events).map((event, index) => (
+                            <span key={index}>
+                              {event.title}{" "}
+                              <Badge variant="secondary">
+                                {event.checkinCount}x
+                              </Badge>
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma atividade encontrada para os filtros selecionados.
               </p>
             )}
           </CardContent>

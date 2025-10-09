@@ -563,6 +563,34 @@ const getWorkplaceReport = async (req, res) => {
   }
 };
 
+// NOVA FUNÇÃO: Para buscar opções de filtro, começando com bairros
+const getReportFilterOptions = async (req, res) => {
+  try {
+    const neighborhoods = await prisma.user.findMany({
+      where: {
+        neighborhood: {
+          not: null, // Ignora usuários sem bairro cadastrado
+        },
+      },
+      select: {
+        neighborhood: true,
+      },
+      distinct: ["neighborhood"], // A mágica está aqui: busca apenas valores únicos
+      orderBy: {
+        neighborhood: "asc",
+      },
+    });
+
+    res.json({
+      // Mapeia o resultado para um array de strings simples: ['Bairro A', 'Bairro B']
+      neighborhoods: neighborhoods.map((item) => item.neighborhood),
+    });
+  } catch (error) {
+    console.error("Erro ao buscar opções de filtro:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 // NOVO: Relatório de frequência com filtros dinâmicos
 const getFilteredFrequencyReport = async (req, res) => {
   try {
@@ -572,21 +600,21 @@ const getFilteredFrequencyReport = async (req, res) => {
       state,
       contractType,
       professionId,
+      neighborhood,
       startDate,
       endDate,
     } = req.query;
 
     // 1. Construir o filtro para encontrar os usuários
     const userWhereClause = {};
-    if (segment) {
-      userWhereClause.teachingSegments = { has: segment };
-    }
-    if (contractType) {
-      userWhereClause.contractType = contractType;
-    }
-    if (professionId) {
-      userWhereClause.professionId = professionId;
-    }
+    if (segment) userWhereClause.teachingSegments = { has: segment };
+    if (contractType) userWhereClause.contractType = contractType;
+    if (professionId) userWhereClause.professionId = professionId;
+    if (neighborhood)
+      userWhereClause.neighborhood = {
+        equals: neighborhood,
+        mode: "insensitive",
+      };
     if (city || state) {
       userWhereClause.workplaces = {
         some: {
@@ -598,7 +626,6 @@ const getFilteredFrequencyReport = async (req, res) => {
       };
     }
 
-    // 2. Encontrar os usuários que correspondem ao filtro
     const filteredUsers = await prisma.user.findMany({
       where: userWhereClause,
       select: { id: true, name: true, email: true },
@@ -606,76 +633,88 @@ const getFilteredFrequencyReport = async (req, res) => {
 
     if (filteredUsers.length === 0) {
       return res.json({
-        message: "Nenhum usuário encontrado com os filtros aplicados.",
         filters: req.query,
+        summary: {
+          totalUsersFound: 0,
+          totalCheckins: 0,
+          usersWithCheckin: 0,
+          usersWithoutCheckin: 0,
+          attendanceRate: "0.00",
+        },
         userFrequency: [],
       });
     }
 
     const userIds = filteredUsers.map((u) => u.id);
 
-    // 3. Construir o filtro para os check-ins desses usuários
+    // 2. Construir o filtro de data e buscar os check-ins
     const checkinDateFilter = {};
-    if (startDate) {
+    if (startDate)
       checkinDateFilter.gte = new Date(`${startDate}T00:00:00.000Z`);
-    }
-    if (endDate) {
-      checkinDateFilter.lte = new Date(`${endDate}T23:59:59.999Z`);
-    }
+    if (endDate) checkinDateFilter.lte = new Date(`${endDate}T23:59:59.999Z`);
 
-    const checkins = await prisma.checkin.findMany({
+    // CORREÇÃO PRINCIPAL AQUI: Usando prisma.userCheckin e a estrutura correta
+    const checkins = await prisma.userCheckin.findMany({
       where: {
-        badge: {
-          enrollment: {
-            userId: { in: userIds },
-          },
-        },
+        userBadge: { userId: { in: userIds } },
         checkinTime:
           Object.keys(checkinDateFilter).length > 0
             ? checkinDateFilter
             : undefined,
       },
-      include: {
-        badge: {
-          include: {
-            enrollment: {
-              include: {
-                user: { select: { id: true, name: true } },
-                event: { select: { id: true, title: true } },
-              },
-            },
-          },
-        },
+      select: {
+        eventId: true,
+        userBadge: { select: { userId: true } },
       },
     });
 
-    // 4. Montar o relatório final (similar ao relatório por escola)
+    // 3. Buscar os detalhes dos eventos
+    const eventIds = [...new Set(checkins.map((c) => c.eventId))];
+    const events = await prisma.event.findMany({
+      where: { id: { in: eventIds } },
+      select: { id: true, title: true },
+    });
+    const eventsMap = new Map(events.map((e) => [e.id, e.title]));
+
+    // 4. Montar o relatório final
     const userFrequencyMap = new Map(
       filteredUsers.map((u) => [u.id, { ...u, totalCheckins: 0, events: {} }])
     );
 
     checkins.forEach((checkin) => {
-      const userId = checkin.badge.enrollment.user.id;
-      const eventId = checkin.badge.enrollment.event.id;
-      const eventTitle = checkin.badge.enrollment.event.title;
+      const userId = checkin.userBadge.userId;
       const userReport = userFrequencyMap.get(userId);
-
       if (userReport) {
-        userReport.totalCheckins += 1;
+        userReport.totalCheckins++;
+        const eventId = checkin.eventId;
+        const eventTitle = eventsMap.get(eventId) || "Evento Desconhecido";
         if (!userReport.events[eventId]) {
           userReport.events[eventId] = { title: eventTitle, checkinCount: 0 };
         }
-        userReport.events[eventId].checkinCount += 1;
+        userReport.events[eventId].checkinCount++;
       }
     });
+
+    const userFrequencyArray = Array.from(userFrequencyMap.values());
+    const usersWithCheckin = userFrequencyArray.filter(
+      (u) => u.totalCheckins > 0
+    ).length;
+    const usersWithoutCheckin = filteredUsers.length - usersWithCheckin;
+    const attendanceRate =
+      filteredUsers.length > 0
+        ? ((usersWithCheckin / filteredUsers.length) * 100).toFixed(2)
+        : "0.00";
 
     res.json({
       filters: req.query,
       summary: {
         totalUsersFound: filteredUsers.length,
+        usersWithCheckin,
+        usersWithoutCheckin,
+        attendanceRate,
         totalCheckins: checkins.length,
       },
-      userFrequency: Array.from(userFrequencyMap.values()).sort(
+      userFrequency: userFrequencyArray.sort(
         (a, b) => b.totalCheckins - a.totalCheckins
       ),
       generatedAt: new Date().toISOString(),
@@ -860,4 +899,5 @@ module.exports = {
   getFilteredFrequencyReport,
   getAwardsReport,
   getEventSummaryReport,
+  getReportFilterOptions,
 };

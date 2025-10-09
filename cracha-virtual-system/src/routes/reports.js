@@ -10,78 +10,22 @@ const {
   getFilteredFrequencyReport,
   getAwardsReport,
   getEventSummaryReport,
+  getReportFilterOptions,
 } = require("../controllers/reportController");
 
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
 
-// Relatório de check-ins de um evento (apenas admin)
+// --- ROTAS ESPECÍFICAS PRIMEIRO ---
+
+// Rota para buscar as opções de filtro dos relatórios
 router.get(
-  "/checkins/:eventId",
+  "/filters/options",
   authenticateToken,
   requireAdmin,
-  getCheckinReport
+  getReportFilterOptions
 );
 
-// Relatório de frequência de um evento (apenas admin)
-router.get(
-  "/frequency/:eventId",
-  authenticateToken,
-  requireAdmin,
-  getFrequencyReport
-);
-
-// Ranking geral de frequência (apenas admin)
-router.get("/ranking", authenticateToken, requireAdmin, getFrequencyRanking);
-
-// Relatório geral do sistema (apenas admin)
-router.get("/system", authenticateToken, requireAdmin, getSystemReport);
-
-// Estatísticas gerais do sistema (apenas admin)
-router.get("/statistics", authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { prisma } = require("../config/database");
-
-    const [totalEvents, totalUsers, activeEnrollments, totalCheckins] =
-      await Promise.all([
-        prisma.event.count(),
-        prisma.user.count(),
-        prisma.enrollment.count({
-          where: {
-            status: "APPROVED",
-          },
-        }),
-        prisma.userCheckin.count(),
-      ]);
-
-    res.json({
-      totalEvents,
-      totalUsers,
-      activeEnrollments,
-      totalCheckins,
-    });
-  } catch (error) {
-    console.error("Erro ao buscar estatísticas:", error);
-    res.status(500).json({ error: "Erro ao buscar estatísticas" });
-  }
-});
-
-// Relatório de frequência de um evento (apenas admin)
-router.get(
-  "/frequency/:eventId",
-  authenticateToken,
-  requireAdmin,
-  getFrequencyReport
-);
-
-// NOVO: Relatório de frequência por escola (apenas admin)
-router.get(
-  "/workplace/:workplaceId",
-  authenticateToken,
-  requireAdmin,
-  getWorkplaceReport
-);
-
-// NOVO: Relatório de frequência com filtros (apenas admin)
+// Relatório de frequência com filtros (a rota mais específica de "/frequency")
 router.get(
   "/frequency/by-filter",
   authenticateToken,
@@ -89,15 +33,67 @@ router.get(
   getFilteredFrequencyReport
 );
 
-// NOVO: Relatório de premiações (apenas admin)
-router.get("/awards", authenticateToken, requireAdmin, getAwardsReport);
+// --- ROTAS GENÉRICAS / COM PARÂMETROS DEPOIS ---
 
-// NOVO: Relatório de resumo de um evento (apenas admin)
+// Relatório de check-ins de um evento
+router.get(
+  "/checkins/:eventId",
+  authenticateToken,
+  requireAdmin,
+  getCheckinReport
+);
+
+// Relatório de frequência de um evento
+router.get(
+  "/frequency/:eventId",
+  authenticateToken,
+  requireAdmin,
+  getFrequencyReport
+);
+
+// Relatório de frequência por escola
+router.get(
+  "/workplace/:workplaceId",
+  authenticateToken,
+  requireAdmin,
+  getWorkplaceReport
+);
+
+// Relatório de resumo de um evento
 router.get(
   "/event-summary/:eventId",
   authenticateToken,
   requireAdmin,
   getEventSummaryReport
 );
+
+// --- ROTAS GERAIS ---
+
+// Relatório de premiações
+router.get("/awards", authenticateToken, requireAdmin, getAwardsReport);
+
+// Ranking geral de frequência
+router.get("/ranking", authenticateToken, requireAdmin, getFrequencyRanking);
+
+// Relatório geral do sistema
+router.get("/system", authenticateToken, requireAdmin, getSystemReport);
+
+// Estatísticas gerais do sistema
+router.get("/statistics", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { prisma } = require("../config/database");
+    const [totalEvents, totalUsers, activeEnrollments, totalCheckins] =
+      await Promise.all([
+        prisma.event.count(),
+        prisma.user.count(),
+        prisma.enrollment.count({ where: { status: "APPROVED" } }),
+        prisma.userCheckin.count(),
+      ]);
+    res.json({ totalEvents, totalUsers, activeEnrollments, totalCheckins });
+  } catch (error) {
+    console.error("Erro ao buscar estatísticas:", error);
+    res.status(500).json({ error: "Erro ao buscar estatísticas" });
+  }
+});
 
 module.exports = router;
