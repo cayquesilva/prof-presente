@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.jsx";
 import {
@@ -23,10 +23,8 @@ import {
 import {
   Hop as Home,
   Calendar,
-  Users,
-  Award,
+  Download,
   ChartBar as BarChart3,
-  Settings,
   Menu,
   LogOut,
   User,
@@ -45,6 +43,46 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // NOVO: Estados para controlar o prompt de instalação do PWA
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+
+  // NOVO: useEffect para ouvir o evento de instalação
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      // Previne que o mini-infobar do Chrome apareça
+      e.preventDefault();
+      // Guarda o evento para que ele possa ser acionado mais tarde.
+      setDeferredPrompt(e);
+      // Mostra nosso botão de instalação customizado
+      setShowInstallButton(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
+    };
+  }, []);
+
+  // NOVO: Função para acionar o prompt de instalação
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      return;
+    }
+    // Mostra o prompt de instalação
+    deferredPrompt.prompt();
+    // Espera o usuário responder ao prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    // Limpamos o prompt, pois ele só pode ser usado uma vez.
+    setDeferredPrompt(null);
+    setShowInstallButton(false);
+  };
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -175,6 +213,16 @@ const Layout = ({ children }) => {
             </div>
 
             <div className="flex items-center space-x-4">
+              {showInstallButton && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleInstallClick}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Instalar App
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
