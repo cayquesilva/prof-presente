@@ -29,7 +29,6 @@ const registerValidation = [
   body("workShifts.*")
     .isIn(["MANHA", "TARDE", "NOITE", "INTEGRAL"])
     .withMessage("Turno inválido."),
-
   body("teachingSegments")
     .optional()
     .isArray()

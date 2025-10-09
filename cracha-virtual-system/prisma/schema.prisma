@@ -41,6 +41,7 @@ enum TeachingSegment {
   FUNDAMENTAL1
   FUNDAMENTAL2
   EJA
+  ADMINISTRATIVO
 }
 
 model User {
