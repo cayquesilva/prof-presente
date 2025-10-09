@@ -15,6 +15,7 @@ enum UserRole {
   ORGANIZER
   CHECKIN_COORDINATOR
   TEACHER
+  GESTOR_ESCOLA
 }
 
 enum EnrollmentStatus {
@@ -69,6 +70,8 @@ model User {
   userBadge     UserBadge?
   profession    Profession? @relation(fields: [professionId], references: [id], onDelete: SetNull) // Novo relacionamento
   workplaces    Workplace[] @relation("UserWorkplaces")
+  createdEvents Event[] @relation("CreatedEvents") // Eventos criados pelo usuário
+
 
   @@index([email])
   @@index([role])
@@ -106,11 +109,27 @@ model Event {
   badgeTemplateUrl    String?   @map("badge_template_url")
   badgeTemplateConfig Json?     @map("badge_template_config")
 
+  // --- NOVOS CAMPOS PARA EVENTOS PRIVADOS ---
+  isPrivate Boolean @default(false)
+  creatorId String? @map("creator_id")
+  creator   User?   @relation("CreatedEvents", fields: [creatorId], references: [id], onDelete: SetNull)
+
+  // Relacionamento de Pai-Filho
+  parentId     String?     @map("parent_id")
+  parent       Event?      @relation("EventTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Event[]     @relation("EventTree")
+
+  // Campo para o template do certificado (apenas no evento "pai")
+  certificateTemplateUrl String? @map("certificate_template_url")
+
+
   // Relacionamentos
   enrollments Enrollment[]
 
   @@index([startDate])
   @@index([endDate])
+  @@index([parentId])
+  @@index([creatorId])
   @@index([createdAt])
   @@map("events")
 }

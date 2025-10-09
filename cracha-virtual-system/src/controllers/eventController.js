@@ -32,27 +32,72 @@ const getAllEvents = async (req, res) => {
   try {
     const { page = 1, limit = 10, search, upcoming } = req.query;
     const skip = (page - 1) * limit;
+    const user = req.user; // Usuário autenticado pelo middleware
 
-    let where = {};
+    // Objeto base para a cláusula WHERE do Prisma
+    const baseWhere = {};
 
-    // Filtro de busca
     if (search) {
-      where.OR = [
+      baseWhere.OR = [
         { title: { contains: search, mode: "insensitive" } },
         { description: { contains: search, mode: "insensitive" } },
         { location: { contains: search, mode: "insensitive" } },
       ];
     }
 
-    // Filtro para eventos futuros
     if (upcoming === "true") {
-      where.startDate = {
-        gte: new Date(),
-      };
+      baseWhere.startDate = { gte: new Date() };
     }
+    
+    // Construção da cláusula final de visibilidade
+    let finalWhere = { ...baseWhere };
+
+    if (user && user.role !== 'ADMIN') {
+        const visibilityClause = [];
+
+        // Todos os usuários (não-admins) podem ver eventos públicos
+        visibilityClause.push({ isPrivate: false });
+
+        if (user.role === 'GESTOR_ESCOLA') {
+            // Gestor também vê os eventos privados que ele mesmo criou
+            visibilityClause.push({ creatorId: user.id });
+        } else { // Para TEACHER, USER, etc.
+            // Usuário comum também vê os eventos privados criados por gestores da(s) sua(s) escola(s)
+            const userWithWorkplaces = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { workplaces: { select: { id: true } } }
+            });
+
+            if (userWithWorkplaces?.workplaces.length > 0) {
+                const userWorkplaceIds = userWithWorkplaces.workplaces.map(w => w.id);
+                
+                // Encontra os gestores que trabalham nas mesmas escolas que o usuário
+                const managers = await prisma.user.findMany({
+                    where: {
+                        role: 'GESTOR_ESCOLA',
+                        workplaces: { some: { id: { in: userWorkplaceIds } } }
+                    },
+                    select: { id: true }
+                });
+                const managerIds = managers.map(m => m.id);
+
+                if (managerIds.length > 0) {
+                    visibilityClause.push({ creatorId: { in: managerIds } });
+                }
+            }
+        }
+        
+        // Combina a lógica: (filtros de busca) E (condições de visibilidade)
+        finalWhere = {
+            AND: [
+                baseWhere,
+                { OR: visibilityClause }
+            ]
+        };
+    } // else: ADMIN vê tudo, então finalWhere = baseWhere
 
     const events = await prisma.event.findMany({
-      where,
+      where: finalWhere,
       select: {
         id: true,
         title: true,
@@ -78,7 +123,7 @@ const getAllEvents = async (req, res) => {
       orderBy: { startDate: "asc" },
     });
 
-    const total = await prisma.event.count({ where });
+    const total = await prisma.event.count({ where: finalWhere });
 
     // Adicionar informações de disponibilidade
     const eventsWithAvailability = events.map((event) => ({
@@ -157,13 +202,11 @@ const getEventById = async (req, res) => {
 // Criar evento
 const createEvent = async (req, res) => {
   try {
-    // Verificar erros de validação
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: "Dados inválidos",
-        details: errors.array(),
-      });
+      return res
+        .status(400)
+        .json({ error: "Dados inválidos", details: errors.array() });
     }
 
     const {
@@ -174,37 +217,42 @@ const createEvent = async (req, res) => {
       location,
       maxAttendees,
       imageUrl,
+      parentId,
     } = req.body;
 
-    // Validar se a data de início é anterior à data de término
+    // 1. Pegamos o usuário logado que está fazendo a requisição
+    const user = req.user;
+
     if (new Date(startDate) >= new Date(endDate)) {
-      return res.status(400).json({
-        error: "Data de início deve ser anterior à data de término",
-      });
+      return res
+        .status(400)
+        .json({ error: "Data de início deve ser anterior à data de término" });
     }
 
-    // Criar evento
-    const event = await prisma.event.create({
-      data: {
-        title,
-        description,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        location,
-        maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
-        imageUrl: imageUrl || null,
-      },
-    });
+    // 2. Preparamos o objeto de dados para o Prisma
+    const data = {
+      title,
+      description,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      location,
+      maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
+      imageUrl: imageUrl || null,
+      parentId: parentId || null,
+    };
 
-    res.status(201).json({
-      message: "Evento criado com sucesso",
-      event,
-    });
+    // 3. Se o criador for um GESTOR_ESCOLA, marcamos o evento como privado e associamos o criador
+    if (user.role === "GESTOR_ESCOLA") {
+      data.isPrivate = true;
+      data.creatorId = user.id;
+    }
+
+    const event = await prisma.event.create({ data });
+
+    res.status(201).json({ message: "Evento criado com sucesso", event });
   } catch (error) {
     console.error("Erro ao criar evento:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
@@ -229,6 +277,7 @@ const updateEvent = async (req, res) => {
       location,
       maxAttendees,
       imageUrl,
+      parentId,
     } = req.body;
 
     // Verificar se o evento existe
@@ -259,6 +308,7 @@ const updateEvent = async (req, res) => {
     if (maxAttendees !== undefined)
       updateData.maxAttendees = maxAttendees ? parseInt(maxAttendees) : null;
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl || null;
+    if (parentId !== undefined) updateData.parentId = parentId || null;
 
     // Atualizar evento
     const updatedEvent = await prisma.event.update({

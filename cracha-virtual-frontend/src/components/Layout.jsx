@@ -94,7 +94,7 @@ const Layout = ({ children }) => {
       ? [{ name: "Check-in", href: "/check-in", icon: QrCode }]
       : []),
     { name: "Ranking de Checkins", href: "/ranking", icon: Trophy },
-    ...(isAdmin
+    ...(isAdmin || user?.role === "GESTOR_ESCOLA"
       ? [{ name: "Administração", href: "/admin", icon: Shield }]
       : []),
   ];

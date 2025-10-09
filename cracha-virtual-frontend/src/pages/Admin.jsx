@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import api from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 import {
   Card,
   CardContent,
@@ -60,6 +61,7 @@ import ReportsDashboard from "../components/ReportsDashboard";
 const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
 const Admin = () => {
+  const { isAdmin, isGestor } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab") || "events";
@@ -371,26 +373,30 @@ const Admin = () => {
               <Calendar className="h-4 w-4 mr-2" />
               Eventos
             </TabsTrigger>
-            <TabsTrigger value="users">
-              <Users className="h-4 w-4 mr-2" />
-              Usuários
-            </TabsTrigger>
-            <TabsTrigger value="awards">
-              <Award className="h-4 w-4 mr-2" />
-              Premiações
-            </TabsTrigger>
-            <TabsTrigger value="workplaces">
-              <Building className="h-4 w-4 mr-2" />
-              Localidades
-            </TabsTrigger>
-            <TabsTrigger value="professions">
-              <Briefcase className="h-4 w-4 mr-2" />
-              Profissões
-            </TabsTrigger>
-            <TabsTrigger value="reports">
-              <FileText className="h-4 w-4 mr-2" />
-              Relatórios
-            </TabsTrigger>
+            {(isAdmin || isGestor) && (
+              <>
+                <TabsTrigger value="users">
+                  <Users className="h-4 w-4 mr-2" />
+                  Usuários
+                </TabsTrigger>
+                <TabsTrigger value="awards">
+                  <Award className="h-4 w-4 mr-2" />
+                  Premiações
+                </TabsTrigger>
+                <TabsTrigger value="workplaces">
+                  <Building className="h-4 w-4 mr-2" />
+                  Localidades
+                </TabsTrigger>
+                <TabsTrigger value="professions">
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Profissões
+                </TabsTrigger>
+                <TabsTrigger value="reports">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Relatórios
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
         </div>
 
@@ -836,26 +842,29 @@ const Admin = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        {(isAdmin || isGestor) && (
+          <>
+            <TabsContent value="users" className="space-y-4">
+              <UserManagement />
+            </TabsContent>
 
-        <TabsContent value="users" className="space-y-4">
-          <UserManagement />
-        </TabsContent>
+            <TabsContent value="awards" className="space-y-4">
+              <AwardManagement />
+            </TabsContent>
 
-        <TabsContent value="awards" className="space-y-4">
-          <AwardManagement />
-        </TabsContent>
+            <TabsContent value="workplaces">
+              <WorkplaceManagement />
+            </TabsContent>
 
-        <TabsContent value="workplaces">
-          <WorkplaceManagement />
-        </TabsContent>
+            <TabsContent value="professions">
+              <ProfessionManagement />
+            </TabsContent>
 
-        <TabsContent value="professions">
-          <ProfessionManagement />
-        </TabsContent>
-
-        <TabsContent value="reports">
-          <ReportsDashboard />
-        </TabsContent>
+            <TabsContent value="reports">
+              <ReportsDashboard />
+            </TabsContent>
+          </>
+        )}
       </Tabs>
     </div>
   );

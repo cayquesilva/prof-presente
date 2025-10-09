@@ -17,7 +17,7 @@ const { authenticateToken, requireAdmin } = require("../middleware/auth");
 const { uploadBadgeTemplate } = require("../middleware/upload");
 
 // Listar todos os eventos (público)
-router.get("/", getAllEvents);
+router.get('/', authenticateToken, getAllEvents);
 
 // Obter evento por ID (público)
 router.get("/:id", getEventById);
@@ -30,8 +30,8 @@ router.get(
   generatePrintableBadges
 );
 
-// Criar evento (apenas admin)
-router.post("/", authenticateToken, requireAdmin, eventValidation, createEvent);
+// Criar evento
+router.post('/', authenticateToken, eventValidation, createEvent);
 
 // Rota para criar/atualizar o modelo de crachá de um evento
 router.post(

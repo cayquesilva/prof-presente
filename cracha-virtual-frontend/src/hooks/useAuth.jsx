@@ -93,6 +93,7 @@ export const AuthProvider = ({ children }) => {
     // A função 'updateUser' foi removida para evitar duplicidade
     isAuthenticated: !!user,
     isAdmin: user?.role === "ADMIN",
+    isGestor: user?.role === "GESTOR_ESCOLA",
     updateAuthUser, // Exporta a função unificada
   };
 
