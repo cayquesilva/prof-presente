@@ -94,12 +94,10 @@ const handleUploadError = (error, req, res, next) => {
     }
     if (error.code === "LIMIT_UNEXPECTED_FILE") {
       // Mensagem mais clara para o usuário final
-      return res
-        .status(400)
-        .json({
-          error:
-            "Ocorreu um erro com o campo do arquivo. Verifique o nome do campo.",
-        });
+      return res.status(400).json({
+        error:
+          "Ocorreu um erro com o campo do arquivo. Verifique o nome do campo.",
+      });
     }
   } else if (error) {
     return res.status(400).json({ error: error.message });
@@ -107,9 +105,28 @@ const handleUploadError = (error, req, res, next) => {
   next();
 };
 
+// NOVO: Storage para templates de certificados (PDFs)
+const certificateStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/certificates";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `cert-template-${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+
+const uploadCertificate = multer({
+  storage: certificateStorage,
+  fileFilter: imageFileFilter, // <-- ALTERADO AQUI (usando o mesmo filtro de imagem do crachá)
+  limits: { fileSize: 1024 * 1024 * 5 }, // 5MB
+}).single("certificateTemplate");
+
 module.exports = {
   uploadProfilePhoto,
   uploadBadgeTemplate,
   uploadInsignia,
   handleUploadError,
+  uploadCertificate,
 };

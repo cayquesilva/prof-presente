@@ -10,14 +10,18 @@ const {
   eventValidation,
   uploadEventBadgeTemplate,
   generatePrintableBadges,
+  uploadCertificateTemplate,
 } = require("../controllers/eventController");
 
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
 
-const { uploadBadgeTemplate } = require("../middleware/upload");
+const {
+  uploadBadgeTemplate,
+  uploadCertificate,
+} = require("../middleware/upload");
 
 // Listar todos os eventos (público)
-router.get('/', authenticateToken, getAllEvents);
+router.get("/", authenticateToken, getAllEvents);
 
 // Obter evento por ID (público)
 router.get("/:id", getEventById);
@@ -31,7 +35,7 @@ router.get(
 );
 
 // Criar evento
-router.post('/', authenticateToken, eventValidation, createEvent);
+router.post("/", authenticateToken, eventValidation, createEvent);
 
 // Rota para criar/atualizar o modelo de crachá de um evento
 router.post(
@@ -53,5 +57,14 @@ router.put(
 
 // Deletar evento (apenas admin)
 router.delete("/:id", authenticateToken, requireAdmin, deleteEvent);
+
+//Criar certificados para o evento
+router.post(
+  "/:id/certificate-template",
+  authenticateToken,
+  requireAdmin,
+  uploadCertificate,
+  uploadCertificateTemplate
+);
 
 module.exports = router;

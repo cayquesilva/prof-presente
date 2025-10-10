@@ -35,7 +35,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
-import { Separator } from "../components/ui/separator"; // NOVO: Importado para separar visualmente os formulários.
+import { Separator } from "../components/ui/separator";
 import {
   Plus,
   CreditCard as Edit,
@@ -57,7 +57,9 @@ import AwardManagement from "../components/AwardManagement";
 import WorkplaceManagement from "../components/WorkplaceManagement";
 import ProfessionManagement from "../components/ProfessionManagement";
 import ReportsDashboard from "../components/ReportsDashboard";
+import CertificatePreview from "../components/CertificatePreview";
 import { Badge } from "../components/ui/badge";
+import { Combobox } from "../components/ui/combobox";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
@@ -70,6 +72,24 @@ const Admin = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
 
+  // ALTERAÇÃO: Renomeado para refletir que guarda o arquivo, não a URL
+  const [certificateTemplateFile, setCertificateTemplateFile] = useState(null);
+
+  // NOVO: Estado para a URL de preview do certificado
+  const [certificateTemplatePreviewUrl, setCertificateTemplatePreviewUrl] =
+    useState(null);
+
+  const [certificateConfig, setCertificateConfig] = useState({
+    nameX: "",
+    nameY: "",
+    nameFontSize: "",
+    nameColor: "#000000",
+    hoursX: "",
+    hoursY: "",
+    hoursFontSize: "",
+    hoursColor: "#333333",
+  });
+
   const [eventForm, setEventForm] = useState({
     title: "",
     description: "",
@@ -77,6 +97,7 @@ const Admin = () => {
     startDate: "",
     endDate: "",
     maxAttendees: "",
+    parentId: "",
   });
 
   const [badgeTemplateFile, setBadgeTemplateFile] = useState(null);
@@ -90,7 +111,6 @@ const Admin = () => {
     qrSize: "",
   });
 
-  // NOVO: Estado para armazenar a URL da imagem para a pré-visualização.
   const [badgeTemplatePreviewUrl, setBadgeTemplatePreviewUrl] = useState(null);
 
   const { data: events, isLoading: eventsLoading } = useQuery({
@@ -136,9 +156,6 @@ const Admin = () => {
       queryClient.invalidateQueries(["admin-events"]);
       queryClient.invalidateQueries(["events"]);
       toast.success("Evento atualizado com sucesso!");
-      // ALTERAÇÃO: Não fecha mais o modal ao atualizar dados, apenas ao salvar o template.
-      //setEditingEvent(null);
-      //resetForm();
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || "Erro ao atualizar evento");
@@ -159,7 +176,6 @@ const Admin = () => {
     },
   });
 
-  // NOVO: Mutação para fazer o upload do template e da configuração do crachá.
   const uploadTemplateMutation = useMutation({
     mutationFn: async ({ id, formData }) => {
       const response = await api.post(
@@ -176,13 +192,40 @@ const Admin = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["admin-events"]);
       toast.success("Modelo do crachá salvo com sucesso!");
-      setEditingEvent(null); // Fecha o modal
+      setEditingEvent(null);
       resetForm();
     },
     onError: (error) => {
       toast.error(
         error.response?.data?.error || "Erro ao salvar modelo do crachá"
       );
+    },
+  });
+
+  const uploadCertificateMutation = useMutation({
+    mutationFn: async ({ id, formData }) => {
+      const response = await api.post(
+        `/events/${id}/certificate-template`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      return response.data;
+    },
+    // CORREÇÃO: A função agora é 'async' e usa 'refetchQueries' com 'await'
+    onSuccess: async () => {
+      // Força a busca pelos dados mais recentes e espera a conclusão
+      await queryClient.refetchQueries({ queryKey: ["admin-events"] });
+
+      toast.success("Modelo de certificado salvo com sucesso!");
+
+      // Agora, com os dados já atualizados, podemos fechar o modal
+      setEditingEvent(null);
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao salvar modelo.");
     },
   });
 
@@ -194,8 +237,9 @@ const Admin = () => {
       startDate: "",
       endDate: "",
       maxAttendees: "",
+      parentId: "",
     });
-    // NOVO: Reseta também os formulários do crachá.
+
     setBadgeTemplateFile(null);
     setBadgeTemplatePreviewUrl(null);
     setBadgeConfig({
@@ -207,13 +251,27 @@ const Admin = () => {
       qrY: "",
       qrSize: "",
     });
+
+    // NOVO: Reset dos estados do certificado
+    setCertificateTemplateFile(null);
+    setCertificateTemplatePreviewUrl(null);
+    setCertificateConfig({
+      nameX: "",
+      nameY: "",
+      nameFontSize: "",
+      nameColor: "#000000",
+      hoursX: "",
+      hoursY: "",
+      hoursFontSize: "",
+      hoursColor: "#333333",
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = {
       ...eventForm,
-      startDate: `${eventForm.startDate}:00.000Z`, // Adiciona segundos e o indicador UTC
+      startDate: `${eventForm.startDate}:00.000Z`,
       endDate: `${eventForm.endDate}:00.000Z`,
       maxAttendees: eventForm.maxAttendees
         ? parseInt(eventForm.maxAttendees)
@@ -236,13 +294,12 @@ const Admin = () => {
       startDate: event.startDate.slice(0, 16),
       endDate: event.endDate.slice(0, 16),
       maxAttendees: event.maxAttendees || "",
+      parentId: event.parentId || "",
     });
 
-    // Limpa a preview anterior ao abrir o modal
     setBadgeTemplatePreviewUrl(null);
     setBadgeTemplateFile(null);
 
-    // NOVO: Preenche os campos de configuração do crachá se eles existirem no evento.
     if (event.badgeTemplateConfig) {
       const config = event.badgeTemplateConfig;
       setBadgeConfig({
@@ -255,16 +312,44 @@ const Admin = () => {
         qrSize: config.qrCode?.size || "",
       });
     }
+
+    // Limpa a preview do certificado ao abrir o modal
+    setCertificateTemplatePreviewUrl(null);
+    setCertificateTemplateFile(null);
+
+    // Reseta a configuração para o padrão
+    setCertificateConfig({
+      nameX: "",
+      nameY: "",
+      nameFontSize: "",
+      nameColor: "#000000",
+      hoursX: "",
+      hoursY: "",
+      hoursFontSize: "",
+      hoursColor: "#333333",
+    });
+
+    // Preenche com a configuração salva, se existir
+    if (event.certificateTemplateConfig) {
+      const config = event.certificateTemplateConfig;
+      setCertificateConfig({
+        nameX: config.name?.x || "",
+        nameY: config.name?.y || "",
+        nameFontSize: config.name?.fontSize || "",
+        nameColor: config.name?.color || "#000000",
+        hoursX: config.hours?.x || "",
+        hoursY: config.hours?.y || "",
+        hoursFontSize: config.hours?.fontSize || "",
+        hoursColor: config.hours?.color || "#333333",
+      });
+    }
   };
 
-  // NOVO: Função para lidar com a mudança no input de arquivo.
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setBadgeTemplateFile(file);
-      // Cria uma URL temporária para o arquivo de imagem poder ser exibido.
       if (badgeTemplatePreviewUrl) {
-        // Limpa a URL do objeto anterior para evitar memory leak
         URL.revokeObjectURL(badgeTemplatePreviewUrl);
       }
       setBadgeTemplatePreviewUrl(URL.createObjectURL(file));
@@ -277,7 +362,6 @@ const Admin = () => {
     }
   };
 
-  // NOVO: Função para lidar com o envio do formulário do modelo do crachá.
   const handleTemplateSubmit = (e) => {
     e.preventDefault();
     if (!editingEvent) return;
@@ -316,29 +400,64 @@ const Admin = () => {
     });
   };
 
-  // NOVO: Função para lidar com a impressão de crachás
+  // FUNÇÃO CORRIGIDA: para lidar com a mudança no input de arquivo do certificado
+  const handleCertificateFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCertificateTemplateFile(file);
+      // Lógica para criar e limpar a URL de preview
+      if (certificateTemplatePreviewUrl) {
+        URL.revokeObjectURL(certificateTemplatePreviewUrl);
+      }
+      setCertificateTemplatePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleCertificateTemplateSubmit = (e) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+
+    const config = {
+      name: {
+        x: parseInt(certificateConfig.nameX) || 0,
+        y: parseInt(certificateConfig.nameY) || 0,
+        fontSize: parseInt(certificateConfig.nameFontSize) || 24,
+        color: certificateConfig.nameColor,
+      },
+      hours: {
+        x: parseInt(certificateConfig.hoursX) || 0,
+        y: parseInt(certificateConfig.hoursY) || 0,
+        fontSize: parseInt(certificateConfig.hoursFontSize) || 18,
+        color: certificateConfig.hoursColor,
+      },
+    };
+
+    const formData = new FormData();
+    if (certificateTemplateFile) {
+      formData.append("certificateTemplate", certificateTemplateFile);
+    }
+    formData.append("certificateTemplateConfig", JSON.stringify(config));
+    uploadCertificateMutation.mutate({ id: editingEvent.id, formData });
+  };
+
   const handlePrintBadges = async (eventId, eventTitle) => {
     toast.info("Gerando PDF com os crachás... Isso pode levar um momento.");
     try {
       const response = await api.get(`/events/${eventId}/print-badges`, {
-        responseType: "blob", // Importante: espera uma resposta de arquivo binário
+        responseType: "blob",
       });
 
-      // Cria uma URL temporária para o arquivo recebido
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      // Define o nome do arquivo para download
       link.setAttribute(
         "download",
         `crachas_${eventTitle.replace(/\s+/g, "_")}.pdf`
       );
 
-      // Simula o clique no link para iniciar o download
       document.body.appendChild(link);
       link.click();
 
-      // Limpa a URL temporária
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
@@ -349,13 +468,18 @@ const Admin = () => {
     }
   };
 
+  // Efeito para limpar as URLs de preview ao desmontar o componente ou ao mudar a URL
   useEffect(() => {
     return () => {
+      // Esta função de limpeza agora só executa ao fechar o modal/sair da página.
       if (badgeTemplatePreviewUrl) {
         URL.revokeObjectURL(badgeTemplatePreviewUrl);
       }
+      if (certificateTemplatePreviewUrl) {
+        URL.revokeObjectURL(certificateTemplatePreviewUrl);
+      }
     };
-  }, [badgeTemplatePreviewUrl]);
+  }, []);
 
   return (
     <div className="p-6 space-y-6">
@@ -529,6 +653,31 @@ const Admin = () => {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label>Evento Pai (Opcional)</Label>
+                    <Combobox
+                      options={[
+                        {
+                          value: "",
+                          label: "Nenhum (Este é um evento principal)",
+                        },
+                        ...(events
+                          ?.filter((e) => e.id !== editingEvent?.id)
+                          .map((e) => ({ value: e.id, label: e.title })) || []),
+                      ]}
+                      value={eventForm.parentId}
+                      onSelect={(value) =>
+                        setEventForm({ ...eventForm, parentId: value })
+                      }
+                      placeholder="Selecione o evento principal..."
+                      searchPlaceholder="Pesquisar evento..."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Selecione se este evento faz parte de um evento maior (ex:
+                      uma palestra dentro de um congresso).
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="startDate">Data de Início</Label>
@@ -610,14 +759,10 @@ const Admin = () => {
                   </div>
                 </form>
 
-                {/* NOVO: Formulário para o Modelo do Crachá, visível apenas na edição. */}
                 {editingEvent && (
                   <>
                     <Separator className="my-4" />
-                    {/* CORREÇÃO: O grid agora envolve as duas seções (formulário de config e preview) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Coluna 1: Formulário de Configuração */}
-                      {/* CORREÇÃO: Removido o <form> aninhado. Agora é um <div>. */}
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">
                           Modelo do Crachá Impresso
@@ -732,7 +877,6 @@ const Admin = () => {
                           </div>
 
                           <div className="flex justify-end pt-2">
-                            {/* CORREÇÃO: O botão agora é type="button" e chama a função no onClick. */}
                             <Button
                               type="button"
                               onClick={handleTemplateSubmit}
@@ -747,7 +891,6 @@ const Admin = () => {
                         </div>
                       </div>
 
-                      {/* Coluna 2: Pré-visualização */}
                       <div className="space-y-4">
                         <BadgePreview
                           templateImage={
@@ -758,9 +901,167 @@ const Admin = () => {
                           }
                           config={badgeConfig}
                           qrCodeImageSrc="/sample-qrcode.png"
+                          onConfigChange={setBadgeConfig}
                         />
                       </div>
                     </div>
+
+                    <Separator className="my-4" />
+
+                    <form
+                      onSubmit={handleCertificateTemplateSubmit}
+                      className="space-y-4"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">
+                            Modelo do Certificado
+                          </h3>
+                          <div className="p-4 border rounded-lg space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="certificateTemplate">
+                                Imagem do Certificado
+                              </Label>
+                              <Input
+                                id="certificateTemplate"
+                                type="file"
+                                onChange={handleCertificateFileChange}
+                                accept="image/*"
+                              />
+                              {editingEvent.certificateTemplateUrl &&
+                                !certificateTemplateFile && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Um modelo já foi enviado. Envie um novo para
+                                    substituir.
+                                  </p>
+                                )}
+                            </div>
+
+                            <h4 className="font-medium text-sm">
+                              Posição do Nome
+                            </h4>
+                            <div className="grid grid-cols-4 gap-2">
+                              <Input
+                                type="number"
+                                placeholder="X"
+                                value={certificateConfig.nameX}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    nameX: e.target.value,
+                                  })
+                                }
+                              />
+                              <Input
+                                type="number"
+                                placeholder="Y"
+                                value={certificateConfig.nameY}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    nameY: e.target.value,
+                                  })
+                                }
+                              />
+                              <Input
+                                type="number"
+                                placeholder="Fonte"
+                                value={certificateConfig.nameFontSize}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    nameFontSize: e.target.value,
+                                  })
+                                }
+                              />
+                              <Input
+                                type="color"
+                                title="Cor da fonte"
+                                value={certificateConfig.nameColor}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    nameColor: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+
+                            <h4 className="font-medium text-sm">
+                              Posição das Horas
+                            </h4>
+                            <div className="grid grid-cols-4 gap-2">
+                              <Input
+                                type="number"
+                                placeholder="X"
+                                value={certificateConfig.hoursX}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    hoursX: e.target.value,
+                                  })
+                                }
+                              />
+                              <Input
+                                type="number"
+                                placeholder="Y"
+                                value={certificateConfig.hoursY}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    hoursY: e.target.value,
+                                  })
+                                }
+                              />
+                              <Input
+                                type="number"
+                                placeholder="Fonte"
+                                value={certificateConfig.hoursFontSize}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    hoursFontSize: e.target.value,
+                                  })
+                                }
+                              />
+                              <Input
+                                type="color"
+                                title="Cor da fonte"
+                                value={certificateConfig.hoursColor}
+                                onChange={(e) =>
+                                  setCertificateConfig({
+                                    ...certificateConfig,
+                                    hoursColor: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                              <Button
+                                type="submit"
+                                disabled={uploadCertificateMutation.isPending}
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Salvar Modelo
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* CORREÇÃO: Passando a prop 'templateImage' e usando a nova URL de preview */}
+                        <CertificatePreview
+                          templateImage={
+                            certificateTemplatePreviewUrl ||
+                            (editingEvent.certificateTemplateUrl
+                              ? `${API_BASE_URL}${editingEvent.certificateTemplateUrl}`
+                              : null)
+                          }
+                          config={certificateConfig}
+                          onConfigChange={setCertificateConfig}
+                        />
+                      </div>
+                    </form>
                   </>
                 )}
               </DialogContent>
@@ -815,7 +1116,6 @@ const Admin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end items-center gap-1">
-                            {/* NOVO: Botão de Impressão em Lote */}
                             {event.badgeTemplateUrl && (
                               <Button
                                 variant="ghost"

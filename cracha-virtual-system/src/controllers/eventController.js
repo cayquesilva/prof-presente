@@ -88,7 +88,7 @@ const getAllEvents = async (req, res) => {
 
     // Combina a cláusula base com a de visibilidade, se necessário
     if (finalWhere.OR || finalWhere.creatorId) {
-        finalWhere = { AND: [baseWhere, finalWhere] };
+      finalWhere = { AND: [baseWhere, finalWhere] };
     }
 
     const events = await prisma.event.findMany({
@@ -106,6 +106,8 @@ const getAllEvents = async (req, res) => {
         createdAt: true,
         badgeTemplateUrl: true,
         badgeTemplateConfig: true,
+        certificateTemplateUrl: true,
+        certificateTemplateConfig: true,
         _count: {
           select: {
             enrollments: {
@@ -519,6 +521,56 @@ const generatePrintableBadges = async (req, res) => {
   }
 };
 
+const uploadCertificateTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { certificateTemplateConfig } = req.body;
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CORREÇÃO: Adicionada a validação que exige o envio do arquivo, igual à função do crachá.
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ error: "Nenhuma imagem de modelo de certificado foi enviada" });
+    }
+
+    // CORREÇÃO: 'updateData' agora é inicializado com a URL, garantindo que ela sempre seja salva.
+    const updateData = {
+      certificateTemplateUrl: `/${req.file.path.replace(/\\/g, "/")}`,
+    };
+
+    if (certificateTemplateConfig) {
+      try {
+        updateData.certificateTemplateConfig = JSON.parse(
+          certificateTemplateConfig
+        );
+      } catch (e) {
+        return res.status(400).json({
+          error:
+            "Formato de certificateTemplateConfig inválido. Deve ser um JSON.",
+        });
+      }
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({
+      message: "Modelo de certificado atualizado com sucesso!",
+      event: updatedEvent,
+    });
+  } catch (error) {
+    console.error("Erro no upload do modelo de certificado:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -528,4 +580,5 @@ module.exports = {
   eventValidation,
   uploadEventBadgeTemplate,
   generatePrintableBadges,
+  uploadCertificateTemplate,
 };

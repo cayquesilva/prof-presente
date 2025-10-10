@@ -121,6 +121,7 @@ model Event {
 
   // Campo para o template do certificado (apenas no evento "pai")
   certificateTemplateUrl String? @map("certificate_template_url")
+  certificateTemplateConfig Json? @map("certificate_template_config")
 
 
   // Relacionamentos

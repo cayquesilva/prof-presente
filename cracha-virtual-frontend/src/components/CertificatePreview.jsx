@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const BadgePreview = ({
-  templateImage,
-  config,
-  qrCodeImageSrc,
-  onConfigChange,
-}) => {
+const CertificatePreview = ({ templateImage, config, onConfigChange }) => {
   const canvasRef = useRef(null);
   const [elements, setElements] = useState({});
   const [draggingElement, setDraggingElement] = useState(null);
@@ -16,6 +11,12 @@ const BadgePreview = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+
+    if (!templateImage) {
+      // Se não houver imagem, limpa o canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
 
     const template = new Image();
     template.crossOrigin = "anonymous";
@@ -36,39 +37,39 @@ const BadgePreview = ({
         y: config.nameY || 20,
         fontSize: config.nameFontSize || 24,
         color: config.nameColor || "#000000",
-        text: "Seu Nome Completo Aqui",
+        text: "Nome do Participante (Exemplo)",
       };
       ctx.fillStyle = nameConfig.color;
       ctx.font = `bold ${nameConfig.fontSize}px sans-serif`;
-      const textMetrics = ctx.measureText(nameConfig.text);
+      const nameMetrics = ctx.measureText(nameConfig.text);
       ctx.fillText(nameConfig.text, nameConfig.x, nameConfig.y);
 
-      // Configurações e desenho do QR Code
-      const qrConfig = {
-        x: config.qrX || 20,
-        y: config.qrY || 60,
-        size: config.qrSize || 100,
+      // Configurações e desenho das Horas
+      const hoursConfig = {
+        x: config.hoursX || 20,
+        y: config.hoursY || 60,
+        fontSize: config.hoursFontSize || 18,
+        color: config.hoursColor || "#333333",
+        text: "XX,X horas",
       };
-      const qrCode = new Image();
-      qrCode.src = qrCodeImageSrc;
-      qrCode.onload = () => {
-        ctx.drawImage(
-          qrCode,
-          qrConfig.x,
-          qrConfig.y,
-          qrConfig.size,
-          qrConfig.size
-        );
-        // Armazena as áreas clicáveis dos elementos
-        setElements({
-          name: {
-            ...nameConfig,
-            width: textMetrics.width,
-            height: nameConfig.fontSize,
-          },
-          qr: { ...qrConfig, width: qrConfig.size, height: qrConfig.size },
-        });
-      };
+      ctx.fillStyle = hoursConfig.color;
+      ctx.font = `${hoursConfig.fontSize}px sans-serif`;
+      const hoursMetrics = ctx.measureText(hoursConfig.text);
+      ctx.fillText(hoursConfig.text, hoursConfig.x, hoursConfig.y);
+
+      // Armazena as áreas clicáveis dos elementos
+      setElements({
+        name: {
+          ...nameConfig,
+          width: nameMetrics.width,
+          height: nameConfig.fontSize,
+        },
+        hours: {
+          ...hoursConfig,
+          width: hoursMetrics.width,
+          height: hoursConfig.fontSize,
+        },
+      });
     };
 
     template.onerror = () => {
@@ -79,7 +80,7 @@ const BadgePreview = ({
       ctx.font = "16px sans-serif";
       ctx.fillText("Erro ao carregar a imagem do modelo.", 10, 30);
     };
-  }, [templateImage, config, qrCodeImageSrc]);
+  }, [templateImage, config]); // A dependência agora é 'templateImage'
 
   // Funções para o Drag and Drop
   const handleMouseDown = (e) => {
@@ -120,8 +121,8 @@ const BadgePreview = ({
 
     if (draggingElement === "name") {
       onConfigChange({ ...config, nameX: newX, nameY: newY });
-    } else if (draggingElement === "qr") {
-      onConfigChange({ ...config, qrX: newX, qrY: newY });
+    } else if (draggingElement === "hours") {
+      onConfigChange({ ...config, hoursX: newX, hoursY: newY });
     }
   };
 
@@ -132,7 +133,7 @@ const BadgePreview = ({
   return (
     <div>
       <h4 className="font-medium mb-2">Pré-visualização</h4>
-      <div className="p-4 border rounded-lg bg-gray-50 flex justify-center items-center">
+      <div className="p-4 border rounded-lg bg-gray-200 flex justify-center items-center">
         {templateImage ? (
           <canvas
             ref={canvasRef}
@@ -144,7 +145,7 @@ const BadgePreview = ({
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp} // Para o drag se o mouse sair do canvas
+            onMouseLeave={handleMouseUp}
           />
         ) : (
           <div className="text-center text-gray-500 h-48 flex items-center">
@@ -156,4 +157,4 @@ const BadgePreview = ({
   );
 };
 
-export default BadgePreview;
+export default CertificatePreview;
