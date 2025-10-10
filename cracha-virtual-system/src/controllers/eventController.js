@@ -808,23 +808,57 @@ async function generateCertificatePdf(
 const getCertificateLogsForEvent = async (req, res) => {
   try {
     const { id: eventId } = req.params;
-    const logs = await prisma.certificateLog.findMany({
-      where: { eventId },
+
+    // 1. Pega todos os participantes com inscrição aprovada no evento.
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        eventId,
+        status: "APPROVED",
+      },
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             email: true,
           },
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        user: {
+          name: "asc",
+        },
       },
     });
-    res.json(logs);
+
+    // 2. Pega todos os logs de envio existentes para este evento.
+    const logs = await prisma.certificateLog.findMany({
+      where: { eventId },
+      select: {
+        userId: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    // 3. Mapeia os logs por ID de usuário para uma busca rápida.
+    const logMap = new Map(logs.map((log) => [log.userId, log]));
+
+    // 4. Combina as duas listas para criar o relatório de status final.
+    const statusReport = enrollments.map((enrollment) => {
+      const log = logMap.get(enrollment.userId);
+      return {
+        userId: enrollment.user.id,
+        userName: enrollment.user.name,
+        userEmail: enrollment.user.email,
+        status: log ? log.status : "PENDING", // Se não há log, o status é "Pendente"
+        sentAt: log ? log.createdAt : null,
+      };
+    });
+
+    res.json(statusReport);
   } catch (error) {
-    console.error("Erro ao buscar logs de certificados:", error);
+    console.error("Erro ao buscar status de certificados:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 };

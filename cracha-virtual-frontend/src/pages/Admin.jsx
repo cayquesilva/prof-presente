@@ -1115,9 +1115,11 @@ const Admin = () => {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Status</TableHead>
                               <TableHead>Participante</TableHead>
-                              <TableHead>Data</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">
+                                Data de Envio
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1125,15 +1127,24 @@ const Admin = () => {
                               <TableRow>
                                 <TableCell colSpan={3} className="text-center">
                                   <Clock className="h-4 w-4 mr-2 inline-block animate-spin" />
-                                  Carregando histórico...
+                                  Carregando status...
                                 </TableCell>
                               </TableRow>
                             ) : certificateLogs &&
                               certificateLogs.length > 0 ? (
-                              certificateLogs.map((log) => (
-                                <TableRow key={log.id}>
+                              certificateLogs.map((report) => (
+                                <TableRow key={report.userId}>
                                   <TableCell>
-                                    {log.status === "SUCCESS" ? (
+                                    <div className="font-medium">
+                                      {report.userName}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {report.userEmail}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    {/* Lógica para exibir o badge de acordo com o status */}
+                                    {report.status === "SUCCESS" && (
                                       <Badge
                                         variant="default"
                                         className="bg-green-600"
@@ -1141,25 +1152,27 @@ const Admin = () => {
                                         <CheckCircle2 className="h-3 w-3 mr-1" />
                                         Enviado
                                       </Badge>
-                                    ) : (
+                                    )}
+                                    {report.status === "FAILED" && (
                                       <Badge variant="destructive">
                                         <XCircle className="h-3 w-3 mr-1" />
                                         Falhou
                                       </Badge>
                                     )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="font-medium">
-                                      {log.user.name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {log.user.email}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-xs">
-                                    {new Date(log.createdAt).toLocaleString(
-                                      "pt-BR"
+                                    {report.status === "PENDING" && (
+                                      <Badge variant="outline">
+                                        <Clock className="h-3 w-3 mr-1" />
+                                        Pendente
+                                      </Badge>
                                     )}
+                                  </TableCell>
+                                  <TableCell className="text-right text-xs">
+                                    {/* Exibe a data apenas se houver uma */}
+                                    {report.sentAt
+                                      ? new Date(report.sentAt).toLocaleString(
+                                          "pt-BR"
+                                        )
+                                      : "—"}
                                   </TableCell>
                                 </TableRow>
                               ))
@@ -1169,8 +1182,7 @@ const Admin = () => {
                                   colSpan={3}
                                   className="text-center text-muted-foreground"
                                 >
-                                  Nenhum certificado foi enviado para este
-                                  evento ainda.
+                                  Nenhum participante inscrito neste evento.
                                 </TableCell>
                               </TableRow>
                             )}
