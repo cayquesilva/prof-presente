@@ -68,13 +68,17 @@ const UserManagement = () => {
       setSelectedUser(null);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || "Erro ao atualizar tipo de usuário");
+      toast.error(
+        error.response?.data?.error || "Erro ao atualizar tipo de usuário"
+      );
     },
   });
 
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, newPassword }) => {
-      const response = await api.post(`/users/${userId}/reset-password`, { newPassword });
+      const response = await api.post(`/users/${userId}/reset-password`, {
+        newPassword,
+      });
       return response.data;
     },
     onSuccess: () => {
@@ -131,6 +135,7 @@ const UserManagement = () => {
   const getRoleBadge = (role) => {
     const roleConfig = {
       ADMIN: { label: "Administrador", variant: "destructive" },
+      GESTOR_ESCOLA: { label: "Gestor Educacional", variant: "outline" },
       ORGANIZER: { label: "Organizador", variant: "default" },
       CHECKIN_COORDINATOR: { label: "Coord. Check-in", variant: "secondary" },
       TEACHER: { label: "Professor", variant: "outline" },
@@ -186,7 +191,10 @@ const UserManagement = () => {
               <TableBody>
                 {filteredUsers?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-8 text-gray-500"
+                    >
                       Nenhum usuário encontrado
                     </TableCell>
                   </TableRow>
@@ -250,6 +258,9 @@ const UserManagement = () => {
                     Coordenador de Check-in
                   </SelectItem>
                   <SelectItem value="ORGANIZER">Organizador</SelectItem>
+                  <SelectItem value="GESTOR_ESCOLA">
+                    Gestor Educacional
+                  </SelectItem>
                   <SelectItem value="ADMIN">Administrador</SelectItem>
                 </SelectContent>
               </Select>
@@ -273,7 +284,10 @@ const UserManagement = () => {
       </Dialog>
 
       {/* Dialog para redefinir senha */}
-      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+      <Dialog
+        open={isPasswordDialogOpen}
+        onOpenChange={setIsPasswordDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Redefinir Senha</DialogTitle>
@@ -314,9 +328,7 @@ const UserManagement = () => {
               onClick={handlePasswordReset}
               disabled={resetPasswordMutation.isPending}
             >
-              {resetPasswordMutation.isPending
-                ? "Redefinindo..."
-                : "Redefinir"}
+              {resetPasswordMutation.isPending ? "Redefinindo..." : "Redefinir"}
             </Button>
           </DialogFooter>
         </DialogContent>

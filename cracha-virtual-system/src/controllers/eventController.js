@@ -48,59 +48,55 @@ const getAllEvents = async (req, res) => {
     if (upcoming === "true") {
       baseWhere.startDate = { gte: new Date() };
     }
-    
+
     // Construção da cláusula final de visibilidade
     let finalWhere = { ...baseWhere };
 
-    if (user && user.role !== 'ADMIN') {
-        const visibilityClause = [];
+    if (user && user.role !== "ADMIN") {
+      if (user.role === "GESTOR_ESCOLA") {
+        // CORREÇÃO: Gestor vê APENAS os eventos que ele mesmo criou
+        finalWhere.creatorId = user.id;
+      } else {
+        // Usuário comum vê eventos públicos OU os privados da sua escola
+        const userWithWorkplaces = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { workplaces: { select: { id: true } } },
+        });
+        const userWorkplaceIds =
+          userWithWorkplaces?.workplaces.map((w) => w.id) || [];
 
-        // Todos os usuários (não-admins) podem ver eventos públicos
-        visibilityClause.push({ isPrivate: false });
+        if (userWorkplaceIds.length > 0) {
+          const managers = await prisma.user.findMany({
+            where: {
+              role: "GESTOR_ESCOLA",
+              workplaces: { some: { id: { in: userWorkplaceIds } } },
+            },
+            select: { id: true },
+          });
+          const managerIds = managers.map((m) => m.id);
 
-        if (user.role === 'GESTOR_ESCOLA') {
-            // Gestor também vê os eventos privados que ele mesmo criou
-            visibilityClause.push({ creatorId: user.id });
-        } else { // Para TEACHER, USER, etc.
-            // Usuário comum também vê os eventos privados criados por gestores da(s) sua(s) escola(s)
-            const userWithWorkplaces = await prisma.user.findUnique({
-                where: { id: user.id },
-                select: { workplaces: { select: { id: true } } }
-            });
-
-            if (userWithWorkplaces?.workplaces.length > 0) {
-                const userWorkplaceIds = userWithWorkplaces.workplaces.map(w => w.id);
-                
-                // Encontra os gestores que trabalham nas mesmas escolas que o usuário
-                const managers = await prisma.user.findMany({
-                    where: {
-                        role: 'GESTOR_ESCOLA',
-                        workplaces: { some: { id: { in: userWorkplaceIds } } }
-                    },
-                    select: { id: true }
-                });
-                const managerIds = managers.map(m => m.id);
-
-                if (managerIds.length > 0) {
-                    visibilityClause.push({ creatorId: { in: managerIds } });
-                }
-            }
+          finalWhere.OR = [
+            { isPrivate: false },
+            { creatorId: { in: managerIds } },
+          ];
+        } else {
+          // Se o usuário não tem escola, só vê eventos públicos
+          finalWhere.isPrivate = false;
         }
-        
-        // Combina a lógica: (filtros de busca) E (condições de visibilidade)
-        finalWhere = {
-            AND: [
-                baseWhere,
-                { OR: visibilityClause }
-            ]
-        };
-    } // else: ADMIN vê tudo, então finalWhere = baseWhere
+      }
+    }
+
+    // Combina a cláusula base com a de visibilidade, se necessário
+    if (finalWhere.OR || finalWhere.creatorId) {
+        finalWhere = { AND: [baseWhere, finalWhere] };
+    }
 
     const events = await prisma.event.findMany({
       where: finalWhere,
       select: {
         id: true,
         title: true,
+        isPrivate: true,
         description: true,
         startDate: true,
         endDate: true,

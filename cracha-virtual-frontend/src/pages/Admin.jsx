@@ -57,11 +57,12 @@ import AwardManagement from "../components/AwardManagement";
 import WorkplaceManagement from "../components/WorkplaceManagement";
 import ProfessionManagement from "../components/ProfessionManagement";
 import ReportsDashboard from "../components/ReportsDashboard";
+import { Badge } from "../components/ui/badge";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
 const Admin = () => {
-  const { isAdmin, isGestor } = useAuth();
+  const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab") || "events";
@@ -212,6 +213,8 @@ const Admin = () => {
     e.preventDefault();
     const data = {
       ...eventForm,
+      startDate: `${eventForm.startDate}:00.000Z`, // Adiciona segundos e o indicador UTC
+      endDate: `${eventForm.endDate}:00.000Z`,
       maxAttendees: eventForm.maxAttendees
         ? parseInt(eventForm.maxAttendees)
         : null,
@@ -309,6 +312,7 @@ const Admin = () => {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "UTC",
     });
   };
 
@@ -373,7 +377,7 @@ const Admin = () => {
               <Calendar className="h-4 w-4 mr-2" />
               Eventos
             </TabsTrigger>
-            {(isAdmin || isGestor) && (
+            {isAdmin && (
               <>
                 <TabsTrigger value="users">
                   <Users className="h-4 w-4 mr-2" />
@@ -391,12 +395,12 @@ const Admin = () => {
                   <Briefcase className="h-4 w-4 mr-2" />
                   Profissões
                 </TabsTrigger>
-                <TabsTrigger value="reports">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Relatórios
-                </TabsTrigger>
               </>
             )}
+            <TabsTrigger value="reports">
+              <FileText className="h-4 w-4 mr-2" />
+              Relatórios
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -770,6 +774,7 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>Título</TableHead>
                     <TableHead>Local</TableHead>
+                    <TableHead>Visibilidade</TableHead>
                     <TableHead>Início</TableHead>
                     <TableHead>Término</TableHead>
                     <TableHead>Capacidade</TableHead>
@@ -796,6 +801,13 @@ const Admin = () => {
                           {event.title}
                         </TableCell>
                         <TableCell>{event.location}</TableCell>
+                        <TableCell>
+                          {event.isPrivate ? (
+                            <Badge variant="secondary">Privado</Badge>
+                          ) : (
+                            <Badge variant="outline">Público</Badge>
+                          )}
+                        </TableCell>
                         <TableCell>{formatDate(event.startDate)}</TableCell>
                         <TableCell>{formatDate(event.endDate)}</TableCell>
                         <TableCell>
@@ -842,7 +854,7 @@ const Admin = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        {(isAdmin || isGestor) && (
+        {isAdmin && (
           <>
             <TabsContent value="users" className="space-y-4">
               <UserManagement />
@@ -859,12 +871,11 @@ const Admin = () => {
             <TabsContent value="professions">
               <ProfessionManagement />
             </TabsContent>
-
-            <TabsContent value="reports">
-              <ReportsDashboard />
-            </TabsContent>
           </>
         )}
+        <TabsContent value="reports">
+          <ReportsDashboard />
+        </TabsContent>
       </Tabs>
     </div>
   );

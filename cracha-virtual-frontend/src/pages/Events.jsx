@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useDebounce } from "../hooks/useDebounce"; // Hook recomendado para debounce
+import { useDebounce } from "../hooks/useDebounce";
 import api from "../lib/api";
 import {
   Card,
@@ -13,15 +13,83 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import { Separator } from "../components/ui/separator";
 import { Calendar, MapPin, Users, Search } from "lucide-react";
 
-// É uma boa prática criar um hook customizado para debounce,
-// mas para simplicidade, a lógica pode ser colocada diretamente no componente.
-// Se não tiver o hook 'useDebounce', a lógica com useEffect/setTimeout funciona.
+// --- NOVO: Componente de Card Reutilizável ---
+const EventCard = ({ event }) => {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    });
+  };
+
+  const getEventStatus = (startDate, endDate) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (now < start)
+      return { label: "Próximo", color: "bg-blue-100 text-blue-800" };
+    if (now >= start && now <= end)
+      return { label: "Em andamento", color: "bg-green-100 text-green-800" };
+    return { label: "Finalizado", color: "bg-gray-100 text-gray-800" };
+  };
+
+  const eventStatus = getEventStatus(event.startDate, event.endDate);
+
+  return (
+    <Card className="hover:shadow-lg transition-shadow flex flex-col">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg line-clamp-2">
+              {event.title}
+            </CardTitle>
+            {event.isPrivate && <Badge variant="secondary">Privado</Badge>}
+          </div>
+          <Badge className={eventStatus.color}>{eventStatus.label}</Badge>
+        </div>
+        <CardDescription className="line-clamp-3 h-[60px]">
+          {event.description}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col justify-between">
+        <div className="space-y-3">
+          <div className="flex items-center text-sm text-gray-600">
+            <Calendar className="h-4 w-4 mr-2" />
+            <span>{formatDate(event.startDate)}</span>
+          </div>
+          <div className="flex items-center text-sm text-gray-600">
+            <MapPin className="h-4 w-4 mr-2" />
+            <span className="line-clamp-1">{event.location}</span>
+          </div>
+          {event.maxAttendees && (
+            <div className="flex items-center text-sm text-gray-600">
+              <Users className="h-4 w-4 mr-2" />
+              <span>
+                {event.enrolledCount || 0} inscritos de {event.maxAttendees}{" "}
+                vagas
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="pt-4">
+          <Link to={`/events/${event.id}`}>
+            <Button className="w-full">Ver detalhes</Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const Events = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  // Debounce no termo de busca para evitar requisições a cada tecla digitada
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const {
@@ -32,68 +100,36 @@ const Events = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    // A chave da query agora inclui o termo de busca.
-    // O React Query irá refazer a busca automaticamente quando o termo mudar.
     queryKey: ["events", debouncedSearchTerm],
-
-    // A função de query agora recebe 'pageParam'
     queryFn: async ({ pageParam = 1 }) => {
       const response = await api.get("/events", {
         params: {
           page: pageParam,
-          limit: 9, // Buscar 9 por vez para preencher a grade 3x3
+          limit: 9,
           search: debouncedSearchTerm,
         },
       });
-      // Corrigido: retornamos o objeto inteiro para ter acesso à paginação
       return response.data;
     },
-
-    // Define como obter o número da próxima página
     getNextPageParam: (lastPage) => {
       const { page, pages } = lastPage.pagination;
-      if (page < pages) {
-        return page + 1;
-      }
-      return undefined; // Não há mais páginas
+      return page < pages ? page + 1 : undefined;
     },
   });
 
-  // Extrai a lista de eventos de todas as páginas carregadas
-  const events = data?.pages.flatMap((page) => page.events) ?? [];
+  const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  // --- LÓGICA DE SEPARAÇÃO DOS EVENTOS ---
+  const privateEvents = allEvents.filter((event) => event.isPrivate);
+  const publicEvents = allEvents.filter((event) => !event.isPrivate);
 
-  const getEventStatus = (startDate, endDate) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (now < start) {
-      return { label: "Próximo", color: "bg-blue-100 text-blue-800" };
-    } else if (now >= start && now <= end) {
-      return { label: "Em andamento", color: "bg-green-100 text-green-800" };
-    } else {
-      return { label: "Finalizado", color: "bg-gray-100 text-gray-800" };
-    }
-  };
-
-  if (isLoading && !data) {
-    // Tela de loading inicial
-    return <div>Carregando eventos...</div>;
+  if (isLoading && allEvents.length === 0) {
+    return <div className="p-6">Carregando eventos...</div>;
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
+      <div className="p-6 text-center">
         <p className="text-red-600">
           Erro ao carregar eventos: {error.message}
         </p>
@@ -105,7 +141,7 @@ const Events = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Eventos</h1>
       </div>
@@ -120,84 +156,52 @@ const Events = () => {
         />
       </div>
 
-      {events.length === 0 ? (
+      {allEvents.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-600">
             {debouncedSearchTerm
               ? "Nenhum evento encontrado para sua pesquisa."
-              : "Nenhum evento disponível no momento."}
+              : "Nenhum evento disponível para você no momento."}
           </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => {
-              const eventStatus = getEventStatus(
-                event.startDate,
-                event.endDate
-              );
-              return (
-                <Card
-                  key={event.id}
-                  className="hover:shadow-lg transition-shadow"
-                >
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg line-clamp-2">
-                        {event.title}
-                      </CardTitle>
-                      <Badge className={eventStatus.color}>
-                        {eventStatus.label}
-                      </Badge>
-                    </div>
-                    <CardDescription className="line-clamp-3">
-                      {event.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        <span>{formatDate(event.startDate)}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        <span className="line-clamp-1">{event.location}</span>
-                      </div>
-                      {event.maxAttendees && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Users className="h-4 w-4 mr-2" />
-                          <span>
-                            {event.enrolledCount ? event.enrolledCount : 0}{" "}
-                            inscritos de {event.maxAttendees} vagas
-                          </span>
-                        </div>
-                      )}
-                      <div className="pt-2">
-                        <Link to={`/events/${event.id}`}>
-                          <Button className="w-full">Ver detalhes</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {/* --- NOVA SEÇÃO DE EVENTOS PRIVADOS --- */}
+          {privateEvents.length > 0 && (
+            <section className="space-y-4">
+              <h2 className="text-2xl font-bold">Eventos da sua Unidade</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {privateEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            </section>
+          )}
 
-          {/* Botão de Paginação "Carregar Mais" */}
-          <div className="flex justify-center mt-6">
-            {hasNextPage && (
-              <Button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? "Carregando..." : "Carregar Mais"}
-              </Button>
-            )}
-          </div>
+          {privateEvents.length > 0 && publicEvents.length > 0 && <Separator />}
+
+          {/* --- NOVA SEÇÃO DE EVENTOS PÚBLICOS --- */}
+          {publicEvents.length > 0 && (
+            <section className="space-y-4">
+              <h2 className="text-2xl font-bold">Eventos Públicos</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {publicEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
+
+      {/* Botão de Paginação "Carregar Mais" */}
+      <div className="flex justify-center mt-6">
+        {hasNextPage && (
+          <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+            {isFetchingNextPage ? "Carregando..." : "Carregar Mais"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

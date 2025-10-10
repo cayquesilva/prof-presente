@@ -57,6 +57,7 @@ const MyEnrollments = () => {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "UTC",
     });
   };
 
@@ -76,9 +77,14 @@ const MyEnrollments = () => {
       <Card className="hover:shadow-lg transition-shadow">
         <CardHeader>
           <div className="flex justify-between items-start">
-            <CardTitle className="text-lg line-clamp-2">
-              {enrollment.event.title}
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg line-clamp-2">
+                {enrollment.event.title}
+              </CardTitle>
+              {enrollment.event.isPrivate && (
+                <Badge variant="secondary">Privado</Badge>
+              )}
+            </div>
             <Badge className={statusBadge.color}>{statusBadge.label}</Badge>
           </div>
           <CardDescription className="line-clamp-3">

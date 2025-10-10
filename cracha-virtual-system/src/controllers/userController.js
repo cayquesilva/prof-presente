@@ -285,6 +285,7 @@ const updateUserRole = async (req, res) => {
     // Validar role
     const validRoles = [
       "ADMIN",
+      "GESTOR_ESCOLA",
       "ORGANIZER",
       "CHECKIN_COORDINATOR",
       "TEACHER",
