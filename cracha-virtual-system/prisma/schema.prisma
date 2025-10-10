@@ -63,6 +63,8 @@ model User {
   contractType    ContractType?   // Tipo de vínculo
   teachingSegments TeachingSegment[] // <-- ADICIONE ESTA (NO PLURAL)
   professionId    String?         @map("profession_id")
+  certificateLogs CertificateLog[]
+
 
   // Relacionamentos
   enrollments   Enrollment[]
@@ -122,6 +124,8 @@ model Event {
   // Campo para o template do certificado (apenas no evento "pai")
   certificateTemplateUrl String? @map("certificate_template_url")
   certificateTemplateConfig Json? @map("certificate_template_config")
+  certificateLogs CertificateLog[]
+
 
 
   // Relacionamentos
@@ -265,4 +269,20 @@ model Workplace {
   @@index([city])
   @@index([state])
   @@map("workplaces")
+}
+
+model CertificateLog {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  status    String // "SUCCESS" ou "FAILED"
+  details   String?  // Para mensagens de erro
+
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([userId])
 }

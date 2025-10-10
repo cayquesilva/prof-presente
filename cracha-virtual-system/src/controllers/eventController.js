@@ -4,6 +4,7 @@ const sharp = require("sharp");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const fs = require("fs/promises");
 const path = require("path");
+const { sendEmail } = require("../utils/email");
 
 // Validações para evento
 const eventValidation = [
@@ -589,15 +590,40 @@ const sendEventCertificates = async (req, res) => {
       });
     }
 
-    // Encontra todos os usuários inscritos E que fizeram pelo menos um check-in no evento
+    // --- INÍCIO DA CORREÇÃO ---
+
+    // ETAPA 1: Encontrar os IDs de todos os usuários que fizeram check-in neste evento.
+    const checkIns = await prisma.userCheckin.findMany({
+      where: {
+        eventId: eventId,
+      },
+      select: {
+        userBadge: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    // Extrai os IDs únicos dos usuários que compareceram.
+    const attendedUserIds = [
+      ...new Set(checkIns.map((checkin) => checkin.userBadge.userId)),
+    ];
+
+    if (attendedUserIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Nenhum participante fez check-in neste evento." });
+    }
+
+    // ETAPA 2: Agora, encontre as inscrições aprovadas que pertencem a esses usuários.
     const enrollments = await prisma.enrollment.findMany({
       where: {
-        eventId,
+        eventId: eventId,
         status: "APPROVED",
-        user: {
-          userCheckins: {
-            some: { eventId },
-          },
+        userId: {
+          in: attendedUserIds, // Filtra pela lista de IDs que encontramos.
         },
       },
       include: {
@@ -605,12 +631,13 @@ const sendEventCertificates = async (req, res) => {
       },
     });
 
+    // --- FIM DA CORREÇÃO ---
+
     if (enrollments.length === 0) {
-      return res
-        .status(400)
-        .json({
-          error: "Nenhum participante elegível para receber certificado.",
-        });
+      return res.status(400).json({
+        error:
+          "Nenhum participante elegível (inscrito e com check-in) foi encontrado.",
+      });
     }
 
     // Retorna a resposta para o admin imediatamente e continua o processo em segundo plano
@@ -618,7 +645,7 @@ const sendEventCertificates = async (req, res) => {
       message: `O processo de envio de ${enrollments.length} certificados foi iniciado.`,
     });
 
-    // Lógica de geração e envio
+    // Lógica de geração e envio (continua a mesma)
     const templatePath = path.join(process.cwd(), event.certificateTemplateUrl);
     const templateImageBuffer = await fs.readFile(templatePath);
     const config = event.certificateTemplateConfig;
@@ -629,57 +656,63 @@ const sendEventCertificates = async (req, res) => {
 
     for (const enrollment of enrollments) {
       const { user } = enrollment;
+      try {
+        // ... (o restante da função para gerar o PDF e enviar o e-mail continua igual) ...
+        // 1. Gera a imagem do certificado com os dados do usuário
+        const nameSvg = `<svg width="800" height="100"><text x="0" y="${
+          config.name.fontSize || 24
+        }" font-family="sans-serif" font-size="${
+          config.name.fontSize || 24
+        }" fill="${config.name.color || "#000000"}">${user.name}</text></svg>`;
+        const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
+          config.hours.fontSize || 18
+        }" font-family="sans-serif" font-size="${
+          config.hours.fontSize || 18
+        }" fill="${
+          config.hours.color || "#333333"
+        }">${totalHours} horas</text></svg>`;
 
-      // 1. Gera a imagem do certificado com os dados do usuário
-      const nameSvg = `<svg width="800" height="100"><text x="0" y="${
-        config.name.fontSize || 24
-      }" font-family="sans-serif" font-size="${
-        config.name.fontSize || 24
-      }" fill="${config.name.color || "#000000"}">${user.name}</text></svg>`;
-      const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
-        config.hours.fontSize || 18
-      }" font-family="sans-serif" font-size="${
-        config.hours.fontSize || 18
-      }" fill="${
-        config.hours.color || "#333333"
-      }">${totalHours} horas</text></svg>`;
+        const finalCertificateBuffer = await sharp(templateImageBuffer)
+          .composite([
+            {
+              input: Buffer.from(nameSvg),
+              top: config.name.y,
+              left: config.name.x,
+            },
+            {
+              input: Buffer.from(hoursSvg),
+              top: config.hours.y,
+              left: config.hours.x,
+            },
+          ])
+          .jpeg()
+          .toBuffer();
 
-      const finalCertificateBuffer = await sharp(templateImageBuffer)
-        .composite([
-          {
-            input: Buffer.from(nameSvg),
-            top: config.name.y,
-            left: config.name.x,
-          },
-          {
-            input: Buffer.from(hoursSvg),
-            top: config.hours.y,
-            left: config.hours.x,
-          },
-        ])
-        .jpeg()
-        .toBuffer();
+        // 2. Cria o PDF
+        const pdfDoc = await PDFDocument.create();
+        const certificateImage = await pdfDoc.embedJpg(finalCertificateBuffer);
+        const page = pdfDoc.addPage([
+          certificateImage.width,
+          certificateImage.height,
+        ]);
+        page.drawImage(certificateImage, {
+          x: 0,
+          y: 0,
+          width: page.getWidth(),
+          height: page.getHeight(),
+        });
+        const pdfBytes = await generateCertificatePdf(
+          user,
+          config,
+          templateImageBuffer,
+          totalHours
+        ); // Lógica de geração extraída para clareza
 
-      // 2. Cria o PDF
-      const pdfDoc = await PDFDocument.create();
-      const certificateImage = await pdfDoc.embedJpg(finalCertificateBuffer);
-      const page = pdfDoc.addPage([
-        certificateImage.width,
-        certificateImage.height,
-      ]);
-      page.drawImage(certificateImage, {
-        x: 0,
-        y: 0,
-        width: page.getWidth(),
-        height: page.getHeight(),
-      });
-      const pdfBytes = await pdfDoc.save();
-
-      // 3. Envia o e-mail
-      await sendEmail({
-        to: user.email,
-        subject: `Seu certificado do evento: ${event.title}`,
-        html: `
+        // 3. Envia o e-mail
+        await sendEmail({
+          to: user.email,
+          subject: `Seu certificado do evento: ${event.title}`,
+          html: `
           <p>Olá, ${user.name}!</p>
           <p>Agradecemos sua participação no evento "${event.title}".</p>
           <p>Seu certificado de participação está em anexo.</p>
@@ -687,18 +720,112 @@ const sendEventCertificates = async (req, res) => {
           <p>Atenciosamente,</p>
           <p>Equipe Organizadora</p>
         `,
-        attachments: [
-          {
-            filename: `certificado_${user.name.replace(/\s+/g, "_")}.pdf`,
-            content: Buffer.from(pdfBytes),
-            contentType: "application/pdf",
+          attachments: [
+            {
+              filename: `certificado_${user.name.replace(/\s+/g, "_")}.pdf`,
+              content: Buffer.from(pdfBytes),
+              contentType: "application/pdf",
+            },
+          ],
+        });
+
+        // CORREÇÃO: Registra o SUCESSO no banco de dados
+        await prisma.certificateLog.create({
+          data: {
+            status: "SUCCESS",
+            eventId: eventId,
+            userId: user.id,
           },
-        ],
-      });
+        });
+      } catch (error) {
+        console.error(
+          `Falha ao processar certificado para ${user.email}:`,
+          error
+        );
+        // CORREÇÃO: Registra a FALHA no banco de dados
+        await prisma.certificateLog.create({
+          data: {
+            status: "FAILED",
+            details: error.message,
+            eventId: eventId,
+            userId: user.id,
+          },
+        });
+      }
     }
   } catch (error) {
-    console.error("Erro ao iniciar o envio de certificados:", error);
-    // Como a resposta já foi enviada, apenas logamos o erro no servidor.
+    console.error("Erro CRÍTICO ao iniciar o envio de certificados:", error);
+  }
+};
+
+// Função auxiliar para organizar o código (pode colocar dentro do mesmo arquivo ou em um utils)
+async function generateCertificatePdf(
+  user,
+  config,
+  templateImageBuffer,
+  totalHours
+) {
+  const nameSvg = `<svg width="800" height="100"><text x="0" y="${
+    config.name.fontSize || 24
+  }" font-family="sans-serif" font-size="${config.name.fontSize || 24}" fill="${
+    config.name.color || "#000000"
+  }">${user.name}</text></svg>`;
+  const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
+    config.hours.fontSize || 18
+  }" font-family="sans-serif" font-size="${
+    config.hours.fontSize || 18
+  }" fill="${
+    config.hours.color || "#333333"
+  }">${totalHours} horas</text></svg>`;
+
+  const finalCertificateBuffer = await sharp(templateImageBuffer)
+    .composite([
+      { input: Buffer.from(nameSvg), top: config.name.y, left: config.name.x },
+      {
+        input: Buffer.from(hoursSvg),
+        top: config.hours.y,
+        left: config.hours.x,
+      },
+    ])
+    .jpeg()
+    .toBuffer();
+
+  const pdfDoc = await PDFDocument.create();
+  const certificateImage = await pdfDoc.embedJpg(finalCertificateBuffer);
+  const page = pdfDoc.addPage([
+    certificateImage.width,
+    certificateImage.height,
+  ]);
+  page.drawImage(certificateImage, {
+    x: 0,
+    y: 0,
+    width: page.getWidth(),
+    height: page.getHeight(),
+  });
+  return await pdfDoc.save();
+}
+
+const getCertificateLogsForEvent = async (req, res) => {
+  try {
+    const { id: eventId } = req.params;
+    const logs = await prisma.certificateLog.findMany({
+      where: { eventId },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error("Erro ao buscar logs de certificados:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
@@ -713,4 +840,5 @@ module.exports = {
   generatePrintableBadges,
   uploadCertificateTemplate,
   sendEventCertificates,
+  getCertificateLogsForEvent,
 };

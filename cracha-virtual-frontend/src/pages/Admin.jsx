@@ -38,7 +38,6 @@ import {
 import { Separator } from "../components/ui/separator";
 import {
   Plus,
-  CreditCard as Edit,
   Trash2,
   Users,
   Calendar,
@@ -50,8 +49,10 @@ import {
   Briefcase,
   FileText,
   Send,
-  Pen,
   Pencil,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
@@ -131,6 +132,19 @@ const Admin = () => {
       return response.data;
     },
     enabled: activeTab === "dashboard",
+  });
+
+  // NOVO: Query para buscar os logs de certificado do evento em edição
+  const { data: certificateLogs, isLoading: logsLoading } = useQuery({
+    queryKey: ["certificate-logs", editingEvent?.id],
+    queryFn: async () => {
+      const response = await api.get(
+        `/events/${editingEvent.id}/certificate-logs`
+      );
+      return response.data;
+    },
+    // A query só será executada quando 'editingEvent' existir
+    enabled: !!editingEvent?.id,
   });
 
   const createEventMutation = useMutation({
@@ -1091,6 +1105,79 @@ const Admin = () => {
                         />
                       </div>
                     </form>
+                    {/* NOVA SEÇÃO: LOGS DE ENVIO */}
+                    <Separator className="my-4" />
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">
+                        Histórico de Envio de Certificados
+                      </h3>
+                      <div className="border rounded-lg max-h-64 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Participante</TableHead>
+                              <TableHead>Data</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {logsLoading ? (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center">
+                                  <Clock className="h-4 w-4 mr-2 inline-block animate-spin" />
+                                  Carregando histórico...
+                                </TableCell>
+                              </TableRow>
+                            ) : certificateLogs &&
+                              certificateLogs.length > 0 ? (
+                              certificateLogs.map((log) => (
+                                <TableRow key={log.id}>
+                                  <TableCell>
+                                    {log.status === "SUCCESS" ? (
+                                      <Badge
+                                        variant="default"
+                                        className="bg-green-600"
+                                      >
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        Enviado
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="destructive">
+                                        <XCircle className="h-3 w-3 mr-1" />
+                                        Falhou
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="font-medium">
+                                      {log.user.name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {log.user.email}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    {new Date(log.createdAt).toLocaleString(
+                                      "pt-BR"
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={3}
+                                  className="text-center text-muted-foreground"
+                                >
+                                  Nenhum certificado foi enviado para este
+                                  evento ainda.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
                   </>
                 )}
               </DialogContent>
@@ -1152,7 +1239,7 @@ const Admin = () => {
                               onClick={() => handleEdit(event)}
                               title="Editar Evento"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
 
                             {/* BOTÃO DE IMPRIMIR CRACHÁS */}
