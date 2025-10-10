@@ -571,6 +571,137 @@ const uploadCertificateTemplate = async (req, res) => {
   }
 };
 
+// NOVA FUNÇÃO: Para enviar certificados para todos os participantes elegíveis
+const sendEventCertificates = async (req, res) => {
+  const { id: eventId } = req.params;
+
+  try {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+
+    if (
+      !event ||
+      !event.certificateTemplateUrl ||
+      !event.certificateTemplateConfig
+    ) {
+      return res.status(404).json({
+        error:
+          "Evento não encontrado ou não possui um modelo de certificado configurado.",
+      });
+    }
+
+    // Encontra todos os usuários inscritos E que fizeram pelo menos um check-in no evento
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        eventId,
+        status: "APPROVED",
+        user: {
+          userCheckins: {
+            some: { eventId },
+          },
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    if (enrollments.length === 0) {
+      return res
+        .status(400)
+        .json({
+          error: "Nenhum participante elegível para receber certificado.",
+        });
+    }
+
+    // Retorna a resposta para o admin imediatamente e continua o processo em segundo plano
+    res.status(202).json({
+      message: `O processo de envio de ${enrollments.length} certificados foi iniciado.`,
+    });
+
+    // Lógica de geração e envio
+    const templatePath = path.join(process.cwd(), event.certificateTemplateUrl);
+    const templateImageBuffer = await fs.readFile(templatePath);
+    const config = event.certificateTemplateConfig;
+    const totalHours = (
+      (new Date(event.endDate) - new Date(event.startDate)) /
+      (1000 * 60 * 60)
+    ).toFixed(1);
+
+    for (const enrollment of enrollments) {
+      const { user } = enrollment;
+
+      // 1. Gera a imagem do certificado com os dados do usuário
+      const nameSvg = `<svg width="800" height="100"><text x="0" y="${
+        config.name.fontSize || 24
+      }" font-family="sans-serif" font-size="${
+        config.name.fontSize || 24
+      }" fill="${config.name.color || "#000000"}">${user.name}</text></svg>`;
+      const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
+        config.hours.fontSize || 18
+      }" font-family="sans-serif" font-size="${
+        config.hours.fontSize || 18
+      }" fill="${
+        config.hours.color || "#333333"
+      }">${totalHours} horas</text></svg>`;
+
+      const finalCertificateBuffer = await sharp(templateImageBuffer)
+        .composite([
+          {
+            input: Buffer.from(nameSvg),
+            top: config.name.y,
+            left: config.name.x,
+          },
+          {
+            input: Buffer.from(hoursSvg),
+            top: config.hours.y,
+            left: config.hours.x,
+          },
+        ])
+        .jpeg()
+        .toBuffer();
+
+      // 2. Cria o PDF
+      const pdfDoc = await PDFDocument.create();
+      const certificateImage = await pdfDoc.embedJpg(finalCertificateBuffer);
+      const page = pdfDoc.addPage([
+        certificateImage.width,
+        certificateImage.height,
+      ]);
+      page.drawImage(certificateImage, {
+        x: 0,
+        y: 0,
+        width: page.getWidth(),
+        height: page.getHeight(),
+      });
+      const pdfBytes = await pdfDoc.save();
+
+      // 3. Envia o e-mail
+      await sendEmail({
+        to: user.email,
+        subject: `Seu certificado do evento: ${event.title}`,
+        html: `
+          <p>Olá, ${user.name}!</p>
+          <p>Agradecemos sua participação no evento "${event.title}".</p>
+          <p>Seu certificado de participação está em anexo.</p>
+          <br>
+          <p>Atenciosamente,</p>
+          <p>Equipe Organizadora</p>
+        `,
+        attachments: [
+          {
+            filename: `certificado_${user.name.replace(/\s+/g, "_")}.pdf`,
+            content: Buffer.from(pdfBytes),
+            contentType: "application/pdf",
+          },
+        ],
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao iniciar o envio de certificados:", error);
+    // Como a resposta já foi enviada, apenas logamos o erro no servidor.
+  }
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -581,4 +712,5 @@ module.exports = {
   uploadEventBadgeTemplate,
   generatePrintableBadges,
   uploadCertificateTemplate,
+  sendEventCertificates,
 };

@@ -49,6 +49,9 @@ import {
   Building,
   Briefcase,
   FileText,
+  Send,
+  Pen,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
@@ -226,6 +229,21 @@ const Admin = () => {
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || "Erro ao salvar modelo.");
+    },
+  });
+
+  // NOVA MUTATION: para enviar os certificados
+  const sendCertificatesMutation = useMutation({
+    mutationFn: (eventId) => api.post(`/events/${eventId}/send-certificates`),
+    onSuccess: (data) => {
+      toast.info(
+        data.data.message || "Processo de envio de certificados iniciado."
+      );
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.error || "Falha ao iniciar envio de certificados."
+      );
     },
   });
 
@@ -465,6 +483,17 @@ const Admin = () => {
       toast.error(
         "Não foi possível gerar o PDF. Verifique se o evento tem um modelo configurado."
       );
+    }
+  };
+
+  // NOVA FUNÇÃO: para chamar a mutation de envio de certificados
+  const handleSendCertificates = (eventId, eventTitle) => {
+    if (
+      window.confirm(
+        `Tem certeza que deseja enviar os certificados para todos os participantes elegíveis do evento "${eventTitle}"?`
+      )
+    ) {
+      sendCertificatesMutation.mutate(eventId);
     }
   };
 
@@ -1079,7 +1108,7 @@ const Admin = () => {
                     <TableHead>Início</TableHead>
                     <TableHead>Término</TableHead>
                     <TableHead>Capacidade</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1114,20 +1143,9 @@ const Admin = () => {
                         <TableCell>
                           {event.maxAttendees || "Ilimitado"}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end items-center gap-1">
-                            {event.badgeTemplateUrl && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handlePrintBadges(event.id, event.title)
-                                }
-                                title="Imprimir Crachás em Lote"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                            )}
+                        <TableCell className="text-center">
+                          <div className="flex justify-between items-center gap-1">
+                            {/* BOTÃO DE EDITAR (sem alteração de lógica) */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1136,6 +1154,49 @@ const Admin = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
+
+                            {/* BOTÃO DE IMPRIMIR CRACHÁS */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handlePrintBadges(event.id, event.title)
+                              }
+                              // AQUI A MUDANÇA: O botão é desabilitado se a URL do template não existir.
+                              disabled={!event.badgeTemplateUrl}
+                              // A dica também se torna dinâmica.
+                              title={
+                                event.badgeTemplateUrl
+                                  ? "Imprimir Crachás em Lote"
+                                  : "Configure o modelo de crachá para habilitar a impressão"
+                              }
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+
+                            {/* BOTÃO DE ENVIAR CERTIFICADOS */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleSendCertificates(event.id, event.title)
+                              }
+                              // AQUI A MUDANÇA: O botão é desabilitado se a URL do template não existir.
+                              disabled={
+                                !event.certificateTemplateUrl ||
+                                sendCertificatesMutation.isPending
+                              }
+                              // A dica agora é dinâmica para informar o usuário.
+                              title={
+                                event.certificateTemplateUrl
+                                  ? "Enviar Certificados por E-mail"
+                                  : "Configure o modelo de certificado para habilitar o envio"
+                              }
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+
+                            {/* BOTÃO DE EXCLUIR */}
                             <Button
                               variant="ghost"
                               size="sm"

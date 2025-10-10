@@ -11,6 +11,7 @@ const {
   uploadEventBadgeTemplate,
   generatePrintableBadges,
   uploadCertificateTemplate,
+  sendEventCertificates,
 } = require("../controllers/eventController");
 
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
@@ -65,6 +66,13 @@ router.post(
   requireAdmin,
   uploadCertificate,
   uploadCertificateTemplate
+);
+
+router.post(
+  "/:id/send-certificates",
+  authenticateToken, // Middleware de autenticação
+  requireAdmin, // Middleware que verifica se é admin
+  sendEventCertificates // Nova função no controller
 );
 
 module.exports = router;
