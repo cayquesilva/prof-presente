@@ -221,7 +221,7 @@ const CheckIn = () => {
         </CardHeader>
         <CardContent>
           <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione um evento" />
             </SelectTrigger>
             <SelectContent>

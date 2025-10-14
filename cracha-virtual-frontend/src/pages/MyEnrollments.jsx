@@ -146,56 +146,61 @@ const MyEnrollments = () => {
     <div className="p-6 space-y-6">
       <h1 className="text-3xl font-bold">Minhas Inscrições</h1>
 
-      {/* ===== A CORREÇÃO ESTÁ AQUI ===== */}
-      <Tabs
-        value={statusFilter}
-        className="w-full"
-        onValueChange={setStatusFilter}
-      >
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">Todas</TabsTrigger>
-          <TabsTrigger value="approved">Aprovadas</TabsTrigger>
-          <TabsTrigger value="pending">Pendentes</TabsTrigger>
-          <TabsTrigger value="rejected">Rejeitadas</TabsTrigger>
-          <TabsTrigger value="cancelled">Canceladas</TabsTrigger>
-        </TabsList>
+      <div className="w-full max-w-[calc(100vw-3rem)] sm:max-w-full">
+        {/* ===== A CORREÇÃO ESTÁ AQUI ===== */}
+        <Tabs
+          value={statusFilter}
+          className="w-full"
+          onValueChange={setStatusFilter}
+        >
+          <TabsList className="inline-flex w-auto overflow-x-auto scrollbar-thin">
+            <TabsTrigger value="all">Todas</TabsTrigger>
+            <TabsTrigger value="approved">Aprovadas</TabsTrigger>
+            <TabsTrigger value="pending">Pendentes</TabsTrigger>
+            <TabsTrigger value="rejected">Rejeitadas</TabsTrigger>
+            <TabsTrigger value="cancelled">Canceladas</TabsTrigger>
+          </TabsList>
 
-        {/* Usamos um único TabsContent que será atualizado dinamicamente */}
-        <TabsContent value={statusFilter} className="mt-4">
-          {isLoading && enrollments.length === 0 ? (
-            <p>Carregando...</p>
-          ) : enrollments.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 mb-4">
-                {statusFilter === "all"
-                  ? "Você ainda não se inscreveu em nenhum evento."
-                  : `Nenhuma inscrição com o status "${statusFilter}".`}
-              </p>
-              <Link to="/events">
-                <Button>Explorar eventos</Button>
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {enrollments.map((enrollment) => (
-                  <EnrollmentCard key={enrollment.id} enrollment={enrollment} />
-                ))}
+          {/* Usamos um único TabsContent que será atualizado dinamicamente */}
+          <TabsContent value={statusFilter} className="mt-4">
+            {isLoading && enrollments.length === 0 ? (
+              <p>Carregando...</p>
+            ) : enrollments.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 mb-4">
+                  {statusFilter === "all"
+                    ? "Você ainda não se inscreveu em nenhum evento."
+                    : `Nenhuma inscrição com o status "${statusFilter}".`}
+                </p>
+                <Link to="/events">
+                  <Button>Explorar eventos</Button>
+                </Link>
               </div>
-              <div className="flex justify-center mt-6">
-                {hasNextPage && (
-                  <Button
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                  >
-                    {isFetchingNextPage ? "Carregando..." : "Carregar Mais"}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {enrollments.map((enrollment) => (
+                    <EnrollmentCard
+                      key={enrollment.id}
+                      enrollment={enrollment}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-center mt-6">
+                  {hasNextPage && (
+                    <Button
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                    >
+                      {isFetchingNextPage ? "Carregando..." : "Carregar Mais"}
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
