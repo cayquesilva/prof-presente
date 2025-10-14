@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
+import { useDebounce } from "../hooks/useDebounce"; // Hook para debounce
 import {
   Card,
   CardContent,
@@ -34,6 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "./ui/pagination";
 import { Badge } from "./ui/badge";
 import { Shield, Key, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +49,9 @@ import { toast } from "sonner";
 const UserManagement = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms de delay
+
   const [selectedUser, setSelectedUser] = useState(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -48,13 +59,25 @@ const UserManagement = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ["admin-users"],
+  // QUERY ATUALIZADA para paginação e busca
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-users", page, debouncedSearchTerm],
     queryFn: async () => {
-      const response = await api.get("/users?limit=100");
-      return response.data.users;
+      const response = await api.get("/users", {
+        params: {
+          page,
+          limit: 10, // Define quantos usuários por página
+          search: debouncedSearchTerm,
+        },
+      });
+      return response.data;
     },
+    // Mantém os dados antigos visíveis enquanto a nova página carrega
+    keepPreviousData: true,
   });
+
+  const users = data?.users ?? [];
+  const pagination = data?.pagination;
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }) => {
@@ -126,12 +149,6 @@ const UserManagement = () => {
     setIsPasswordDialogOpen(true);
   };
 
-  const filteredUsers = users?.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const getRoleBadge = (role) => {
     const roleConfig = {
       ADMIN: { label: "Administrador", variant: "destructive" },
@@ -141,12 +158,11 @@ const UserManagement = () => {
       TEACHER: { label: "Professor", variant: "outline" },
       USER: { label: "Usuário", variant: "outline" },
     };
-
     const config = roleConfig[role] || roleConfig.USER;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  if (isLoading) {
+  if (isLoading && page === 1 && !searchTerm) {
     return (
       <Card>
         <CardContent className="py-12">
@@ -172,7 +188,10 @@ const UserManagement = () => {
               <Input
                 placeholder="Buscar por nome ou email..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1); // Reseta para a primeira página ao buscar
+                }}
                 className="pl-10"
               />
             </div>
@@ -189,7 +208,13 @@ const UserManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers?.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      Buscando...
+                    </TableCell>
+                  </TableRow>
+                ) : users.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
@@ -199,7 +224,7 @@ const UserManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers?.map((user) => (
+                  users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
@@ -229,8 +254,42 @@ const UserManagement = () => {
             </Table>
           </div>
 
-          <div className="mt-4 text-sm text-gray-500">
-            Total: {filteredUsers?.length || 0} usuário(s)
+          {/* COMPONENTE DE PAGINAÇÃO */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Total: {pagination?.total || 0} usuário(s)
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((old) => Math.max(old - 1, 1));
+                    }}
+                    disabled={page === 1}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <span className="px-4 text-sm">
+                    Página {pagination?.page} de {pagination?.pages}
+                  </span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (pagination && page < pagination.pages) {
+                        setPage((old) => old + 1);
+                      }
+                    }}
+                    disabled={!pagination || page >= pagination.pages}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </CardContent>
       </Card>
