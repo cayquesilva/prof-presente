@@ -522,6 +522,7 @@ const Admin = () => {
         URL.revokeObjectURL(certificateTemplatePreviewUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
