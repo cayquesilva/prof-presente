@@ -271,21 +271,22 @@ const CheckIn = () => {
 
           {/* Métodos de Check-in */}
           <Tabs defaultValue="qr" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="qr">
-                <QrCode className="h-4 w-4 mr-2" />
-                QR Code
-              </TabsTrigger>
-              <TabsTrigger value="manual">
-                <Keyboard className="h-4 w-4 mr-2" />
-                Código Manual
-              </TabsTrigger>
-              <TabsTrigger value="search">
-                <Camera className="h-4 w-4 mr-2" />
-                Buscar Nome
-              </TabsTrigger>
-            </TabsList>
-
+            <div className="w-full overflow-x-auto pb-2 scrollbar-thin">
+              <TabsList className="inline-flex w-auto space-x-2 sm:grid sm:w-full sm:grid-cols-3">
+                <TabsTrigger value="qr">
+                  <QrCode className="h-4 w-4 mr-2" />
+                  QR Code
+                </TabsTrigger>
+                <TabsTrigger value="manual">
+                  <Keyboard className="h-4 w-4 mr-2" />
+                  Código Manual
+                </TabsTrigger>
+                <TabsTrigger value="search">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Buscar Nome
+                </TabsTrigger>
+              </TabsList>
+            </div>
             <TabsContent value="qr">
               <Card>
                 <CardHeader>
@@ -337,6 +338,7 @@ const CheckIn = () => {
                           handleManualCheckIn();
                         }
                       }}
+                      className="mt-2"
                     />
                   </div>
                   <Button
@@ -379,9 +381,11 @@ const CheckIn = () => {
                           className="p-3 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
                           onClick={() => handleUserSelect(user)}
                         >
-                          <div>
-                            <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-gray-600">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium break-words">
+                              {user.name}
+                            </p>
+                            <p className="text-sm text-gray-600 truncate">
                               {user.email}
                             </p>
                             {user.badgeCode && (
@@ -390,7 +394,11 @@ const CheckIn = () => {
                               </p>
                             )}
                           </div>
-                          <Button size="sm" variant="outline">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-shrink-0"
+                          >
                             Check-in
                           </Button>
                         </div>
