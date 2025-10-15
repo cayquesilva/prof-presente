@@ -115,7 +115,14 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
     const now = new Date();
     const correctedStartDate = getCorrectedDate(event.startDate);
     const correctedEndDate = getCorrectedDate(event.endDate);
-    if (now < correctedStartDate) {
+
+    // 2. Criamos a nova data de início do check-in (30 minutos antes).
+    //    Primeiro, criamos uma cópia da data de início para não alterar a original.
+    const checkinStartTime = new Date(correctedStartDate);
+    //    Depois, usamos setMinutes() para subtrair 30 minutos.
+    checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 30);
+
+    if (now < checkinStartTime) {
       return res.status(400).json({ error: "Evento ainda não começou" });
     }
     if (now > correctedEndDate) {
