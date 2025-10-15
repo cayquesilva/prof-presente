@@ -131,9 +131,19 @@ const EventDetails = () => {
 
   const canEnroll = (event) => {
     if (!event) return false;
+
+    // 1. Pega a data/hora atual.
     const now = new Date();
-    const end = new Date(event.endDate);
-    return now < end;
+
+    // 2. Corrige a data de INÍCIO do evento para o fuso local.
+    const correctedStartDate = new Date(event.startDate.slice(0, -1));
+
+    // 3. Cria o prazo final de inscrição: 90 minutos APÓS o início corrigido.
+    const enrollmentDeadline = new Date(correctedStartDate);
+    enrollmentDeadline.setMinutes(enrollmentDeadline.getMinutes() + 90);
+
+    // 4. Retorna true se a hora atual for anterior ao prazo final.
+    return now < enrollmentDeadline;
   };
 
   if (isLoading) {
