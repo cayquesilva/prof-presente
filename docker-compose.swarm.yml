@@ -24,8 +24,8 @@ services:
         sleep 20 &&
         echo 'Rodando prisma migrade deploy...' &&
         npx prisma migrate deploy &&
-        echo 'Rodando a seed com dados iniciais...' &&
-        npm run db:seed &&
+        -- remover caso rodando em produção echo 'Rodando a seed com dados iniciais...' &&
+        -- remover caso rodando em produção npm run db:seed &&
         echo 'Iniciando container...' &&
         npm start
       "
