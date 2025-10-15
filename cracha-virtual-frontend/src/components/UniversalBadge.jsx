@@ -1,10 +1,9 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { Printer } from "lucide-react";
+import { Download } from "lucide-react";
 import QRCode from "react-qr-code";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import domtoimage from "dom-to-image-more";
 import { toast } from "sonner";
 import Logo from "../assets/logo-prof-presente-white.svg";
 import { getAssetUrl } from "../lib/utils";
@@ -13,53 +12,42 @@ const LogoPlaceholder = () => <img src={Logo} className="h-7" />;
 
 const UniversalBadge = ({ user, badge, awards = [] }) => {
   const badgeRef = useRef(null);
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  useEffect(() => {
-    if (isPrinting) {
-      if (!badgeRef.current) {
-        setIsPrinting(false);
-        return;
-      }
+  const handleDownload = () => {
+    const node = badgeRef.current;
+    if (!node) return;
 
-      // Cor de fundo sólida que o html2canvas entende
-      const originalBackgroundColor = document.body.style.backgroundColor;
-      document.body.style.backgroundColor = "#FFF"; // Um branco simples
+    setIsGenerating(true);
+    toast.info("Gerando seu crachá...");
 
-      html2canvas(badgeRef.current, {
-        scale: 3,
-        useCORS: true,
-        // CORREÇÃO: Fornece uma cor de fundo explícita e compatível
-        backgroundColor: null, // Deixamos nulo para que a cor do próprio elemento seja usada
+    // Gera um SVG do componente. Esta abordagem é mais robusta contra erros de CSS.
+    domtoimage
+      .toPng(node, {
+        quality: 1.0, // Qualidade da imagem (para PNG não tem tanto efeito quanto JPG)
+        width: node.offsetWidth * 2, // Opcional: Aumenta a resolução para melhor qualidade
+        height: node.offsetHeight * 2, // Opcional: Aumenta a resolução para melhor qualidade
+        style: {
+          transform: "scale(2)", // Garante que o conteúdo seja renderizado no tamanho maior
+          transformOrigin: "top left",
+        },
       })
-        .then((canvas) => {
-          const imgData = canvas.toDataURL("image/png");
-          const pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: [54, 86],
-          });
-          pdf.addImage(imgData, "PNG", 0, 0, 54, 86);
-          pdf.save(`cracha_universal_${user.name.replace(/\s/g, "_")}.pdf`);
-          toast.success("Download do crachá iniciado!");
-        })
-        .catch((error) => {
-          console.error("Erro ao gerar PDF:", error);
-          toast.error("Ocorreu um erro ao gerar o PDF do crachá.");
-        })
-        .finally(() => {
-          document.body.style.backgroundColor = originalBackgroundColor;
-
-          setIsPrinting(false);
-        });
-    }
-  }, [isPrinting, user.name]);
-
-  const handlePrint = () => {
-    if (!isPrinting) {
-      toast.info("Preparando o crachá para impressão...");
-      setIsPrinting(true);
-    }
+      .then((dataUrl) => {
+        const link = document.createElement("a");
+        // Altera a extensão do arquivo para .png
+        link.download = `cracha_universal_${user.name.replace(/\s/g, "_")}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast.success("Download do crachá iniciado!");
+      })
+      .catch((error) => {
+        // Altera a mensagem de erro
+        console.error("Erro ao gerar PNG do crachá:", error);
+        toast.error("Ocorreu um erro ao gerar o crachá. Tente novamente.");
+      })
+      .finally(() => {
+        setIsGenerating(false);
+      });
   };
 
   if (!user || !badge) {
@@ -72,17 +60,9 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
     <div className="flex flex-col items-center gap-6">
       <div
         ref={badgeRef}
-        className={`relative w-[320px] h-[512px] rounded-2xl shadow-lg overflow-hidden text-white
-                   ${
-                     isPrinting
-                       ? // CORREÇÃO: Usando o valor hexadecimal direto que o html2canvas entende
-                         "bg-[#111827]"
-                       : "bg-gradient-to-br from-gray-800 via-gray-900 to-black"
-                   }`}
+        className="relative w-[320px] h-[512px] rounded-2xl shadow-lg overflow-hidden text-white bg-gradient-to-br from-gray-800 via-gray-900 to-black p-6"
       >
-        {/* O restante do conteúdo do crachá permanece o mesmo */}
-        <div className="relative z-10 flex flex-col items-center justify-between h-full p-6">
-          {/* SEÇÃO SUPERIOR: Logo e Título */}
+        <div className="relative z-10 flex flex-col items-center justify-between h-full">
           <div className="flex items-center justify-between w-full">
             <LogoPlaceholder />
             {latestAwards.length > 0 && (
@@ -99,24 +79,14 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               </div>
             )}
           </div>
-
-          {/* SEÇÃO CENTRAL: Foto e Nome */}
           <div className="flex flex-col items-center text-center mt-2">
-            <Avatar
-              className={`w-24 h-24 border-2 border-white/80 mb-1 ${
-                isPrinting ? "shadow-none" : "shadow-lg"
-              }`}
-            >
+            <Avatar className="w-24 h-24 border-2 border-white/80 mb-1 shadow-lg">
               <AvatarImage
                 src={getAssetUrl(user.photoUrl)}
                 alt={user.name}
                 crossOrigin="anonymous"
               />
-              <AvatarFallback
-                className={`text-3xl ${
-                  isPrinting ? "bg-[#374151]" : "bg-gray-700"
-                }`}
-              >
+              <AvatarFallback className="text-3xl bg-gray-700">
                 {user.name
                   ?.split(" ")
                   .map((n) => n[0])
@@ -128,8 +98,6 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               {user.name}
             </h2>
           </div>
-
-          {/* SEÇÃO INFERIOR: QR Code */}
           <div className="flex flex-col items-center text-center bg-white/95 p-4 rounded-xl backdrop-blur-sm w-[100%]">
             <QRCode
               size={256}
@@ -141,11 +109,7 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               })}
               viewBox={`0 0 256 256`}
             />
-            <p
-              className={`mt-2 font-mono text-sm font-bold tracking-wider ${
-                isPrinting ? "text-[#1f2937]" : "text-gray-800"
-              }`}
-            >
+            <p className="mt-2 font-mono text-sm font-bold tracking-wider text-gray-800">
               {badge.badgeCode}
             </p>
           </div>
@@ -153,12 +117,12 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
       </div>
 
       <Button
-        onClick={handlePrint}
+        onClick={handleDownload}
         className="w-full max-w-sm"
-        disabled={isPrinting}
+        disabled={isGenerating}
       >
-        <Printer className="h-4 w-4 mr-2" />
-        {isPrinting ? "Gerando PDF..." : "Imprimir / Salvar PDF"}
+        <Download className="h-4 w-4 mr-2" />
+        {isGenerating ? "Gerando..." : "Salvar Crachá como SVG"}
       </Button>
     </div>
   );
