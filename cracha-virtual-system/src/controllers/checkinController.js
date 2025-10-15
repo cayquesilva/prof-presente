@@ -2,6 +2,20 @@
 const { prisma } = require("../config/database");
 const { checkAndGrantAutomaticAwards } = require("./awardController");
 
+/**
+ * Corrige a data armazenada no banco (que foi salva como UTC por engano)
+ * para um objeto Date que reflete o fuso horário correto (-03:00) para comparação.
+ * @param {Date} storedDate O objeto Date vindo do Prisma.
+ * @returns {Date} Um novo objeto Date com o fuso horário corrigido.
+ */
+const getCorrectedDate = (storedDate) => {
+  if (!storedDate) return null;
+  const isoString = storedDate.toISOString();
+  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
+  const correctDateString = `${naiveDateTimeString}-03:00`;
+  return new Date(correctDateString);
+};
+
 // Função principal para realizar o check-in.
 const performCheckin = async (req, res) => {
   try {
@@ -99,10 +113,12 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
 
     // Verifica se o evento está em andamento.
     const now = new Date();
-    if (now < new Date(event.startDate)) {
+    const correctedStartDate = getCorrectedDate(event.startDate);
+    const correctedEndDate = getCorrectedDate(event.endDate);
+    if (now < correctedStartDate) {
       return res.status(400).json({ error: "Evento ainda não começou" });
     }
-    if (now > new Date(event.endDate)) {
+    if (now > correctedEndDate) {
       return res.status(400).json({ error: "Evento já terminou" });
     }
 

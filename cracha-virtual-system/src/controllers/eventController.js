@@ -6,6 +6,20 @@ const fs = require("fs/promises");
 const path = require("path");
 const { sendEmail } = require("../utils/email");
 
+/**
+ * Corrige a data armazenada no banco (que foi salva como UTC por engano)
+ * para um objeto Date que reflete o fuso horário correto (-03:00) para comparação.
+ * @param {Date} storedDate O objeto Date vindo do Prisma.
+ * @returns {Date} Um novo objeto Date com o fuso horário corrigido.
+ */
+const getCorrectedDate = (storedDate) => {
+  if (!storedDate) return null;
+  const isoString = storedDate.toISOString();
+  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
+  const correctDateString = `${naiveDateTimeString}-03:00`;
+  return new Date(correctDateString);
+};
+
 // Validações para evento
 const eventValidation = [
   body("title")
@@ -47,7 +61,8 @@ const getAllEvents = async (req, res) => {
     }
 
     if (upcoming === "true") {
-      baseWhere.startDate = { gte: new Date() };
+      const adjustedDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      baseWhere.startDate = { gte: adjustedDate };
     }
 
     // Construção da cláusula final de visibilidade

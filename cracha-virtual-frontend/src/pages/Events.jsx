@@ -31,8 +31,8 @@ const EventCard = ({ event }) => {
 
   const getEventStatus = (startDate, endDate) => {
     const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate.slice(0, -1));
+    const end = new Date(endDate.slice(0, -1));
     if (now < start)
       return { label: "Próximo", color: "bg-blue-100 text-blue-800" };
     if (now >= start && now <= end)

@@ -1,6 +1,20 @@
 const { prisma } = require("../config/database");
 // ALTERAÇÃO: generateQRCode não é mais necessário aqui.
 
+/**
+ * Corrige a data armazenada no banco (que foi salva como UTC por engano)
+ * para um objeto Date que reflete o fuso horário correto (-03:00) para comparação.
+ * @param {Date} storedDate O objeto Date vindo do Prisma.
+ * @returns {Date} Um novo objeto Date com o fuso horário corrigido.
+ */
+const getCorrectedDate = (storedDate) => {
+  if (!storedDate) return null;
+  const isoString = storedDate.toISOString();
+  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
+  const correctDateString = `${naiveDateTimeString}-03:00`;
+  return new Date(correctDateString);
+};
+
 // Inscrever usuário em evento
 const enrollInEvent = async (req, res) => {
   try {
@@ -34,7 +48,7 @@ const enrollInEvent = async (req, res) => {
 
     if (existingEnrollment) {
       if (["CANCELLED", "REJECTED"].includes(existingEnrollment.status)) {
-        if (new Date() > new Date(event.endDate)) {
+        if (new Date() > getCorrectedDate(event.endDate)) {
           return res
             .status(400)
             .json({
@@ -81,7 +95,7 @@ const enrollInEvent = async (req, res) => {
       }
     }
 
-    if (new Date() > new Date(event.endDate)) {
+    if (new Date() > getCorrectedDate(event.endDate)) {
       return res
         .status(400)
         .json({
@@ -244,7 +258,25 @@ const cancelEnrollment = async (req, res) => {
         .json({ error: "Você não tem permissão para cancelar esta inscrição" });
     }
 
-    if (new Date() > new Date(enrollment.event.startDate)) {
+    // 1. Pega a data/hora do banco (que é um objeto Date interpretado como UTC).
+    const storedDate = enrollment.event.startDate;
+
+    // 2. Converte para uma string no formato ISO ('YYYY-MM-DDTHH:mm:ss.sssZ').
+    const isoString = storedDate.toISOString();
+
+    // 3. Remove o 'Z' final para obter uma string de data/hora "ingênua",
+    //    tratando-a como se fosse a hora local correta.
+    const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e segundos/millis para simplicidade
+
+    // 4. Anexa o fuso horário correto de Brasília (-03:00) à string.
+    //    Isso diz ao JavaScript: "interprete esta data/hora como se estivesse no fuso -03:00".
+    const correctDateString = `${naiveDateTimeString}-03:00`;
+
+    // 5. Cria o objeto Date correto a partir da string com o fuso ajustado.
+    const correctStartDate = new Date(correctDateString);
+
+
+    if (new Date() > correctStartDate) {
       return res
         .status(400)
         .json({

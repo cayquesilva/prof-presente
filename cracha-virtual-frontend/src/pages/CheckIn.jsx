@@ -370,6 +370,7 @@ const CheckIn = () => {
                       placeholder="Digite o nome..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      className="mt-2"
                     />
                   </div>
 
