@@ -149,7 +149,7 @@ const MyEnrollments = () => {
       {/* ===== A CORREÇÃO ESTÁ AQUI ===== */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
         <div className="w-full overflow-x-auto pb-2 scrollbar-thin">
-          <TabsList className="inline-flex space-x-2">
+          <TabsList className="inline-flex w-auto space-x-2 sm:grid sm:w-full sm:grid-cols-5">
             <TabsTrigger value="all">Todas</TabsTrigger>
             <TabsTrigger value="approved">Aprovadas</TabsTrigger>
             <TabsTrigger value="pending">Pendentes</TabsTrigger>
