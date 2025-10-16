@@ -107,14 +107,12 @@ const EventDetails = () => {
     const end = new Date(endDate.slice(0, -1));
 
     if (now < start) {
-      console.log("now:", now, "start:", start, "end:", end);
       return {
         label: "Próximo",
         color: "bg-blue-100 text-blue-800",
         icon: Clock,
       };
     } else if (now >= start && now <= end) {
-      console.log("now:", now, "start:", start, "end:", end);
       return {
         label: "Em andamento",
         color: "bg-green-100 text-green-800",
