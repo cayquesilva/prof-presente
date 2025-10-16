@@ -7,7 +7,8 @@ const {
   getMyUserBadge,
   validateUserBadge,
   searchUsersByName,
-  generateMissingBadges
+  generateMissingBadges,
+  getMissingBadgesCount,
 } = require("../controllers/badgeController");
 
 const {
@@ -48,6 +49,14 @@ router.post(
   authenticateToken,
   requireAdmin,
   generateMissingBadges
+);
+
+// Rota para obter a contagem de crachás faltantes (apenas admin)
+router.get(
+  "/missing-count",
+  authenticateToken,
+  requireAdmin,
+  getMissingBadgesCount
 );
 
 module.exports = router;

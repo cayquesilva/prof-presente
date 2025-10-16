@@ -149,6 +149,17 @@ const Admin = () => {
     enabled: !!editingEvent?.id,
   });
 
+  // --- INÍCIO: NOVA QUERY PARA BUSCAR A CONTAGEM ---
+  const { data: missingBadgesData, isLoading: isLoadingMissingBadges } =
+    useQuery({
+      queryKey: ["missing-badges-count"],
+      // A query só será executada quando a aba de "usuários" estiver ativa
+      queryFn: () => api.get("/badges/missing-count").then((res) => res.data),
+      enabled: activeTab === "users",
+      // Opcional: Recarrega a contagem a cada 30 segundos se a aba estiver ativa
+      refetchInterval: 180000,
+    });
+
   const createEventMutation = useMutation({
     mutationFn: async (data) => {
       const response = await api.post("/events", data);
@@ -267,8 +278,9 @@ const Admin = () => {
   const generateMissingBadgesMutation = useMutation({
     mutationFn: () => api.post("/badges/generate-missing"),
     onSuccess: (data) => {
-      // A resposta do backend é 202, então usamos toast.info
       toast.info(data.data.message);
+      // Invalida a query da contagem para forçar a busca do novo valor (que será 0)
+      queryClient.invalidateQueries({ queryKey: ["missing-badges-count"] });
     },
     onError: (error) => {
       toast.error(
@@ -1334,35 +1346,45 @@ const Admin = () => {
         {isAdmin && (
           <>
             <TabsContent value="users" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ferramentas de Usuário</CardTitle>
-                  <CardDescription>
-                    Execute ações em massa para gerenciar os usuários do
-                    sistema.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-semibold">Gerar Crachás Faltantes</h4>
-                      <p className="text-sm text-gray-500">
-                        Cria crachás universais para todos os usuários antigos
-                        que ainda não possuem um.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => generateMissingBadgesMutation.mutate()}
-                      disabled={generateMissingBadgesMutation.isPending}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {generateMissingBadgesMutation.isPending
-                        ? "Iniciando..."
-                        : "Iniciar Geração"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {!isLoadingMissingBadges && missingBadgesData && (
+                <>
+                  {missingBadgesData.count > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Ferramentas de Usuário</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-amber-500/50 rounded-lg bg-amber-500/5">
+                          <div>
+                            <h4 className="font-semibold text-amber-800">
+                              Ação Necessária
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              Encontramos{" "}
+                              <strong>
+                                {missingBadgesData.count} usuário(s)
+                              </strong>{" "}
+                              sem crachá universal. Clique para gerá-los agora.
+                            </p>
+                          </div>
+                          <Button
+                            className="mt-3 sm:mt-0"
+                            onClick={() =>
+                              generateMissingBadgesMutation.mutate()
+                            }
+                            disabled={generateMissingBadgesMutation.isPending}
+                          >
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            {generateMissingBadgesMutation.isPending
+                              ? "Iniciando..."
+                              : "Gerar Crachás"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
               <UserManagement />
             </TabsContent>
 

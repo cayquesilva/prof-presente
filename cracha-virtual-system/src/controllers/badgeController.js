@@ -429,6 +429,21 @@ const generateMissingBadges = async (req, res) => {
   }
 };
 
+// Obter a contagem de usuários que não possuem um crachá universal.
+const getMissingBadgesCount = async (req, res) => {
+  try {
+    const count = await prisma.user.count({
+      where: {
+        userBadge: null,
+      },
+    });
+    res.json({ count });
+  } catch (error) {
+    console.error("Erro ao contar usuários sem crachá:", error);
+    res.status(500).json({ error: "Erro interno do servidor." });
+  }
+};
+
 module.exports = {
   createUserBadge,
   getUserBadge,
@@ -436,4 +451,5 @@ module.exports = {
   validateUserBadge,
   searchUsersByName,
   generateMissingBadges,
+  getMissingBadgesCount,
 };
