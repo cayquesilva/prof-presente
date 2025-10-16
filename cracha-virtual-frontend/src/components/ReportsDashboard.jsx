@@ -264,7 +264,6 @@ const ReportsDashboard = () => {
     // MUDANÇA 1: As colunas do PDF agora correspondem à nova tabela.
     const tableColumn = [
       "Participante",
-      "Email",
       "Unidade de Trabalho",
       "Status",
       "Horário do Check-in",
@@ -280,7 +279,6 @@ const ReportsDashboard = () => {
 
       const rowData = [
         item.user.name,
-        item.user.email,
         item.workplace, // Adicionado
         item.hasCheckedIn ? "Presente" : "Ausente",
         checkinTimeFormatted, // Adicionado
@@ -769,47 +767,53 @@ const ReportsDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <Table className="table-fixed w-full">
-              <TableHeader>
-                <TableRow>
-                  {/* MUDANÇA 1: Cabeçalhos da tabela atualizados */}
-                  <TableHead className="w-[25%]">Participante</TableHead>
-                  <TableHead className="w-[25%]">Unidade de Trabalho</TableHead>
-                  <TableHead className="w-[25%]">Status</TableHead>
-                  <TableHead className="w-[25%]">Horário do Check-in</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {eventReportData.frequencyData.map((item) => (
-                  <TableRow key={item.user.id}>
-                    {/* MUDANÇA 2: Células da tabela refletindo os novos dados */}
-                    <TableCell className="font-medium break-words whitespace-normal">
-                      {item.user.name}
-                    </TableCell>
-                    <TableCell className="whitespace-normal break-words">
-                      {item.workplace}
-                    </TableCell>
-                    <TableCell>
-                      {item.hasCheckedIn ? (
-                        <Badge variant="default" className="bg-green-600">
-                          Presente
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">Ausente</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {
-                        item.checkinTime
-                          ? // Formata a data para exibir apenas a hora
-                            format(new Date(item.checkinTime), "HH:mm:ss")
-                          : "—" // Exibe um traço se não houver check-in
-                      }
-                    </TableCell>
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[800px] table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    {/* MUDANÇA 1: Cabeçalhos da tabela atualizados */}
+                    <TableHead className="w-[25%]">Participante</TableHead>
+                    <TableHead className="w-[25%]">
+                      Unidade de Trabalho
+                    </TableHead>
+                    <TableHead className="w-[25%]">Status</TableHead>
+                    <TableHead className="w-[25%]">
+                      Horário do Check-in
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {eventReportData.frequencyData.map((item) => (
+                    <TableRow key={item.user.id}>
+                      {/* MUDANÇA 2: Células da tabela refletindo os novos dados */}
+                      <TableCell className="font-medium break-words whitespace-normal">
+                        {item.user.name}
+                      </TableCell>
+                      <TableCell className="whitespace-normal break-words">
+                        {item.workplace}
+                      </TableCell>
+                      <TableCell>
+                        {item.hasCheckedIn ? (
+                          <Badge variant="default" className="bg-green-600">
+                            Presente
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">Ausente</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {
+                          item.checkinTime
+                            ? // Formata a data para exibir apenas a hora
+                              format(new Date(item.checkinTime), "HH:mm:ss")
+                            : "—" // Exibe um traço se não houver check-in
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
