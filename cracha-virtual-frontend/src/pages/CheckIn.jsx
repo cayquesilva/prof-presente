@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Scanner } from "@yudiel/react-qr-scanner";
 import api from "../lib/api";
-
 import {
   CircleCheck as CheckCircle,
   Circle as XCircle,
-  MapPin,
   QrCode,
   Keyboard,
   Camera,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "../hooks/useDebounce";
@@ -35,26 +34,24 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const CheckIn = () => {
-  const [scanner, setScanner] = useState(null);
   const [scanResult, setScanResult] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState("");
   const [manualInput, setManualInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const [scanError, setScanError] = useState(null);
 
   // Buscar eventos disponíveis
   const { data: eventsData } = useQuery({
     queryKey: ["events-for-checkin"],
     queryFn: async () => {
-      const response = await api.get("/events", {
-        params: { limit: 100 },
-      });
+      const response = await api.get("/events", { params: { limit: 100 } });
       return response.data;
     },
   });
 
-  // Buscar usuários por nome (autocomplete)
+  // Buscar usuários por nome
   const { data: usersData } = useQuery({
     queryKey: ["users-search", debouncedSearch, selectedEvent],
     queryFn: async () => {
@@ -94,66 +91,18 @@ const CheckIn = () => {
     },
   });
 
-  const initializeScanner = () => {
+  const handleStartScanner = () => {
     if (!selectedEvent) {
       toast.error("Selecione um evento primeiro");
       return;
     }
-
-    if (scanner) {
-      scanner.clear();
-    }
-
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "qr-reader",
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        facingMode: "environment",
-      },
-      false
-    );
-
-    html5QrcodeScanner.render(
-      (decodedText) => {
-        try {
-          // Tentar parsear como JSON primeiro
-          let qrData;
-          try {
-            qrData = JSON.parse(decodedText);
-          } catch {
-            // Se não for JSON, usar como está
-            qrData = decodedText;
-          }
-
-          checkInMutation.mutate({
-            qrCodeValue:
-              typeof qrData === "string" ? qrData : JSON.stringify(qrData),
-            eventId: selectedEvent,
-          });
-          html5QrcodeScanner.clear();
-          setIsScanning(false);
-        } catch (e) {
-          console.error("Erro ao processar QR Code:", e);
-          toast.error("Erro ao processar QR Code: " + e.message);
-        }
-      },
-      (errorMessage) => {
-        console.log("QR Code scanning error:", errorMessage);
-      }
-    );
-
-    setScanner(html5QrcodeScanner);
+    setScanError(null);
+    setScanResult(null);
     setIsScanning(true);
   };
 
-  const stopScanner = () => {
-    if (scanner) {
-      scanner.clear();
-      setIsScanning(false);
-      setScanner(null);
-    }
+  const handleStopScanner = () => {
+    setIsScanning(false);
   };
 
   const handleManualCheckIn = () => {
@@ -161,7 +110,6 @@ const CheckIn = () => {
       toast.error("Selecione um evento primeiro");
       return;
     }
-
     if (!manualInput.trim()) {
       toast.error("Por favor, insira o código do crachá");
       return;
@@ -178,7 +126,6 @@ const CheckIn = () => {
       toast.error("Selecione um evento primeiro");
       return;
     }
-
     if (!user.badgeCode) {
       toast.error("Usuário não possui crachá");
       return;
@@ -190,13 +137,10 @@ const CheckIn = () => {
     });
   };
 
+  // Limpa o resultado ao mudar de evento
   useEffect(() => {
-    return () => {
-      if (scanner) {
-        scanner.clear();
-      }
-    };
-  }, [scanner]);
+    setScanResult(null);
+  }, [selectedEvent]);
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-4xl">
@@ -287,34 +231,91 @@ const CheckIn = () => {
                 </TabsTrigger>
               </TabsList>
             </div>
+
+            {/* --- Scanner --- */}
             <TabsContent value="qr">
               <Card>
                 <CardHeader>
                   <CardTitle>Escanear QR Code</CardTitle>
                   <CardDescription>
-                    Use a câmera para escanear o QR code do crachá
+                    Aponte a câmera para o QR code do crachá. A leitura é
+                    automática.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {!isScanning ? (
-                    <Button onClick={initializeScanner} className="w-full">
+                    <Button onClick={handleStartScanner} className="w-full">
                       <Camera className="h-4 w-4 mr-2" />
-                      Iniciar Scanner
+                      Ativar Câmera
                     </Button>
                   ) : (
                     <Button
-                      onClick={stopScanner}
+                      onClick={handleStopScanner}
                       variant="destructive"
                       className="w-full"
                     >
-                      Parar Scanner
+                      Desativar Câmera
                     </Button>
                   )}
-                  <div id="qr-reader" className="w-full"></div>
+
+                  {isScanning && (
+                    <div className="mt-4">
+                      <Scanner
+                        onScan={(detectedCodes) => {
+                          if (!detectedCodes || detectedCodes.length === 0)
+                            return;
+                          const first = detectedCodes[0];
+                          const text = first.rawValue || "";
+                          if (text) {
+                            console.log("✅ QR Code detectado:", text);
+                            toast.success("QR Code lido com sucesso!");
+                            setIsScanning(false);
+                            setScanError(null);
+
+                            checkInMutation.mutate({
+                              qrCodeValue: text,
+                              eventId: selectedEvent,
+                            });
+                          }
+                        }}
+                        onError={(err) => {
+                          if (
+                            err &&
+                            typeof err.message === "string" &&
+                            !err.message.includes("NotFoundException")
+                          ) {
+                            console.error("Erro de leitura:", err);
+                            setScanError(err.message);
+                          }
+                        }}
+                        constraints={{
+                          facingMode: "environment",
+                        }}
+                        allowMultiple={false}
+                        styles={{
+                          container: { width: "100%" },
+                          video: { borderRadius: "0.5rem" },
+                        }}
+                      />
+                      {scanError && (
+                        <div className="...">
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Erro: {scanError}
+                        </div>
+                      )}
+                      <div className="text-center text-sm text-gray-500 p-2 border rounded-lg mt-2">
+                        <p>Aponte a câmera para o QR Code.</p>
+                        <p>
+                          Garanta boa iluminação e que o código esteja focado.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
+            {/* --- Manual --- */}
             <TabsContent value="manual">
               <Card>
                 <CardHeader>
@@ -334,9 +335,7 @@ const CheckIn = () => {
                         setManualInput(e.target.value.toUpperCase())
                       }
                       onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          handleManualCheckIn();
-                        }
+                        if (e.key === "Enter") handleManualCheckIn();
                       }}
                       className="mt-2"
                     />
@@ -354,6 +353,7 @@ const CheckIn = () => {
               </Card>
             </TabsContent>
 
+            {/* --- Buscar por nome --- */}
             <TabsContent value="search">
               <Card>
                 <CardHeader>
