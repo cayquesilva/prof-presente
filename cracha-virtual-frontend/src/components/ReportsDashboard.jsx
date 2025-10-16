@@ -261,16 +261,29 @@ const ReportsDashboard = () => {
     const summaryText = `Inscritos: ${summary.totalEnrollments} | Presentes: ${summary.usersWithCheckin} | Ausentes: ${summary.usersWithoutCheckin} | Participação: ${summary.attendanceRate}%`;
     doc.text(summaryText, 14, 36);
 
-    // Definindo as colunas e as linhas para a tabela
-    const tableColumn = ["Participante", "Email", "Check-ins", "Status"];
+    // MUDANÇA 1: As colunas do PDF agora correspondem à nova tabela.
+    const tableColumn = [
+      "Participante",
+      "Email",
+      "Unidade de Trabalho",
+      "Status",
+      "Horário do Check-in",
+    ];
     const tableRows = [];
 
+    // MUDANÇA 2: Os dados de cada linha são mapeados para as novas colunas.
     frequencyData.forEach((item) => {
+      // Formata o horário do check-in ou define como '—' se ausente.
+      const checkinTimeFormatted = item.checkinTime
+        ? format(new Date(item.checkinTime), "HH:mm:ss")
+        : "—";
+
       const rowData = [
         item.user.name,
         item.user.email,
-        item.checkinCount.toString(),
+        item.workplace, // Adicionado
         item.hasCheckedIn ? "Presente" : "Ausente",
+        checkinTimeFormatted, // Adicionado
       ];
       tableRows.push(rowData);
     });
@@ -756,23 +769,26 @@ const ReportsDashboard = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
+            <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Participante</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Check-ins</TableHead>
-                  <TableHead>Status</TableHead>
+                  {/* MUDANÇA 1: Cabeçalhos da tabela atualizados */}
+                  <TableHead className="w-[25%]">Participante</TableHead>
+                  <TableHead className="w-[25%]">Unidade de Trabalho</TableHead>
+                  <TableHead className="w-[25%]">Status</TableHead>
+                  <TableHead className="w-[25%]">Horário do Check-in</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {eventReportData.frequencyData.map((item) => (
                   <TableRow key={item.user.id}>
-                    <TableCell className="font-medium">
+                    {/* MUDANÇA 2: Células da tabela refletindo os novos dados */}
+                    <TableCell className="font-medium break-words whitespace-normal">
                       {item.user.name}
                     </TableCell>
-                    <TableCell>{item.user.email}</TableCell>
-                    <TableCell>{item.checkinCount}</TableCell>
+                    <TableCell className="whitespace-normal break-words">
+                      {item.workplace}
+                    </TableCell>
                     <TableCell>
                       {item.hasCheckedIn ? (
                         <Badge variant="default" className="bg-green-600">
@@ -781,6 +797,14 @@ const ReportsDashboard = () => {
                       ) : (
                         <Badge variant="destructive">Ausente</Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {
+                        item.checkinTime
+                          ? // Formata a data para exibir apenas a hora
+                            format(new Date(item.checkinTime), "HH:mm:ss")
+                          : "—" // Exibe um traço se não houver check-in
+                      }
                     </TableCell>
                   </TableRow>
                 ))}

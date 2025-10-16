@@ -80,6 +80,10 @@ const getCheckinReport = async (req, res) => {
     const uniqueCheckins = Object.keys(userCheckins).length;
     const totalCheckins = checkins.length;
 
+    // MUDANÇA: Convertendo o objeto para array e ordenando alfabeticamente pelo nome do usuário.
+    const userCheckinsArray = Object.values(userCheckins);
+    userCheckinsArray.sort((a, b) => a.user.name.localeCompare(b.user.name));
+
     const report = {
       event: {
         id: event.id,
@@ -103,7 +107,7 @@ const getCheckinReport = async (req, res) => {
         averageCheckinsPerUser:
           uniqueCheckins > 0 ? (totalCheckins / uniqueCheckins).toFixed(2) : 0,
       },
-      userCheckins: Object.values(userCheckins),
+      userCheckins: userCheckinsArray,
       generatedAt: new Date().toISOString(),
     };
 
@@ -128,17 +132,26 @@ const getFrequencyReport = async (req, res) => {
       return res.status(404).json({ error: "Evento não encontrado" });
     }
 
+    // MUDANÇA 1: Incluímos a busca pelas 'workplaces' (unidades de trabalho) do usuário.
     const enrollments = await prisma.enrollment.findMany({
       where: { eventId, status: "APPROVED" },
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            workplaces: {
+              select: {
+                name: true,
+              },
+            },
+          },
         },
       },
     });
 
     if (enrollments.length === 0) {
-      // Retorna relatório vazio se não houver inscritos
       return res.json({
         event: {
           id: event.id,
@@ -160,37 +173,57 @@ const getFrequencyReport = async (req, res) => {
 
     const enrolledUserIds = enrollments.map((e) => e.user.id);
 
-    // MUDANÇA: Busca os IDs dos usuários que tiveram PELO MENOS UM check-in no evento.
-    const usersWhoCheckedIn = await prisma.userCheckin.findMany({
+    // MUDANÇA 2: Buscamos todos os check-ins para depois pegar o primeiro de cada usuário.
+    const allEventCheckins = await prisma.userCheckin.findMany({
       where: {
         eventId: eventId,
         userBadge: {
           userId: { in: enrolledUserIds },
         },
       },
-      distinct: ["userBadgeId"], // A chave da mudança está aqui!
       select: {
         userBadge: { select: { userId: true } },
+        checkinTime: true,
+      },
+      orderBy: {
+        checkinTime: "asc", // Ordenamos para garantir que o primeiro que encontrarmos seja o mais antigo.
       },
     });
 
-    const usersWithCheckinSet = new Set(
-      usersWhoCheckedIn.map((c) => c.userBadge.userId)
-    );
+    // Criamos um mapa para armazenar o primeiro horário de check-in de cada usuário.
+    const firstCheckinMap = new Map();
+    for (const checkin of allEventCheckins) {
+      const userId = checkin.userBadge.userId;
+      if (!firstCheckinMap.has(userId)) {
+        firstCheckinMap.set(userId, checkin.checkinTime);
+      }
+    }
 
-    // MUDANÇA: Agora, a frequência é simplesmente "presente" ou "ausente".
+    // MUDANÇA 3: Montamos os dados de frequência com os novos campos.
     const frequencyData = enrollments.map((enrollment) => {
-      const hasCheckedIn = usersWithCheckinSet.has(enrollment.user.id);
+      const checkinTime = firstCheckinMap.get(enrollment.user.id) || null;
+      // Formatamos os nomes das unidades em uma única string.
+      const workplaceNames =
+        enrollment.user.workplaces.map((wp) => wp.name).join(", ") || "N/A";
+
       return {
-        user: enrollment.user,
-        enrollmentDate: enrollment.enrollmentDate,
-        checkinCount: hasCheckedIn ? 1 : 0, // A contagem agora é binária: 1 para presente, 0 para ausente.
-        hasCheckedIn: hasCheckedIn,
+        user: {
+          // Mantemos os dados do usuário aninhados
+          id: enrollment.user.id,
+          name: enrollment.user.name,
+          email: enrollment.user.email,
+        },
+        workplace: workplaceNames, // NOVO CAMPO
+        hasCheckedIn: !!checkinTime,
+        checkinTime: checkinTime, // NOVO CAMPO
       };
     });
 
+    // MUDANÇA 4: Ordenamos a lista final por nome de usuário.
+    frequencyData.sort((a, b) => a.user.name.localeCompare(b.user.name));
+
     const totalEnrollments = enrollments.length;
-    const usersWithCheckin = usersWithCheckinSet.size;
+    const usersWithCheckin = firstCheckinMap.size;
     const usersWithoutCheckin = totalEnrollments - usersWithCheckin;
 
     const report = {
@@ -210,9 +243,7 @@ const getFrequencyReport = async (req, res) => {
             ? ((usersWithCheckin / totalEnrollments) * 100).toFixed(2)
             : 0,
       },
-      frequencyData: frequencyData.sort(
-        (a, b) => b.checkinCount - a.checkinCount
-      ),
+      frequencyData, // Agora com os novos dados e ordenado
       generatedAt: new Date().toISOString(),
     };
 
@@ -475,7 +506,7 @@ const getWorkplaceReport = async (req, res) => {
     });
 
     // 3. Buscar os detalhes dos eventos a partir dos IDs coletados nos check-ins
-    const eventIds = [...new Set(checkins.map((c) => c.eventId))];
+    const eventIds = [...new Set(uniqueCheckins.map((c) => c.eventId))];
     const events = await prisma.event.findMany({
       where: { id: { in: eventIds } },
       select: { id: true, title: true },
@@ -519,6 +550,9 @@ const getWorkplaceReport = async (req, res) => {
         ? ((usersWithCheckin / usersInWorkplace.length) * 100).toFixed(2)
         : "0.00";
 
+    // MUDANÇA: A ordenação agora é por nome em vez de total de check-ins.
+    userFrequencyArray.sort((a, b) => a.name.localeCompare(b.name));
+
     res.json({
       workplace: { id: workplace.id, name: workplace.name },
       period: {
@@ -530,9 +564,7 @@ const getWorkplaceReport = async (req, res) => {
         totalCheckins: totalCheckinsCount,
         attendanceRate: attendanceRate,
       },
-      userFrequency: userFrequencyArray.sort(
-        (a, b) => b.totalCheckins - a.totalCheckins
-      ),
+      userFrequency: userFrequencyArray,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -684,6 +716,9 @@ const getFilteredFrequencyReport = async (req, res) => {
         ? ((usersWithCheckin / filteredUsers.length) * 100).toFixed(2)
         : "0.00";
 
+    // MUDANÇA: A ordenação agora é por nome em vez de total de check-ins.
+    userFrequencyArray.sort((a, b) => a.name.localeCompare(b.name));
+
     res.json({
       filters: req.query,
       summary: {
@@ -693,9 +728,7 @@ const getFilteredFrequencyReport = async (req, res) => {
         attendanceRate,
         totalCheckins: uniqueCheckins.length,
       },
-      userFrequency: userFrequencyArray.sort(
-        (a, b) => b.totalCheckins - a.totalCheckins
-      ),
+      userFrequency: userFrequencyArray,
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -746,6 +779,11 @@ const getAwardsReport = async (req, res) => {
         user,
         awardedAt,
       });
+    });
+
+    // MUDANÇA: Ordenando a lista de premiados (recipients) de cada prêmio.
+    awardsMap.forEach((award) => {
+      award.recipients.sort((a, b) => a.user.name.localeCompare(b.user.name));
     });
 
     // 3. Preparar o relatório final
