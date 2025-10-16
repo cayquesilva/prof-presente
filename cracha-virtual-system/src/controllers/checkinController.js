@@ -134,9 +134,6 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
       where: {
         userBadgeId: userBadge.id,
         eventId,
-        checkinTime: {
-          gte: new Date(Date.now() - 5 * 60 * 1000), // 5 minutos atrás
-        },
       },
     });
 
