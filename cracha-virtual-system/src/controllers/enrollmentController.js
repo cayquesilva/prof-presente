@@ -1,5 +1,9 @@
 const { prisma } = require("../config/database");
-// ALTERAÇÃO: generateQRCode não é mais necessário aqui.
+
+const {
+  sendEnrollmentConfirmationEmail,
+  sendEnrollmentCancellationEmail,
+} = require("../utils/email");
 
 /**
  * Corrige a data armazenada no banco (que foi salva como UTC por engano)
@@ -25,19 +29,27 @@ const enrollInEvent = async (req, res) => {
       return res.status(400).json({ error: "eventId é obrigatório" });
     }
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: {
-        _count: {
-          select: {
-            enrollments: { where: { status: "APPROVED" } },
+    const [event, user, userBadge] = await Promise.all([
+      prisma.event.findUnique({
+        where: { id: eventId },
+        include: {
+          _count: {
+            select: { enrollments: { where: { status: "APPROVED" } } },
           },
         },
-      },
-    });
+      }),
+      prisma.user.findUnique({ where: { id: userId } }),
+      prisma.userBadge.findUnique({ where: { userId } }),
+    ]);
 
     if (!event) {
       return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    if (!user || !userBadge) {
+      return res
+        .status(404)
+        .json({ error: "Dados do usuário ou crachá não encontrados." });
     }
 
     const existingEnrollment = await prisma.enrollment.findUnique({
@@ -49,11 +61,9 @@ const enrollInEvent = async (req, res) => {
     if (existingEnrollment) {
       if (["CANCELLED", "REJECTED"].includes(existingEnrollment.status)) {
         if (new Date() > getCorrectedDate(event.endDate)) {
-          return res
-            .status(400)
-            .json({
-              error: "Não é possível se inscrever em evento que já terminou",
-            });
+          return res.status(400).json({
+            error: "Não é possível se inscrever em evento que já terminou",
+          });
         }
         if (
           event.maxAttendees &&
@@ -81,26 +91,25 @@ const enrollInEvent = async (req, res) => {
           },
         });
 
+        // --- MUDANÇA: Dispara o e-mail de confirmação ao reativar a inscrição ---
+        sendEnrollmentConfirmationEmail(user, event, userBadge);
+
         // ALTERAÇÃO: A geração de crachá foi removida daqui.
         return res
           .status(200)
           .json({ message: "Inscrição reativada com sucesso", enrollment });
       } else {
-        return res
-          .status(409)
-          .json({
-            error: "Usuário já está inscrito neste evento",
-            enrollment: existingEnrollment,
-          });
+        return res.status(409).json({
+          error: "Usuário já está inscrito neste evento",
+          enrollment: existingEnrollment,
+        });
       }
     }
 
     if (new Date() > getCorrectedDate(event.endDate)) {
-      return res
-        .status(400)
-        .json({
-          error: "Não é possível se inscrever em evento que já terminou",
-        });
+      return res.status(400).json({
+        error: "Não é possível se inscrever em evento que já terminou",
+      });
     }
 
     if (event.maxAttendees && event._count.enrollments >= event.maxAttendees) {
@@ -131,6 +140,8 @@ const enrollInEvent = async (req, res) => {
 
     // ALTERAÇÃO: A geração automática de crachá foi removida daqui.
     // O crachá universal do usuário será usado.
+    // --- MUDANÇA: Dispara o e-mail de confirmação ao reativar a inscrição ---
+    sendEnrollmentConfirmationEmail(user, event, userBadge);
 
     res.status(201).json({
       message: "Inscrição realizada com sucesso",
@@ -245,7 +256,7 @@ const cancelEnrollment = async (req, res) => {
 
     const enrollment = await prisma.enrollment.findUnique({
       where: { id: enrollmentId },
-      include: { event: true },
+      include: { event: true, user: true },
     });
 
     if (!enrollment) {
@@ -275,19 +286,20 @@ const cancelEnrollment = async (req, res) => {
     // 5. Cria o objeto Date correto a partir da string com o fuso ajustado.
     const correctStartDate = new Date(correctDateString);
 
-
     if (new Date() > correctStartDate) {
-      return res
-        .status(400)
-        .json({
-          error: "Não é possível cancelar inscrição de evento que já começou",
-        });
+      return res.status(400).json({
+        error: "Não é possível cancelar inscrição de evento que já começou",
+      });
     }
 
     const updatedEnrollment = await prisma.enrollment.update({
       where: { id: enrollmentId },
       data: { status: "CANCELLED" },
     });
+
+    // --- MUDANÇA: Dispara o e-mail de cancelamento ---
+    // Usamos os dados que já foram buscados no 'include'
+    sendEnrollmentCancellationEmail(enrollment.user, enrollment.event);
 
     res.json({
       message: "Inscrição cancelada com sucesso",
