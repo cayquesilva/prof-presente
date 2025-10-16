@@ -2,6 +2,21 @@ const bcrypt = require("bcryptjs");
 const { body, validationResult } = require("express-validator");
 const { prisma } = require("../config/database");
 const { generateToken } = require("../utils/jwt");
+const { generateQRCode } = require("../utils/qrcode");
+
+// --- NOVO: Copie esta função para cá ou importe-a de um arquivo de utils ---
+const generateBadgeCode = (userName) => {
+  const names = userName.trim().split(" ");
+  const firstName = names[0].toUpperCase();
+  const lastName =
+    names.length > 1 ? names[names.length - 1].toUpperCase() : "";
+  const randomNumbers = Math.floor(1000 + Math.random() * 9000);
+
+  if (lastName) {
+    return `${firstName}-${lastName}-${randomNumbers}`;
+  }
+  return `${firstName}-${randomNumbers}`;
+};
 
 // Validações para registro
 const registerValidation = [
@@ -96,6 +111,17 @@ const register = async (req, res) => {
       }
     }
 
+    // --- NOVA LÓGICA: Geração do código do crachá ---
+    let badgeCode;
+    let isUnique = false;
+    while (!isUnique) {
+      badgeCode = generateBadgeCode(name);
+      const existingBadge = await prisma.userBadge.findUnique({
+        where: { badgeCode },
+      });
+      if (!existingBadge) isUnique = true;
+    }
+
     // LÓGICA PARA MÚLTIPLAS UNIDADES
     let workplacesConnect = undefined;
     if (
@@ -120,42 +146,69 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Criar usuário
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        cpf: cpf || null,
-        birthDate: new Date(birthDate),
-        phone: phone || null,
-        address: address || null,
-        neighborhood: neighborhood || null, // NOVO
-        workShifts: workShifts,
-        contractType: contractType || null, // NOVO
-        teachingSegments: teachingSegments,
-        photoUrl: null, // photoUrl será adicionado depois se houver upload
-        profession: professionName
-          ? { connectOrCreate: professionConnectOrCreate }
-          : undefined,
-        workplaces: workplacesConnect
-          ? { connect: workplacesConnect }
-          : undefined,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        photoUrl: true,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      // 5. Criação do usuário (usando sua lógica original, agora dentro da transação)
+      const newUser = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          cpf: cpf ? cpf.replace(/\D/g, "") : null,
+          birthDate: new Date(birthDate),
+          phone: phone || null,
+          address: address || null,
+          neighborhood: neighborhood || null,
+          workShifts,
+          contractType: contractType || null,
+          teachingSegments,
+          photoUrl: null,
+          profession: professionName
+            ? { connectOrCreate: professionConnectOrCreate }
+            : undefined,
+          workplaces: workplacesConnect
+            ? { connect: workplacesConnect }
+            : undefined,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          photoUrl: true,
+        },
+      });
+
+      // 6. Geração do QR Code e criação do crachá universal (nova lógica)
+      const qrData = JSON.stringify({
+        userId: newUser.id,
+        badgeCode,
+        badgeType: "user",
+      });
+      const qrCodeFilename = `user_badge_${newUser.id}`;
+      await generateQRCode(qrData, qrCodeFilename);
+      const qrCodeUrl = `/uploads/qrcodes/${qrCodeFilename}.png`;
+
+      const badgeImageUrl = `/api/badges/${newUser.id}/image`;
+
+      await tx.userBadge.create({
+        data: {
+          userId: newUser.id,
+          badgeCode,
+          qrCodeUrl,
+          badgeImageUrl,
+        },
+      });
+
+      return newUser; // Retorna o usuário criado para a resposta final
     });
 
     res.status(201).json({
       message: "Usuário registrado com sucesso",
-      user,
+      user: result, // 'result' agora é o objeto 'user' retornado pela transação
     });
   } catch (error) {
+    // 7. Seu tratamento de erro original (mantido)
     if (error.code === "P2002") {
       const field = error.meta.target.join(", ");
       return res
