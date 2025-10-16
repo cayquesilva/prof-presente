@@ -76,6 +76,57 @@ const getCheckinRanking = async (req, res) => {
   }
 };
 
+// FUNÇÃO Ranking de Pontualidade - VERSÃO FINAL CORRIGIDA
+const getPunctualityRanking = async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+
+    const rankings = await prisma.$queryRaw`
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u."photoUrl",
+        -- MUDANÇA: Agora contamos os eventos distintos em vez de todos os check-ins.
+        COUNT(DISTINCT uc."eventId")::int AS "punctualCheckins"
+      FROM
+        user_checkins AS uc
+      INNER JOIN
+        events AS e ON uc."eventId" = e.id
+      INNER JOIN
+        user_badges AS ub ON uc."userBadgeId" = ub.id
+      INNER JOIN
+        users AS u ON ub."userId" = u.id
+      WHERE
+        uc."checkinTime" <= e."startDate"
+      GROUP BY
+        u.id, u."photoUrl"
+      ORDER BY
+        "punctualCheckins" DESC
+      LIMIT ${parseInt(limit)};
+    `;
+
+    const formattedRankings = rankings.map((user, index) => ({
+      position: index + 1,
+      punctualCheckins: user.punctualCheckins,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        photoUrl: user.photoUrl,
+      },
+    }));
+
+    res.json({ rankings: formattedRankings });
+  } catch (error) {
+    console.error("Erro ao gerar ranking de pontualidade:", error);
+    res.status(500).json({
+      error: "Erro interno do servidor",
+    });
+  }
+};
+
 module.exports = {
   getCheckinRanking,
+  getPunctualityRanking,
 };

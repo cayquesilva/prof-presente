@@ -24,7 +24,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const Evaluations = lazy(() => import("./pages/Evaluations"));
 const EvaluateEnrollment = lazy(() => import("./pages/EvaluateEnrollment"));
 const Profile = lazy(() => import("./pages/Profile"));
-const UserRanking = lazy(() => import("./pages/UserRanking.jsx"));
+const Rankings = lazy(() => import("./pages/Rankings"));
 
 import "./App.css";
 
@@ -189,7 +189,7 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <LazyWrapper>
-                        <UserRanking />
+                        <Rankings />
                       </LazyWrapper>
                     </Layout>
                   </ProtectedRoute>

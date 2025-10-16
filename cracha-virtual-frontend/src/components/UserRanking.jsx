@@ -6,7 +6,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
+} from "./ui/card";
 import {
   Table,
   TableBody,
@@ -14,9 +14,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { Badge } from "../components/ui/badge";
+} from "./ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Badge } from "./ui/badge";
 import { Trophy, Medal, Award } from "lucide-react";
 
 const UserRanking = () => {
@@ -106,23 +106,25 @@ const UserRanking = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-20">Posição</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead className="text-center">Check-ins</TableHead>
-                  <TableHead className="text-right">Classificação</TableHead>
+                  <TableHead className="text-center w-[15%]">Posição</TableHead>
+                  <TableHead className="w-[50%]">Usuário</TableHead>
+                  <TableHead className="text-center w-[35%]">
+                    Check-ins
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {/* ALTERAÇÃO: Mapeamento de 'item.teacher' para 'item.user'. */}
                 {rankings?.map((item) => (
                   <TableRow key={item.user.id}>
-                    <TableCell>
-                      <div className="flex items-center justify-center">
+                    <TableCell className="w-[15%]">
+                      <div className="flex items-center justify-center gap-2">
                         {getPositionIcon(item.position)}
+                        {getPositionBadge(item.position)}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 w-[50%]">
                         <Avatar>
                           <AvatarImage
                             src={item.user.photoUrl}
@@ -145,16 +147,13 @@ const UserRanking = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center w-[35%]">
                       <Badge
                         variant="secondary"
                         className="font-bold text-lg px-4 py-1"
                       >
                         {item.totalCheckins}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {getPositionBadge(item.position)}
                     </TableCell>
                   </TableRow>
                 ))}
