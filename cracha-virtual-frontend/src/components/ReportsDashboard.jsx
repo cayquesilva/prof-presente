@@ -524,7 +524,8 @@ const ReportsDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            {" "}
             <Combobox
               options={
                 events?.map((event) => ({
@@ -687,7 +688,7 @@ const ReportsDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <Combobox
               options={
                 events?.map((event) => ({
@@ -799,7 +800,7 @@ const ReportsDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <Combobox
               options={
                 workplaces?.map((wp) => ({
@@ -1041,7 +1042,7 @@ const ReportsDashboard = () => {
               />
             </div>
           </div>
-          <div className="pt-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <Button
               onClick={handleGenerateFilteredReport}
               disabled={isGeneratingFilteredReport}
@@ -1150,15 +1151,17 @@ const ReportsDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            onClick={() => generateAwardsReport()}
-            disabled={isGeneratingAwardsReport}
-          >
-            {isGeneratingAwardsReport && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Gerar Relatório de Premiações
-          </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <Button
+              onClick={() => generateAwardsReport()}
+              disabled={isGeneratingAwardsReport}
+            >
+              {isGeneratingAwardsReport && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Gerar Relatório de Premiações
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
