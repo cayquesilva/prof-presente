@@ -121,91 +121,77 @@ const getFrequencyReport = async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    // Verificar se o evento existe
     const event = await prisma.event.findUnique({
       where: { id: eventId },
     });
-
     if (!event) {
-      return res.status(404).json({
-        error: "Evento não encontrado",
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { eventId, status: "APPROVED" },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (enrollments.length === 0) {
+      // Retorna relatório vazio se não houver inscritos
+      return res.json({
+        event: {
+          id: event.id,
+          title: event.title,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          location: event.location,
+        },
+        summary: {
+          totalEnrollments: 0,
+          usersWithCheckin: 0,
+          usersWithoutCheckin: 0,
+          attendanceRate: "0.00",
+        },
+        frequencyData: [],
+        generatedAt: new Date().toISOString(),
       });
     }
 
-    // Buscar todas as inscrições aprovadas
-    const enrollments = await prisma.enrollment.findMany({
+    const enrolledUserIds = enrollments.map((e) => e.user.id);
+
+    // MUDANÇA: Busca os IDs dos usuários que tiveram PELO MENOS UM check-in no evento.
+    const usersWhoCheckedIn = await prisma.userCheckin.findMany({
       where: {
-        eventId,
-        status: "APPROVED",
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            userBadge: {
-              select: {
-                _count: {
-                  select: {
-                    userCheckins: true, // O nome do relacionamento em UserBadge é "userCheckins"
-                  },
-                },
-              },
-            },
-          },
+        eventId: eventId,
+        userBadge: {
+          userId: { in: enrolledUserIds },
         },
+      },
+      distinct: ["userBadgeId"], // A chave da mudança está aqui!
+      select: {
+        userBadge: { select: { userId: true } },
       },
     });
 
-    // Calcular frequência para cada usuário
-    const frequencyData = enrollments.map((enrollment) => {
-      const checkinCount = enrollment.user.userBadge?._count?.userCheckins || 0;
+    const usersWithCheckinSet = new Set(
+      usersWhoCheckedIn.map((c) => c.userBadge.userId)
+    );
 
+    // MUDANÇA: Agora, a frequência é simplesmente "presente" ou "ausente".
+    const frequencyData = enrollments.map((enrollment) => {
+      const hasCheckedIn = usersWithCheckinSet.has(enrollment.user.id);
       return {
-        user: {
-          // Montamos o objeto de usuário manualmente
-          id: enrollment.user.id,
-          name: enrollment.user.name,
-          email: enrollment.user.email,
-        },
+        user: enrollment.user,
         enrollmentDate: enrollment.enrollmentDate,
-        checkinCount,
-        hasCheckedIn: checkinCount > 0,
-        lastCheckin: null, // Será preenchido abaixo se necessário
+        checkinCount: hasCheckedIn ? 1 : 0, // A contagem agora é binária: 1 para presente, 0 para ausente.
+        hasCheckedIn: hasCheckedIn,
       };
     });
 
-    // Buscar último check-in para cada usuário
-    for (const userData of frequencyData) {
-      if (userData.checkinCount > 0) {
-        const lastCheckin = await prisma.userCheckin.findFirst({
-          where: {
-            eventId: eventId,
-            userBadge: {
-              userId: userData.user.id,
-            },
-          },
-          orderBy: { checkinTime: "desc" },
-        });
-        userData.lastCheckin = lastCheckin?.checkinTime || null;
-      }
-    }
-
-    // Estatísticas gerais
     const totalEnrollments = enrollments.length;
-    const usersWithCheckin = frequencyData.filter((u) => u.hasCheckedIn).length;
+    const usersWithCheckin = usersWithCheckinSet.size;
     const usersWithoutCheckin = totalEnrollments - usersWithCheckin;
-
-    // Distribuição de check-ins
-    const checkinDistribution = {};
-    frequencyData.forEach((userData) => {
-      const count = userData.checkinCount;
-      if (!checkinDistribution[count]) {
-        checkinDistribution[count] = 0;
-      }
-      checkinDistribution[count]++;
-    });
 
     const report = {
       event: {
@@ -224,7 +210,6 @@ const getFrequencyReport = async (req, res) => {
             ? ((usersWithCheckin / totalEnrollments) * 100).toFixed(2)
             : 0,
       },
-      checkinDistribution,
       frequencyData: frequencyData.sort(
         (a, b) => b.checkinCount - a.checkinCount
       ),
@@ -268,64 +253,52 @@ const getFrequencyRanking = async (req, res) => {
       }
     }
 
-    // Buscar todos os usuários com crachá universal
-    const usersWithBadge = await prisma.userBadge.findMany({
-      select: {
-        id: true,
-        userId: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            photoUrl: true,
-          },
-        },
+    // MUDANÇA: Agrupa por usuário e evento para obter participações únicas.
+    const uniqueParticipations = await prisma.userCheckin.groupBy({
+      by: ["userBadgeId", "eventId"],
+      where: { ...dateFilter },
+    });
+
+    // MUDANÇA: Agrega os resultados para contar eventos únicos por usuário.
+    const userEventCounts = uniqueParticipations.reduce((acc, p) => {
+      acc[p.userBadgeId] = (acc[p.userBadgeId] || 0) + 1;
+      return acc;
+    }, {});
+
+    const sortedUsers = Object.entries(userEventCounts)
+      .map(([userBadgeId, checkinCount]) => ({ userBadgeId, checkinCount }))
+      .sort((a, b) => b.checkinCount - a.checkinCount);
+
+    const paginatedUsers = sortedUsers.slice(skip, skip + parseInt(limit));
+    const userBadgeIds = paginatedUsers.map((u) => u.userBadgeId);
+
+    const userBadges = await prisma.userBadge.findMany({
+      where: { id: { in: userBadgeIds } },
+      include: {
+        user: { select: { id: true, name: true, photoUrl: true, email: true } },
       },
     });
 
-    // Calcular check-ins para cada usuário
-    const rankingData = [];
-    for (const userBadge of usersWithBadge) {
-      const checkinCount = await prisma.userCheckin.count({
-        where: {
-          userBadgeId: userBadge.id,
-          ...dateFilter,
-        },
-      });
+    const userBadgesMap = new Map(userBadges.map((ub) => [ub.id, ub.user]));
 
-      const eventCount = await prisma.enrollment.count({
-        where: {
-          userId: userBadge.userId,
-          status: "APPROVED",
-        },
-      });
-
-      if (checkinCount > 0) {
-        rankingData.push({
-          user: userBadge.user,
-          checkinCount,
-          eventCount,
-        });
-      }
-    }
-
-    // Ordenar por número de check-ins
-    rankingData.sort((a, b) => b.checkinCount - a.checkinCount);
-
-    // Aplicar paginação
-    const paginatedRanking = rankingData.slice(skip, skip + parseInt(limit));
-
-    // Adicionar posição no ranking
-    const rankingWithPosition = paginatedRanking.map((item, index) => ({
-      position: skip + index + 1,
-      ...item,
-    }));
+    const rankingWithPosition = paginatedUsers
+      .map((item, index) => {
+        const user = userBadgesMap.get(item.userBadgeId);
+        return user
+          ? {
+              position: skip + index + 1,
+              user,
+              checkinCount: item.checkinCount, // Contagem de eventos únicos
+            }
+          : null;
+      })
+      .filter(Boolean);
 
     const report = {
       period: period || "all",
       summary: {
-        totalUsers: rankingData.length,
-        totalCheckins: rankingData.reduce(
+        totalUsers: sortedUsers.length,
+        totalCheckins: sortedUsers.reduce(
           (sum, item) => sum + item.checkinCount,
           0
         ),
@@ -334,8 +307,8 @@ const getFrequencyRanking = async (req, res) => {
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
-        total: rankingData.length,
-        pages: Math.ceil(rankingData.length / limit),
+        total: sortedUsers.length,
+        pages: Math.ceil(sortedUsers.length / limit),
       },
       generatedAt: new Date().toISOString(),
     };
@@ -352,13 +325,17 @@ const getFrequencyRanking = async (req, res) => {
 // Relatório geral do sistema
 const getSystemReport = async (req, res) => {
   try {
-    // Estatísticas gerais
     const totalUsers = await prisma.user.count();
     const totalEvents = await prisma.event.count();
     const totalEnrollments = await prisma.enrollment.count();
-    const totalCheckins = await prisma.userCheckin.count();
     const totalAwards = await prisma.award.count();
     const totalUserAwards = await prisma.userAward.count();
+
+    // MUDANÇA: Conta o total de participações únicas (usuário + evento) em vez de todos os check-ins.
+    const uniqueParticipations = await prisma.userCheckin.groupBy({
+      by: ["userBadgeId", "eventId"],
+    });
+    const totalUniqueCheckins = uniqueParticipations.length;
 
     // Eventos por mês (últimos 12 meses)
     const twelveMonthsAgo = new Date();
@@ -412,14 +389,13 @@ const getSystemReport = async (req, res) => {
         totalUsers,
         totalEvents,
         totalEnrollments,
-        totalCheckins,
-        totalAwards,
+        totalCheckins: totalUniqueCheckins, // MUDANÇA: Usando a nova contagem        totalAwards,
         totalUserAwards,
         averageEnrollmentsPerEvent:
           totalEvents > 0 ? (totalEnrollments / totalEvents).toFixed(2) : 0,
         averageCheckinsPerEnrollment:
           totalEnrollments > 0
-            ? (totalCheckins / totalEnrollments).toFixed(2)
+            ? (totalUniqueCheckins / totalEnrollments).toFixed(2)
             : 0,
       },
       trends: {
@@ -485,13 +461,13 @@ const getWorkplaceReport = async (req, res) => {
       dateFilter.lte = new Date(`${endDate}T23:59:59.999Z`);
     }
 
-    const checkins = await prisma.userCheckin.findMany({
+    const uniqueCheckins = await prisma.userCheckin.findMany({
       where: {
         userBadge: { userId: { in: userIds } },
         checkinTime:
           Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       },
-      // Apenas selecionamos os dados que o UserCheckin realmente tem
+      distinct: ["eventId", "userBadgeId"], // A chave da mudança está aqui!
       select: {
         eventId: true,
         userBadge: { select: { userId: true } },
@@ -515,18 +491,20 @@ const getWorkplaceReport = async (req, res) => {
       ])
     );
 
-    checkins.forEach((checkin) => {
+    let totalCheckinsCount = 0;
+    uniqueCheckins.forEach((checkin) => {
+      totalCheckinsCount++; // Contagem total de participações únicas
       const userId = checkin.userBadge.userId;
       const eventId = checkin.eventId;
       const userReport = userFrequencyMap.get(userId);
 
       if (userReport) {
-        userReport.totalCheckins++;
+        userReport.totalCheckins++; // Incrementa o total de eventos únicos do usuário
         const eventTitle = eventsMap.get(eventId) || "Evento Desconhecido";
+        // A lógica de contar check-ins por evento se torna menos relevante, mas pode ser mantida se útil
         if (!userReport.events[eventId]) {
-          userReport.events[eventId] = { title: eventTitle, checkinCount: 0 };
+          userReport.events[eventId] = { title: eventTitle, checkinCount: 1 };
         }
-        userReport.events[eventId].checkinCount++;
       }
     });
 
@@ -549,7 +527,7 @@ const getWorkplaceReport = async (req, res) => {
       },
       summary: {
         totalUsers: usersInWorkplace.length,
-        totalCheckins: checkins.length,
+        totalCheckins: totalCheckinsCount,
         attendanceRate: attendanceRate,
       },
       userFrequency: userFrequencyArray.sort(
@@ -653,8 +631,8 @@ const getFilteredFrequencyReport = async (req, res) => {
       checkinDateFilter.gte = new Date(`${startDate}T00:00:00.000Z`);
     if (endDate) checkinDateFilter.lte = new Date(`${endDate}T23:59:59.999Z`);
 
-    // CORREÇÃO PRINCIPAL AQUI: Usando prisma.userCheckin e a estrutura correta
-    const checkins = await prisma.userCheckin.findMany({
+    // MUDANÇA: Busca participações únicas para os usuários filtrados.
+    const uniqueCheckins = await prisma.userCheckin.findMany({
       where: {
         userBadge: { userId: { in: userIds } },
         checkinTime:
@@ -662,6 +640,7 @@ const getFilteredFrequencyReport = async (req, res) => {
             ? checkinDateFilter
             : undefined,
       },
+      distinct: ["eventId", "userBadgeId"], // A chave da mudança está aqui!
       select: {
         eventId: true,
         userBadge: { select: { userId: true } },
@@ -681,7 +660,7 @@ const getFilteredFrequencyReport = async (req, res) => {
       filteredUsers.map((u) => [u.id, { ...u, totalCheckins: 0, events: {} }])
     );
 
-    checkins.forEach((checkin) => {
+    uniqueCheckins.forEach((checkin) => {
       const userId = checkin.userBadge.userId;
       const userReport = userFrequencyMap.get(userId);
       if (userReport) {
@@ -712,7 +691,7 @@ const getFilteredFrequencyReport = async (req, res) => {
         usersWithCheckin,
         usersWithoutCheckin,
         attendanceRate,
-        totalCheckins: checkins.length,
+        totalCheckins: uniqueCheckins.length,
       },
       userFrequency: userFrequencyArray.sort(
         (a, b) => b.totalCheckins - a.totalCheckins
