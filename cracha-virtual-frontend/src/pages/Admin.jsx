@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
@@ -53,6 +54,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
@@ -257,6 +259,20 @@ const Admin = () => {
     onError: (error) => {
       toast.error(
         error.response?.data?.error || "Falha ao iniciar envio de certificados."
+      );
+    },
+  });
+
+  // NOVA MUTATION PARA GERAR CRACHÁS
+  const generateMissingBadgesMutation = useMutation({
+    mutationFn: () => api.post("/badges/generate-missing"),
+    onSuccess: (data) => {
+      // A resposta do backend é 202, então usamos toast.info
+      toast.info(data.data.message);
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.error || "Falha ao iniciar o processo."
       );
     },
   });
@@ -1318,6 +1334,35 @@ const Admin = () => {
         {isAdmin && (
           <>
             <TabsContent value="users" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ferramentas de Usuário</CardTitle>
+                  <CardDescription>
+                    Execute ações em massa para gerenciar os usuários do
+                    sistema.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h4 className="font-semibold">Gerar Crachás Faltantes</h4>
+                      <p className="text-sm text-gray-500">
+                        Cria crachás universais para todos os usuários antigos
+                        que ainda não possuem um.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => generateMissingBadgesMutation.mutate()}
+                      disabled={generateMissingBadgesMutation.isPending}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {generateMissingBadgesMutation.isPending
+                        ? "Iniciando..."
+                        : "Iniciar Geração"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
               <UserManagement />
             </TabsContent>
 

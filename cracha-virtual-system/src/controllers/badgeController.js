@@ -354,10 +354,86 @@ const searchUsersByName = async (req, res) => {
   }
 };
 
+// Gerar crachás para todos os usuários existentes que não possuem um.
+const generateMissingBadges = async (req, res) => {
+  try {
+    // 1. Encontra todos os usuários que NÃO possuem um UserBadge vinculado.
+    const usersWithoutBadge = await prisma.user.findMany({
+      where: {
+        userBadge: null, // Filtra usuários onde a relação com UserBadge é nula
+      },
+    });
+
+    if (usersWithoutBadge.length === 0) {
+      return res.json({ message: "Todos os usuários já possuem crachás." });
+    }
+
+    // 2. Responde imediatamente ao admin, informando que o processo começou.
+    res.status(202).json({
+      message: `Processo iniciado. Criando crachás para ${usersWithoutBadge.length} usuários em segundo plano.`,
+    });
+
+    // 3. Executa a criação dos crachás em segundo plano para não travar a API.
+    (async () => {
+      console.log(
+        `Iniciando a criação de ${usersWithoutBadge.length} crachás...`
+      );
+      for (const user of usersWithoutBadge) {
+        try {
+          // Reutiliza a mesma lógica de criação de crachá
+          let badgeCode;
+          let isUnique = false;
+          while (!isUnique) {
+            badgeCode = generateBadgeCode(user.name);
+            const existing = await prisma.userBadge.findUnique({
+              where: { badgeCode },
+            });
+            if (!existing) isUnique = true;
+          }
+
+          const qrData = JSON.stringify({
+            userId: user.id,
+            badgeCode,
+            badgeType: "user",
+          });
+          const qrCodeFilename = `user_badge_${user.id}`;
+          await generateQRCode(qrData, qrCodeFilename);
+          const qrCodeUrl = `/uploads/qrcodes/${qrCodeFilename}.png`;
+          const badgeImageUrl = `/api/badges/${user.id}/image`;
+
+          await prisma.userBadge.create({
+            data: {
+              userId: user.id,
+              badgeCode,
+              qrCodeUrl,
+              badgeImageUrl,
+            },
+          });
+          console.log(
+            `Crachá criado para o usuário: ${user.name} (${user.id})`
+          );
+        } catch (error) {
+          console.error(
+            `Falha ao criar crachá para o usuário ${user.id}:`,
+            error
+          );
+        }
+      }
+      console.log("Criação de crachás em lote finalizada.");
+    })();
+  } catch (error) {
+    console.error("Erro ao iniciar a geração de crachás faltantes:", error);
+    res
+      .status(500)
+      .json({ error: "Erro interno do servidor ao iniciar o processo." });
+  }
+};
+
 module.exports = {
   createUserBadge,
   getUserBadge,
   getMyUserBadge,
   validateUserBadge,
   searchUsersByName,
+  generateMissingBadges,
 };

@@ -6,7 +6,8 @@ const {
   getUserBadge,
   getMyUserBadge,
   validateUserBadge,
-  searchUsersByName, // Importe a função de busca
+  searchUsersByName,
+  generateMissingBadges
 } = require("../controllers/badgeController");
 
 const {
@@ -39,6 +40,14 @@ router.post(
   authenticateToken,
   requireCheckinPermission,
   validateUserBadge
+);
+
+// Rota para gerar crachás faltantes em lote (apenas admin)
+router.post(
+  "/generate-missing",
+  authenticateToken,
+  requireAdmin,
+  generateMissingBadges
 );
 
 module.exports = router;
