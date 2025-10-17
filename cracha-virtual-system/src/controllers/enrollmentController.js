@@ -29,7 +29,7 @@ const enrollInEvent = async (req, res) => {
       return res.status(400).json({ error: "eventId é obrigatório" });
     }
 
-    const [event, user, userBadge] = await Promise.all([
+    const [event, user, userBadge, userAwards] = await Promise.all([
       prisma.event.findUnique({
         where: { id: eventId },
         include: {
@@ -40,6 +40,13 @@ const enrollInEvent = async (req, res) => {
       }),
       prisma.user.findUnique({ where: { id: userId } }),
       prisma.userBadge.findUnique({ where: { userId } }),
+      prisma.userAward.findMany({
+        // Query para buscar as premiações
+        where: { userId },
+        include: { award: true },
+        orderBy: { awardedAt: "desc" },
+        take: 5,
+      }),
     ]);
 
     if (!event) {
@@ -92,7 +99,7 @@ const enrollInEvent = async (req, res) => {
         });
 
         // --- MUDANÇA: Dispara o e-mail de confirmação ao reativar a inscrição ---
-        sendEnrollmentConfirmationEmail(user, event, userBadge);
+        sendEnrollmentConfirmationEmail(user, event, userBadge, userAwards);
 
         // ALTERAÇÃO: A geração de crachá foi removida daqui.
         return res
@@ -141,7 +148,7 @@ const enrollInEvent = async (req, res) => {
     // ALTERAÇÃO: A geração automática de crachá foi removida daqui.
     // O crachá universal do usuário será usado.
     // --- MUDANÇA: Dispara o e-mail de confirmação ao reativar a inscrição ---
-    sendEnrollmentConfirmationEmail(user, event, userBadge);
+    sendEnrollmentConfirmationEmail(user, event, userBadge, userAwards);
 
     res.status(201).json({
       message: "Inscrição realizada com sucesso",

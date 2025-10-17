@@ -1,5 +1,7 @@
 const nodemailer = require("nodemailer");
 
+const { generateBadgeHtml } = require("../utils/badgeService");
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
@@ -38,12 +40,18 @@ const sendEmail = async ({ to, subject, html, attachments }) => {
 // --- FUNÇÕES ADICIONADAS ---
 
 /**
- * Envia um e-mail de confirmação de inscrição usando a função genérica sendEmail.
- * @param {object} user - O objeto do usuário (precisa de name, email).
- * @param {object} event - O objeto do evento (precisa de title).
- * @param {object} userBadge - O objeto do crachá do usuário (precisa de qrCodeUrl).
+ * Envia um e-mail de confirmação com o CRACHÁ COMPLETO em HTML.
+ * @param {object} user
+ * @param {object} event
+ * @param {object} userBadge
+ * @param {Array} awards
  */
-const sendEnrollmentConfirmationEmail = async (user, event, userBadge) => {
+const sendEnrollmentConfirmationEmail = async (
+  user,
+  event,
+  userBadge,
+  awards
+) => {
   if (!user.email) {
     console.error(
       "Tentativa de enviar e-mail para usuário sem endereço:",
@@ -52,23 +60,24 @@ const sendEnrollmentConfirmationEmail = async (user, event, userBadge) => {
     return;
   }
 
-  // MUDANÇA: Construímos o URL absoluto da imagem do QR Code.
-  const baseUrl = process.env.PUBLIC_API_URL;
-  const fullQrCodeUrl = `${baseUrl}${userBadge.qrCodeUrl}`;
+  // 2. Gera o HTML do crachá dinamicamente
+  const badgeHtml = await generateBadgeHtml(user, userBadge, awards);
 
-  const subject = `Inscrição Confirmada: ${event.title}`;
+  const subject = `Crachá e Confirmação de Inscrição: ${event.title}`;
   const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-      <h2>Olá, ${user.name}!</h2>
-      <p>Sua inscrição no evento <strong>${event.title}</strong> foi confirmada com sucesso.</p>
-      <p>Para realizar o check-in no dia do evento, utilize o seu crachá universal. Apresente o QR Code abaixo na entrada:</p>
-      
-      <div style="text-align: center; margin: 20px 0;">
-        <img src="${fullQrCodeUrl}" alt="Seu QR Code de Check-in" style="max-width: 200px;"/>
-      </div>
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; text-align: center; background-color: #f4f4f4; padding: 20px;">
+      <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px;">
+        <h2 style="color: #333;">Olá, ${user.name}!</h2>
+        <p style="color: #555;">Sua inscrição no evento <strong>${event.title}</strong> foi confirmada com sucesso.</p>
+        <p style="color: #555;">Abaixo está o seu crachá de acesso. Ele será necessário para o check-in no dia do evento.</p>
+        
+        <div style="margin: 20px auto; display: inline-block;">
+          ${badgeHtml}
+        </div>
 
-      <p>Guarde este e-mail para fácil acesso.</p>
-      <p>Atenciosamente,<br>Equipe Prof Presente</p>
+        <p style="color: #555;">Recomendamos salvar este e-mail para fácil acesso.</p>
+        <p style="color: #555; margin-top: 30px;">Atenciosamente,<br>Equipe Prof Presente</p>
+      </div>
     </div>
   `;
 
