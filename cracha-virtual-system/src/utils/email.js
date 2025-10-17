@@ -45,9 +45,16 @@ const sendEmail = async ({ to, subject, html, attachments }) => {
  */
 const sendEnrollmentConfirmationEmail = async (user, event, userBadge) => {
   if (!user.email) {
-    console.error("Tentativa de enviar e-mail para usuário sem endereço:", user.id);
+    console.error(
+      "Tentativa de enviar e-mail para usuário sem endereço:",
+      user.id
+    );
     return;
   }
+
+  // MUDANÇA: Construímos o URL absoluto da imagem do QR Code.
+  const baseUrl = process.env.PUBLIC_API_URL;
+  const fullQrCodeUrl = `${baseUrl}${userBadge.qrCodeUrl}`;
 
   const subject = `Inscrição Confirmada: ${event.title}`;
   const html = `
@@ -57,7 +64,7 @@ const sendEnrollmentConfirmationEmail = async (user, event, userBadge) => {
       <p>Para realizar o check-in no dia do evento, utilize o seu crachá universal. Apresente o QR Code abaixo na entrada:</p>
       
       <div style="text-align: center; margin: 20px 0;">
-        <img src="${userBadge.qrCodeUrl}" alt="Seu QR Code de Check-in" style="max-width: 200px;"/>
+        <img src="${fullQrCodeUrl}" alt="Seu QR Code de Check-in" style="max-width: 200px;"/>
       </div>
 
       <p>Guarde este e-mail para fácil acesso.</p>
@@ -75,7 +82,10 @@ const sendEnrollmentConfirmationEmail = async (user, event, userBadge) => {
  */
 const sendEnrollmentCancellationEmail = async (user, event) => {
   if (!user.email) {
-    console.error("Tentativa de enviar e-mail para usuário sem endereço:", user.id);
+    console.error(
+      "Tentativa de enviar e-mail para usuário sem endereço:",
+      user.id
+    );
     return;
   }
 
@@ -89,10 +99,9 @@ const sendEnrollmentCancellationEmail = async (user, event) => {
           <p>Atenciosamente,<br>Equipe Prof Presente</p>
       </div>
   `;
-  
+
   await sendEmail({ to: user.email, subject, html });
 };
-
 
 module.exports = {
   sendEmail, // Sua função original
