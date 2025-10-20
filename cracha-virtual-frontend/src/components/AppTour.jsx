@@ -9,7 +9,7 @@ const dashboardSteps = [
     target: "#nav-link-eventos",
     content:
       'Bem-vindo! Para começar, clique no menu "Eventos" para ver as formações disponíveis.',
-    title: "1/6: Explore os Eventos",
+    title: "1/5: Explore os Eventos",
     placement: "right",
     disableBeacon: true,
   },
@@ -20,7 +20,7 @@ const eventsSteps = [
     target: "#events-list",
     content:
       'Ótimo! Esta é a lista de eventos. Clique em "Ver detalhes" para saber mais e se inscrever.',
-    title: "2/6: Lista de Eventos",
+    title: "2/5: Lista de Eventos",
     placement: "bottom",
     disableBeacon: true,
   },
@@ -28,7 +28,7 @@ const eventsSteps = [
     target: "#nav-link-meu-perfil",
     content:
       'Excelente! Agora, clique em "Meu Perfil" para ver seu crachá e gerenciar suas informações.',
-    title: "3/6: Acesse seu Perfil",
+    title: "3/5: Acesse seu Perfil",
     placement: "right",
     disableBeacon: true,
   },
@@ -38,7 +38,7 @@ const profileSteps = [
   {
     target: "#profile-info-tab",
     content: "Aqui você pode visualizar e editar seus dados pessoais.",
-    title: "4/6: Suas Informações",
+    title: "4/5: Suas Informações",
     placement: "bottom",
     disableBeacon: true,
   },
@@ -46,16 +46,8 @@ const profileSteps = [
     target: "#my-badge-tab",
     content:
       "Clique nesta aba para visualizar seu Crachá Universal, sua identidade para todos os eventos.",
-    title: "5/6: Visualize seu Crachá",
+    title: "5/5: Visualize seu Crachá",
     placement: "bottom",
-    disableBeacon: true,
-  },
-  {
-    target: "#download-badge-button",
-    content:
-      "Use este botão para salvar uma imagem do seu crachá. Tour finalizado!",
-    title: "6/6: Salve seu Crachá",
-    placement: "top",
     disableBeacon: true,
   },
 ];
