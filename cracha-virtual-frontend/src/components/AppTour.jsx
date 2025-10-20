@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import Joyride, { STATUS } from "react-joyride";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import api from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 
 const dashboardSteps = [
   {
@@ -57,9 +58,29 @@ const AppTour = ({ user }) => {
   const [steps, setSteps] = useState([]);
   const location = useLocation();
   const intervalRef = useRef(null); // Usamos uma ref para controlar o intervalo
+  const queryClient = useQueryClient();
+  const { updateAuthUser } = useAuth();
 
   const { mutate: completeOnboarding } = useMutation({
-    mutationFn: () => api.put("/users/:id/complete-onboarding"),
+    mutationFn: () => api.put("/users/me/complete-onboarding"),
+    onSuccess: () => {
+      // --- CORREÇÃO PRINCIPAL AQUI ---
+      // 3. ATUALIZE O ESTADO GLOBAL DE AUTENTICAÇÃO
+      // Isso atualiza o objeto 'user' no useAuth e no localStorage.
+      updateAuthUser({ hasCompletedOnboarding: true });
+
+      // A atualização do cache do React Query continua sendo uma boa prática.
+      queryClient.setQueryData(["user-profile", user.id], (oldData) => {
+        if (!oldData) return;
+        return { ...oldData, hasCompletedOnboarding: true };
+      });
+      console.log(
+        "Onboarding concluído e estado global do usuário atualizado."
+      );
+    },
+    onError: (error) => {
+      console.error("Falha ao marcar o tour como concluído no backend:", error);
+    },
   });
 
   useEffect(() => {

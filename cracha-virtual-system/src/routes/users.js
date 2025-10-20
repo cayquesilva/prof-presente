@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const {
@@ -11,36 +11,43 @@ const {
   updateUserRole,
   resetUserPassword,
   completeOnboarding,
-} = require('../controllers/userController');
+} = require("../controllers/userController");
 
-const { 
-  authenticateToken, 
-  requireAdmin, 
-  requireOwnershipOrAdmin 
-} = require('../middleware/auth');
+const {
+  authenticateToken,
+  requireAdmin,
+  requireOwnershipOrAdmin,
+} = require("../middleware/auth");
 
-const { 
-  uploadProfilePhoto, 
-  handleUploadError 
-} = require('../middleware/upload');
+const {
+  uploadProfilePhoto,
+  handleUploadError,
+} = require("../middleware/upload");
 
 // Listar todos os usuários (apenas admin)
-router.get('/', authenticateToken, requireAdmin, getAllUsers);
+router.get("/", authenticateToken, requireAdmin, getAllUsers);
 
 // Obter usuário por ID
-router.get('/:id', authenticateToken, requireOwnershipOrAdmin, getUserById);
+router.get("/:id", authenticateToken, requireOwnershipOrAdmin, getUserById);
 
 // Atualizar usuário
-router.put('/:id', authenticateToken, requireOwnershipOrAdmin, updateUserValidation, updateUser);
+router.put(
+  "/:id",
+  authenticateToken,
+  requireOwnershipOrAdmin,
+  updateUserValidation,
+  updateUser
+);
 
 // Rota para marcar o tour como concluído
-router.put('/:id/complete-onboarding', authenticateToken, completeOnboarding);
+router.put("/me/complete-onboarding", authenticateToken, completeOnboarding);
 
 // Deletar usuário (apenas admin)
-router.delete('/:id', authenticateToken, requireAdmin, deleteUser);
+router.delete("/:id", authenticateToken, requireAdmin, deleteUser);
 
 // Upload de foto do perfil
-router.post('/:id/photo',
+router.post(
+  "/:id/photo",
   authenticateToken,
   requireOwnershipOrAdmin,
   uploadProfilePhoto,
@@ -49,10 +56,14 @@ router.post('/:id/photo',
 );
 
 // Atualizar role do usuário (apenas admin)
-router.patch('/:id/role', authenticateToken, requireAdmin, updateUserRole);
+router.patch("/:id/role", authenticateToken, requireAdmin, updateUserRole);
 
 // Redefinir senha do usuário (apenas admin)
-router.post('/:id/reset-password', authenticateToken, requireAdmin, resetUserPassword);
+router.post(
+  "/:id/reset-password",
+  authenticateToken,
+  requireAdmin,
+  resetUserPassword
+);
 
 module.exports = router;
-
