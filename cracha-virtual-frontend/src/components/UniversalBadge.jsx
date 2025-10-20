@@ -117,12 +117,13 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
       </div>
 
       <Button
+        id="download-badge-button"
         onClick={handleDownload}
         className="w-full max-w-sm"
         disabled={isGenerating}
       >
         <Download className="h-4 w-4 mr-2" />
-        {isGenerating ? "Gerando..." : "Salvar Crachá como SVG"}
+        {isGenerating ? "Gerando..." : "Salvar Crachá como PNG"}
       </Button>
     </div>
   );

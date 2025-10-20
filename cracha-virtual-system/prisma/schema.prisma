@@ -64,7 +64,7 @@ model User {
   teachingSegments TeachingSegment[] // <-- ADICIONE ESTA (NO PLURAL)
   professionId    String?         @map("profession_id")
   certificateLogs CertificateLog[]
-
+  hasCompletedOnboarding  Boolean   @default(false) @map("has_completed_onboarding")
 
   // Relacionamentos
   enrollments   Enrollment[]

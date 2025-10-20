@@ -272,6 +272,7 @@ const EventDetails = () => {
           <div className="flex gap-4">
             {canUserEnroll && (
               <Button
+                id="enroll-button"
                 onClick={() => enrollMutation.mutate()}
                 disabled={enrollMutation.isPending}
                 className="flex-1"

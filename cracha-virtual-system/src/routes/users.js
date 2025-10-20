@@ -10,6 +10,7 @@ const {
   updateUserValidation,
   updateUserRole,
   resetUserPassword,
+  completeOnboarding,
 } = require('../controllers/userController');
 
 const { 
@@ -31,6 +32,9 @@ router.get('/:id', authenticateToken, requireOwnershipOrAdmin, getUserById);
 
 // Atualizar usuário
 router.put('/:id', authenticateToken, requireOwnershipOrAdmin, updateUserValidation, updateUser);
+
+// Rota para marcar o tour como concluído
+router.put('/:id/complete-onboarding', authenticateToken, completeOnboarding);
 
 // Deletar usuário (apenas admin)
 router.delete('/:id', authenticateToken, requireAdmin, deleteUser);

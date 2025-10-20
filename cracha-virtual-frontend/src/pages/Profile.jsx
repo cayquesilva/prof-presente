@@ -329,8 +329,12 @@ const Profile = () => {
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="badge">Meu Crachá</TabsTrigger>
+          <TabsTrigger value="profile" id="profile-info-tab">
+            Perfil
+          </TabsTrigger>
+          <TabsTrigger value="badge" id="my-badge-tab">
+            Meu Crachá
+          </TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="space-y-3">

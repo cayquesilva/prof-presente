@@ -113,7 +113,10 @@ const MyEnrollments = () => {
               </Link>
               {enrollment.status === "APPROVED" &&
                 !enrollment.courseEvaluation && (
-                  <Link to={`/evaluate/${enrollment.id}`}>
+                  <Link
+                    to={`/evaluate/${enrollment.id}`}
+                    id="evaluate-enrollment-button"
+                  >
                     <Button
                       variant="outline"
                       className="flex items-center gap-2"

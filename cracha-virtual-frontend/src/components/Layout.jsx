@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import Logo from "../assets/logo-prof-presente.svg"; // Importe o seu logo
 import { getAssetUrl } from "../lib/utils"; // NOVO: Importa a função auxiliar
+import AppTour from "./AppTour";
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin } = useAuth();
@@ -85,10 +86,30 @@ const Layout = ({ children }) => {
   };
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Eventos", href: "/events", icon: Calendar },
-    { name: "Minhas Inscrições", href: "/my-enrollments", icon: FileText },
-    { name: "Meu Perfil", href: "/profile", icon: CreditCard },
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: Home,
+      id: "nav-link-dashboard",
+    },
+    {
+      name: "Eventos",
+      href: "/events",
+      icon: Calendar,
+      id: "nav-link-eventos",
+    },
+    {
+      name: "Minhas Inscrições",
+      href: "/my-enrollments",
+      icon: FileText,
+      id: "nav-link-minhas-inscrições",
+    },
+    {
+      name: "Meu Perfil",
+      href: "/profile",
+      icon: CreditCard,
+      id: "nav-link-meu-perfil",
+    },
     { name: "Avaliações", href: "/evaluations", icon: Star },
     ...(isAdmin || user?.role === "CHECKIN_COORDINATOR"
       ? [{ name: "Check-in", href: "/check-in", icon: QrCode }]
@@ -119,6 +140,7 @@ const Layout = ({ children }) => {
           return (
             <Link
               key={item.name}
+              id={item.id}
               to={item.href}
               onClick={() => setSidebarOpen(false)}
               className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -226,6 +248,7 @@ const Layout = ({ children }) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
+                    id="user-avatar-button"
                     variant="ghost"
                     className="relative h-8 w-8 rounded-full"
                   >
@@ -273,6 +296,7 @@ const Layout = ({ children }) => {
 
         {/* Conteúdo da página */}
         <main className="flex-1">{children}</main>
+        {user && <AppTour user={user} />}
       </div>
     </div>
   );

@@ -288,6 +288,7 @@ const getProfile = async (req, res) => {
         address: true,
         photoUrl: true,
         role: true,
+        hasCompletedOnboarding: true,
         createdAt: true,
         updatedAt: true,
       },

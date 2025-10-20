@@ -376,6 +376,22 @@ const resetUserPassword = async (req, res) => {
   }
 };
 
+const completeOnboarding = async (req, res) => {
+  try {
+    const userId = req.user.id; // ID do usuário logado
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { hasCompletedOnboarding: true },
+    });
+
+    res.status(200).json({ message: "Onboarding concluído com sucesso." });
+  } catch (error) {
+    console.error("Erro ao concluir onboarding:", error);
+    res.status(500).json({ error: "Erro interno do servidor." });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -385,4 +401,5 @@ module.exports = {
   updateUserValidation,
   updateUserRole,
   resetUserPassword,
+  completeOnboarding,
 };
