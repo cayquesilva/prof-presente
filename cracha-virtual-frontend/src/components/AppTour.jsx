@@ -1,5 +1,7 @@
+// ARQUIVO: src/components/AppTour.jsx
+
 import React, { useState, useEffect, useRef } from "react";
-import Joyride, { STATUS } from "react-joyride";
+import Joyride, { STATUS, EVENTS, ACTIONS } from "react-joyride";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import api from "../lib/api";
@@ -56,61 +58,41 @@ const profileSteps = [
 const AppTour = ({ user }) => {
   const [run, setRun] = useState(false);
   const [steps, setSteps] = useState([]);
+  const [stepIndex, setStepIndex] = useState(0);
   const location = useLocation();
-  const intervalRef = useRef(null); // Usamos uma ref para controlar o intervalo
-  const queryClient = useQueryClient();
+  const intervalRef = useRef(null);
   const { updateAuthUser } = useAuth();
+  const queryClient = useQueryClient();
 
   const { mutate: completeOnboarding } = useMutation({
     mutationFn: () => api.put("/users/me/complete-onboarding"),
     onSuccess: () => {
-      // --- CORREÇÃO PRINCIPAL AQUI ---
-      // 3. ATUALIZE O ESTADO GLOBAL DE AUTENTICAÇÃO
-      // Isso atualiza o objeto 'user' no useAuth e no localStorage.
       updateAuthUser({ hasCompletedOnboarding: true });
-
-      // A atualização do cache do React Query continua sendo uma boa prática.
       queryClient.setQueryData(["user-profile", user.id], (oldData) => {
-        if (!oldData) return;
-        return { ...oldData, hasCompletedOnboarding: true };
+        if (oldData) return { ...oldData, hasCompletedOnboarding: true };
       });
-      console.log(
-        "Onboarding concluído e estado global do usuário atualizado."
-      );
-    },
-    onError: (error) => {
-      console.error("Falha ao marcar o tour como concluído no backend:", error);
     },
   });
 
   useEffect(() => {
-    // Limpa qualquer verificador de intervalo anterior ao mudar de página
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
+    // ... (lógica de espera e definição de passos - permanece a mesma)
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setRun(false);
     if (user && !user.hasCompletedOnboarding) {
       const path = location.pathname;
       let currentSteps = [];
-
-      if (path.startsWith("/dashboard")) {
-        currentSteps = dashboardSteps;
-      } else if (path.startsWith("/events")) {
-        currentSteps = eventsSteps;
-      } else if (path.startsWith("/profile")) {
-        currentSteps = profileSteps;
-      }
+      if (path.startsWith("/dashboard")) currentSteps = dashboardSteps;
+      else if (path.startsWith("/events")) currentSteps = eventsSteps;
+      else if (path.startsWith("/profile")) currentSteps = profileSteps;
 
       if (currentSteps.length > 0) {
         const firstTarget = currentSteps[0].target;
-
-        // --- NOVA LÓGICA DE ESPERA ---
-        // Fica verificando a cada 200ms se o alvo do primeiro passo já apareceu na tela
         intervalRef.current = setInterval(() => {
           if (document.querySelector(firstTarget)) {
-            clearInterval(intervalRef.current); // Para de verificar
+            clearInterval(intervalRef.current);
             setSteps(currentSteps);
-            setRun(true); // Inicia o tour
+            setStepIndex(0);
+            setRun(true);
           }
         }, 200);
       } else {
@@ -118,22 +100,42 @@ const AppTour = ({ user }) => {
         setSteps([]);
       }
     }
-
-    // Função de limpeza para quando o componente for desmontado
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [user, location.pathname]);
 
+  // --- LÓGICA DE CONCLUSÃO CORRIGIDA ---
   const handleJoyrideCallback = (data) => {
-    const { status } = data;
-    const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED];
+    const { action, index, status, type, step } = data;
 
-    if (finishedStatuses.includes(status)) {
+    // Se o usuário PULAR ou FECHAR o tour, encerra permanentemente.
+    if (status === STATUS.SKIPPED || action === ACTIONS.CLOSE) {
       setRun(false);
       completeOnboarding();
+      return;
+    }
+
+    // Se um capítulo do tour for FINALIZADO (clicou em "Próximo" ou "Entendido!").
+    if (status === STATUS.FINISHED) {
+      // Define qual é o alvo do último passo de TODA a jornada.
+      // Neste caso, é o último passo da página de Perfil.
+      const finalStepTarget = profileSteps[profileSteps.length - 1].target;
+
+      // SÓ encerra permanentemente se o passo que acabou de terminar FOI o último da jornada.
+      if (step.target === finalStepTarget) {
+        setRun(false);
+        completeOnboarding();
+      }
+      // Se for o final de um capítulo intermediário (como o do dashboard),
+      // o tour apenas para, esperando a navegação do usuário. A variável não é alterada.
+      return;
+    }
+
+    // Lógica para avançar entre os passos de um mesmo capítulo.
+    if ([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND].includes(type)) {
+      const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
+      setStepIndex(nextStepIndex);
     }
   };
 
@@ -145,6 +147,7 @@ const AppTour = ({ user }) => {
     <Joyride
       steps={steps}
       run={run}
+      stepIndex={stepIndex}
       callback={handleJoyrideCallback}
       continuous
       showProgress
@@ -156,6 +159,7 @@ const AppTour = ({ user }) => {
         last: "Entendido!",
         next: "Próximo",
         skip: "Pular",
+        nextLabelWithProgress: `Avançar: etapa ${stepIndex+1} de ${steps.length}`,
       }}
     />
   );
