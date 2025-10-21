@@ -6,8 +6,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import api from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
+import { useMediaQuery } from "../hooks/use-mobile";
 
-const dashboardSteps = [
+// Passos para Desktop
+const dashboardStepsDesktop = [
   {
     target: "#nav-link-eventos",
     content:
@@ -15,6 +17,26 @@ const dashboardSteps = [
     title: "1/5: Explore os Eventos",
     placement: "right",
     disableBeacon: true,
+  },
+];
+
+// NOVOS PASSOS PARA MOBILE
+const dashboardStepsMobile = [
+  {
+    target: "#mobile-menu-trigger",
+    content:
+      "Bem-vindo! Para começar, clique aqui para abrir o menu de navegação.",
+    title: "Abra o Menu",
+    placement: "bottom",
+    disableBeacon: true,
+  },
+  {
+    target: "#nav-link-eventos",
+    content:
+      'Ótimo! Agora clique em "Eventos" para ver as formações disponíveis.',
+    title: "1/5: Explore os Eventos",
+    placement: "right",
+    disableOverlay: true,
   },
 ];
 
@@ -34,6 +56,7 @@ const eventsSteps = [
     title: "3/5: Acesse seu Perfil",
     placement: "right",
     disableBeacon: true,
+    disableOverlay: true,
   },
 ];
 
@@ -55,7 +78,7 @@ const profileSteps = [
   },
 ];
 
-const AppTour = ({ user }) => {
+const AppTour = ({ user, setSidebarOpen }) => {
   const [run, setRun] = useState(false);
   const [steps, setSteps] = useState([]);
   const [stepIndex, setStepIndex] = useState(0);
@@ -63,6 +86,7 @@ const AppTour = ({ user }) => {
   const intervalRef = useRef(null);
   const { updateAuthUser } = useAuth();
   const queryClient = useQueryClient();
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const { mutate: completeOnboarding } = useMutation({
     mutationFn: () => api.put("/users/me/complete-onboarding"),
@@ -81,8 +105,9 @@ const AppTour = ({ user }) => {
     if (user && !user.hasCompletedOnboarding) {
       const path = location.pathname;
       let currentSteps = [];
-      if (path.startsWith("/dashboard")) currentSteps = dashboardSteps;
-      else if (path.startsWith("/events")) currentSteps = eventsSteps;
+      if (path.startsWith("/dashboard")) {
+        currentSteps = isMobile ? dashboardStepsMobile : dashboardStepsDesktop;
+      } else if (path.startsWith("/events")) currentSteps = eventsSteps;
       else if (path.startsWith("/profile")) currentSteps = profileSteps;
 
       if (currentSteps.length > 0) {
@@ -103,38 +128,50 @@ const AppTour = ({ user }) => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [user, location.pathname]);
+  }, [user, location.pathname, isMobile]);
 
   // --- LÓGICA DE CONCLUSÃO CORRIGIDA ---
   const handleJoyrideCallback = (data) => {
     const { action, index, status, type, step } = data;
 
-    // Se o usuário PULAR ou FECHAR o tour, encerra permanentemente.
-    if (status === STATUS.SKIPPED || action === ACTIONS.CLOSE) {
-      setRun(false);
-      completeOnboarding();
-      return;
-    }
-
-    // Se um capítulo do tour for FINALIZADO (clicou em "Próximo" ou "Entendido!").
-    if (status === STATUS.FINISHED) {
-      // Define qual é o alvo do último passo de TODA a jornada.
-      // Neste caso, é o último passo da página de Perfil.
+    // A lógica de pular/fechar/finalizar permanece a mesma
+    if (
+      [STATUS.FINISHED, STATUS.SKIPPED, ACTIONS.CLOSE].includes(status) ||
+      action === ACTIONS.CLOSE
+    ) {
       const finalStepTarget = profileSteps[profileSteps.length - 1].target;
-
-      // SÓ encerra permanentemente se o passo que acabou de terminar FOI o último da jornada.
-      if (step.target === finalStepTarget) {
+      if (
+        status === STATUS.SKIPPED ||
+        action === ACTIONS.CLOSE ||
+        (status === STATUS.FINISHED && step.target === finalStepTarget)
+      ) {
         setRun(false);
         completeOnboarding();
       }
-      // Se for o final de um capítulo intermediário (como o do dashboard),
-      // o tour apenas para, esperando a navegação do usuário. A variável não é alterada.
       return;
     }
 
-    // Lógica para avançar entre os passos de um mesmo capítulo.
-    if ([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND].includes(type)) {
+    if ([EVENTS.STEP_AFTER].includes(type)) {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
+
+      // Abre a sidebar no mobile e pausa o tour
+      if (
+        isMobile &&
+        step.target === "#mobile-menu-trigger" &&
+        action === ACTIONS.NEXT
+      ) {
+        setRun(false); // Pausa o tour
+        setSidebarOpen(true);
+
+        // Espera um pouco e reinicia o tour no próximo passo
+        setTimeout(() => {
+          setStepIndex(nextStepIndex);
+          setRun(true);
+        }, 500); // 500ms para garantir que a sidebar esteja totalmente renderizada
+
+        return; // Impede a execução do resto da função
+      }
+
       setStepIndex(nextStepIndex);
     }
   };
@@ -159,7 +196,9 @@ const AppTour = ({ user }) => {
         last: "Entendido!",
         next: "Próximo",
         skip: "Pular",
-        nextLabelWithProgress: `Avançar: etapa ${stepIndex+1} de ${steps.length}`,
+        nextLabelWithProgress: `Avançar: etapa ${stepIndex + 1} de ${
+          steps.length
+        }`,
       }}
     />
   );

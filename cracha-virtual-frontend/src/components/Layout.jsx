@@ -210,11 +210,15 @@ const Layout = ({ children }) => {
             <div className="flex items-center space-x-4">
               {/* Esta é a segunda sidebar, que também precisa da correção */}
               <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden">
-                    <Menu className="w-5 h-5" />
-                  </Button>
-                </SheetTrigger>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  id="mobile-menu-trigger"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
                 <SheetContent side="left" className="p-0 w-64">
                   {/* Adicionamos um título e descrição escondidos para acessibilidade */}
                   <VisuallyHidden asChild>
@@ -296,7 +300,7 @@ const Layout = ({ children }) => {
 
         {/* Conteúdo da página */}
         <main className="flex-1">{children}</main>
-        {user && <AppTour user={user} />}
+        {user && <AppTour user={user} setSidebarOpen={setSidebarOpen} />}
       </div>
     </div>
   );
