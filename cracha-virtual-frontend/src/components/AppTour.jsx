@@ -3,24 +3,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import Joyride, { STATUS, EVENTS, ACTIONS } from "react-joyride";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "react-router-dom";
 import api from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 import { useMediaQuery } from "../hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
+
+// ----------------------------
+// 🧩 Passos do Tour
+// ----------------------------
+const isMobile = window.innerWidth < 768; // breakpoint mobile padrão
 
 // Passos para Desktop
 const dashboardStepsDesktop = [
   {
     target: "#nav-link-eventos",
     content:
-      'Bem-vindo! Para começar, clique no menu "Eventos" para ver as formações disponíveis.',
+      'Bem-vindo! Para começar, vamos para o menu "Eventos" para ver as formações disponíveis.',
     title: "1/5: Explore os Eventos",
     placement: "right",
     disableBeacon: true,
   },
 ];
 
-// NOVOS PASSOS PARA MOBILE
+// Passos para Mobile
 const dashboardStepsMobile = [
   {
     target: "#mobile-menu-trigger",
@@ -33,13 +38,14 @@ const dashboardStepsMobile = [
   {
     target: "#nav-link-eventos",
     content:
-      'Ótimo! Agora clique em "Eventos" para ver as formações disponíveis.',
+      'Ótimo! Agora vamos para "Eventos" para ver as formações disponíveis.',
     title: "1/5: Explore os Eventos",
-    placement: "right",
-    disableOverlay: true,
+    placement: "center",
+    spotlightClicks: false,
   },
 ];
 
+// Eventos
 const eventsSteps = [
   {
     target: "#events-list",
@@ -52,14 +58,15 @@ const eventsSteps = [
   {
     target: "#nav-link-meu-perfil",
     content:
-      'Excelente! Agora, clique em "Meu Perfil" para ver seu crachá e gerenciar suas informações.',
+      'Excelente! Agora, vamos para "Meu Perfil" para ver seu crachá e gerenciar suas informações.',
     title: "3/5: Acesse seu Perfil",
-    placement: "right",
+    placement: isMobile ? "center" : "right",
     disableBeacon: true,
     disableOverlay: true,
   },
 ];
 
+// Perfil
 const profileSteps = [
   {
     target: "#profile-info-tab",
@@ -78,16 +85,22 @@ const profileSteps = [
   },
 ];
 
+// ----------------------------
+// 🧭 Componente principal
+// ----------------------------
 const AppTour = ({ user, setSidebarOpen }) => {
   const [run, setRun] = useState(false);
   const [steps, setSteps] = useState([]);
   const [stepIndex, setStepIndex] = useState(0);
-  const location = useLocation();
+  const [tourStage, setTourStage] = useState("dashboard"); // controla o capítulo atual
   const intervalRef = useRef(null);
+  const animationFrameRef = useRef(null);
   const { updateAuthUser } = useAuth();
   const queryClient = useQueryClient();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const navigate = useNavigate();
 
+  // --- Mutação para marcar tour como completo ---
   const { mutate: completeOnboarding } = useMutation({
     mutationFn: () => api.put("/users/me/complete-onboarding"),
     onSuccess: () => {
@@ -98,17 +111,21 @@ const AppTour = ({ user, setSidebarOpen }) => {
     },
   });
 
+  // --- Escolhe os passos com base no estágio do tour ---
   useEffect(() => {
-    // ... (lógica de espera e definição de passos - permanece a mesma)
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRun(false);
+
     if (user && !user.hasCompletedOnboarding) {
-      const path = location.pathname;
       let currentSteps = [];
-      if (path.startsWith("/dashboard")) {
+
+      if (tourStage === "dashboard") {
         currentSteps = isMobile ? dashboardStepsMobile : dashboardStepsDesktop;
-      } else if (path.startsWith("/events")) currentSteps = eventsSteps;
-      else if (path.startsWith("/profile")) currentSteps = profileSteps;
+      } else if (tourStage === "events") {
+        currentSteps = eventsSteps;
+      } else if (tourStage === "profile") {
+        currentSteps = profileSteps;
+      }
 
       if (currentSteps.length > 0) {
         const firstTarget = currentSteps[0].target;
@@ -125,61 +142,103 @@ const AppTour = ({ user, setSidebarOpen }) => {
         setSteps([]);
       }
     }
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [user, location.pathname, isMobile]);
+  }, [user, isMobile, tourStage]);
 
-  // --- LÓGICA DE CONCLUSÃO CORRIGIDA ---
+  // --- Callback de controle do tour ---
   const handleJoyrideCallback = (data) => {
     const { action, index, status, type, step } = data;
 
-    // A lógica de pular/fechar/finalizar permanece a mesma
-    if (
-      [STATUS.FINISHED, STATUS.SKIPPED, ACTIONS.CLOSE].includes(status) ||
-      action === ACTIONS.CLOSE
-    ) {
-      const finalStepTarget = profileSteps[profileSteps.length - 1].target;
-      if (
-        status === STATUS.SKIPPED ||
-        action === ACTIONS.CLOSE ||
-        (status === STATUS.FINISHED && step.target === finalStepTarget)
-      ) {
-        setRun(false);
-        completeOnboarding();
-      }
+    // ⚠️ Não encerre tour por erro de visibilidade — apenas pause
+    if (type === EVENTS.TARGET_NOT_VISIBLE) {
+      console.warn("Target não visível, tentando novamente:", step?.target);
+      setRun(false);
+
+      // aguarda o elemento aparecer
+      const retryInterval = setInterval(() => {
+        if (document.querySelector(step?.target)) {
+          clearInterval(retryInterval);
+          console.log("Target reapareceu:", step?.target);
+          setRun(true);
+        }
+      }, 500);
       return;
     }
 
-    if ([EVENTS.STEP_AFTER].includes(type)) {
+    // ▶️ Controle de passos
+    if (type === EVENTS.STEP_AFTER) {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
 
-      // Abre a sidebar no mobile e pausa o tour
+      // Caso especial: abrir menu mobile
       if (
         isMobile &&
         step.target === "#mobile-menu-trigger" &&
         action === ACTIONS.NEXT
       ) {
-        setRun(false); // Pausa o tour
+        setRun(false);
         setSidebarOpen(true);
 
-        // Espera um pouco e reinicia o tour no próximo passo
-        setTimeout(() => {
-          setStepIndex(nextStepIndex);
-          setRun(true);
-        }, 500); // 500ms para garantir que a sidebar esteja totalmente renderizada
-
-        return; // Impede a execução do resto da função
+        animationFrameRef.current = requestAnimationFrame(() => {
+          animationFrameRef.current = requestAnimationFrame(() => {
+            setStepIndex(nextStepIndex);
+            setRun(true);
+          });
+        });
+        return;
       }
 
       setStepIndex(nextStepIndex);
+    } else if (status === STATUS.FINISHED) {
+      const finalProfileTarget = profileSteps[profileSteps.length - 1].target;
+
+      // --- Dashboard Mobile (último passo) ---
+      if (tourStage === "dashboard" && step?.target === "#nav-link-eventos") {
+        setRun(false);
+        navigate("/events");
+        setTourStage("events");
+        return;
+      }
+
+      // --- Dashboard Desktop ---
+      if (tourStage === "dashboard") {
+        setRun(false);
+        navigate("/events");
+        setTourStage("events");
+        return;
+      }
+
+      // --- Events ---
+      if (
+        tourStage === "events" &&
+        step?.target === eventsSteps[eventsSteps.length - 1].target
+      ) {
+        setRun(false);
+        navigate("/profile");
+        setTourStage("profile");
+        return;
+      }
+
+      // --- Profile (último passo global) ---
+      if (tourStage === "profile" && step?.target === finalProfileTarget) {
+        setRun(false);
+        completeOnboarding();
+        return;
+      }
+
+      // Fallback: pausa
+      setRun(false);
     }
   };
 
+  // --- Não renderiza enquanto não há passos ---
   if (!run || steps.length === 0) {
     return null;
   }
 
+  // --- Renderização do Joyride ---
   return (
     <Joyride
       steps={steps}
