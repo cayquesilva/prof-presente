@@ -42,16 +42,31 @@ const callFacialServiceIndex = async (userId, photoUrl) => {
       `${process.env.FACIAL_SERVICE_URL}/index-face`,
       {
         userId: userId,
-        photoUrl: photoUrl, // Passa a URL pública/relativa da foto
-      }
+        photoUrl: photoUrl,
+      },
     );
     console.log(`[Facial Service] Indexação bem-sucedida para ${userId}.`);
     return response.data.descriptor; // Retorna o descritor (array de números)
   } catch (error) {
-    console.error(
-      `[Facial Service] Erro ao indexar face para ${userId}:`,
-      error.response?.data || error.message
-    );
+    if (error.response) {
+      // A requisição foi feita e o servidor respondeu com status fora de 2xx
+      console.error(
+        `[Facial Service] Erro ${error.response.status} ao indexar face para ${userId}:`,
+        error.response.data
+      );
+    } else if (error.request) {
+      // A requisição foi feita mas nenhuma resposta foi recebida (pode ser timeout ou socket hang up)
+      console.error(
+        `[Facial Service] Nenhuma resposta recebida do serviço facial para ${userId}:`,
+        error.message
+      );
+    } else {
+      // Erro ao configurar a requisição
+      console.error(
+        `[Facial Service] Erro ao configurar chamada para indexar face ${userId}:`,
+        error.message
+      );
+    }
     return null; // Retorna null em caso de erro
   }
 };
