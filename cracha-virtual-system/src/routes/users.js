@@ -11,6 +11,7 @@ const {
   updateUserRole,
   resetUserPassword,
   completeOnboarding,
+  updateFacialConsent,
 } = require("../controllers/userController");
 
 const {
@@ -65,5 +66,7 @@ router.post(
   requireAdmin,
   resetUserPassword
 );
+
+router.put("/me/consent-facial", authenticateToken, updateFacialConsent);
 
 module.exports = router;

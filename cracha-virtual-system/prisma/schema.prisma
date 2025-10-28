@@ -65,6 +65,8 @@ model User {
   professionId    String?         @map("profession_id")
   certificateLogs CertificateLog[]
   hasCompletedOnboarding  Boolean   @default(false) @map("has_completed_onboarding")
+  hasConsentFacialRecognition Boolean @default(false) @map("has_consent_facial_recognition")
+  faceDescriptor              Json?   @map("face_descriptor") // Armazena o vetor facial
 
   // Relacionamentos
   enrollments   Enrollment[]

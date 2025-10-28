@@ -1,6 +1,8 @@
 // ALTERAÇÃO: Este controller foi massivamente simplificado para usar apenas o crachá universal.
 const { prisma } = require("../config/database");
 const { checkAndGrantAutomaticAwards } = require("./awardController");
+const axios = require("axios");
+const { Buffer } = require("buffer");
 
 /**
  * Corrige a data armazenada no banco (que foi salva como UTC por engano)
@@ -321,9 +323,149 @@ const getEventCheckinStats = async (req, res) => {
   }
 };
 
+// --- NOVA FUNÇÃO: CHECK-IN FACIAL ---
+const performFacialCheckin = async (req, res) => {
+  try {
+    const { eventId, imageBase64 } = req.body; // Recebe eventId e imagem base64
+
+    if (!eventId || !imageBase64) {
+      return res
+        .status(400)
+        .json({ error: "eventId e imageBase64 são obrigatórios." });
+    }
+
+    // Valida o evento
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado." });
+    }
+
+    console.log(`[Facial Check-in] Iniciando para evento ${eventId}...`);
+
+    // 1. Busca descritores dos inscritos E com consentimento
+    const enrolledUsers = await prisma.user.findMany({
+      where: {
+        enrollments: { some: { eventId: eventId, status: "APPROVED" } },
+        hasConsentFacialRecognition: true,
+        faceDescriptor: { not: null },
+      },
+      select: { id: true, faceDescriptor: true },
+    });
+
+    if (enrolledUsers.length === 0) {
+      console.log(
+        `[Facial Check-in] Nenhum usuário inscrito com consentimento e descritor facial para evento ${eventId}.`
+      );
+      return res.status(404).json({
+        error:
+          "Nenhum participante habilitado para reconhecimento facial neste evento.",
+      });
+    }
+
+    const knownDescriptors = enrolledUsers
+      .map((u) => ({
+        userId: u.id,
+        descriptor: Array.isArray(u.faceDescriptor) ? u.faceDescriptor : [],
+      }))
+      .filter((u) => u.descriptor.length > 0);
+
+    console.log(
+      `[Facial Check-in] ${knownDescriptors.length} descritores conhecidos encontrados.`
+    );
+
+    // 2. Prepara a imagem e chama o serviço facial
+    const imageBuffer = Buffer.from(imageBase64, "base64");
+    const facialServiceUrl = process.env.FACIAL_SERVICE_URL;
+
+    if (!facialServiceUrl) {
+      console.error(
+        "[Facial Check-in] URL do serviço facial não configurada (FACIAL_SERVICE_URL)."
+      );
+      return res
+        .status(500)
+        .json({ error: "Serviço de reconhecimento facial não configurado." });
+    }
+
+    let matchedUserId = null;
+    try {
+      console.log(`[Facial Check-in] Chamando serviço facial para busca...`);
+      const response = await axios.post(
+        `${facialServiceUrl}/search-face?knownDescriptors=${encodeURIComponent(
+          JSON.stringify(knownDescriptors)
+        )}`,
+        imageBuffer,
+        // Assumindo JPEG por padrão, o frontend pode precisar especificar
+        { headers: { "Content-Type": "image/jpeg" } }
+      );
+      matchedUserId = response.data.matchedUserId;
+      console.log(
+        `[Facial Check-in] Serviço facial respondeu com match: ${matchedUserId}`
+      );
+    } catch (error) {
+      // Se o serviço facial retornar 404 (sem match), não é um erro fatal aqui
+      if (error.response && error.response.status === 404) {
+        console.log("[Facial Check-in] Serviço facial não encontrou match.");
+      } else {
+        // Outros erros (serviço indisponível, erro interno lá) são logados
+        console.error(
+          "[Facial Check-in] Erro ao chamar serviço facial:",
+          error.response?.data || error.message
+        );
+        return res.status(500).json({
+          error: "Falha na comunicação com o serviço de reconhecimento facial.",
+        });
+      }
+    }
+
+    // 3. Processa o resultado
+    if (matchedUserId) {
+      const userBadge = await prisma.userBadge.findUnique({
+        where: { userId: matchedUserId },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true }, // Seleciona apenas o necessário
+          },
+        },
+      });
+      if (userBadge && userBadge.user) {
+        // Reutiliza a lógica de check-in existente!
+        console.log(
+          `[Facial Check-in] Match válido. Processando check-in para ${matchedUserId}...`
+        );
+        return await processUserCheckin(req, res, userBadge, eventId);
+      } else {
+        console.error(
+          `[Facial Check-in] CRÍTICO: UserBadge ou User associado não encontrado para matchedUserId ${matchedUserId}.`
+        );
+        return res
+          .status(500)
+          .json({
+            error:
+              "Erro interno: Dados do crachá/usuário não encontrados para usuário reconhecido.",
+          });
+      }
+    } else {
+      console.log(
+        "[Facial Check-in] Nenhum match encontrado ou confiança insuficiente."
+      );
+      return res.status(404).json({
+        error:
+          "Rosto não reconhecido ou não corresponde a um inscrito habilitado.",
+      });
+    }
+  } catch (error) {
+    console.error("[Facial Check-in] Erro inesperado:", error);
+    res
+      .status(500)
+      .json({ error: "Erro interno do servidor durante check-in facial." });
+  }
+};
+
 module.exports = {
   performCheckin,
   getEventCheckins,
   getUserCheckins,
   getEventCheckinStats,
+  performFacialCheckin,
+  processUserCheckin,
 };

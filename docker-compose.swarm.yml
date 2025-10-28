@@ -10,6 +10,7 @@ services:
       - PORT=${PORT}
       - NODE_ENV=${NODE_ENV}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      - FACIAL_SERVICE_URL=http://facial-service:3001/api
     volumes:
       - backend_uploads:/app/uploads
     networks:
@@ -79,9 +80,24 @@ services:
       placement:
         constraints: [node.role == manager]
 
+  # Serviço de reconhecimento facial
+  facial-service:
+    image: cayquesilva/prof-presente-facial:latest # Ou imagem pré-construída
+    environment:
+      - PORT=3002
+      - PUBLIC_API_URL=${PUBLIC_API_URL} # Necessário para baixar fotos
+      # Adicione outras variáveis se necessário
+    networks:
+      - prof-presente-internal # Apenas rede interna
+    deploy:
+      replicas: 1
+      # Considere constraints se precisar de mais CPU/RAM para este serviço
+    # Não precisa de volume para modelos, face_recognition geralmente os embute
+
 volumes:
   db_data:
   backend_uploads:
+  facial_models:
 
 networks:
   prof-presente-internal:

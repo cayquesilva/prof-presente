@@ -6,6 +6,7 @@ const {
   getEventCheckins,
   getUserCheckins,
   getEventCheckinStats,
+  performFacialCheckin,
 } = require('../controllers/checkinController');
 
 const {
@@ -32,6 +33,9 @@ router.get('/my', authenticateToken, (req, res, next) => {
 
 // Obter estatísticas de check-in de um evento (apenas admin)
 router.get('/events/:eventId/stats', authenticateToken, requireAdmin, getEventCheckinStats);
+
+//a rota para o check-in facial
+router.post('/facial', authenticateToken, requireCheckinPermission, performFacialCheckin);
 
 module.exports = router;
 

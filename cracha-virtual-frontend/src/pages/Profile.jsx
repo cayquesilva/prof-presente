@@ -36,11 +36,14 @@ import {
   Award,
   Calendar,
   Camera,
+  LockKeyhole,
 } from "lucide-react";
 // Importa o novo componente de crachá
 import UniversalBadge from "../components/UniversalBadge";
 import { useAuth } from "../hooks/useAuth"; // NOVO: Para deslogar o usuário após exclusão
 import { getAssetUrl } from "../lib/utils"; // NOVO: Para resolver a URL da imagem
+import { Switch } from "../components/ui/switch";
+import { Alert, AlertDescription } from "../components/ui/alert";
 
 const Profile = () => {
   const queryClient = useQueryClient();
@@ -52,6 +55,7 @@ const Profile = () => {
     phone: "",
     address: "",
   });
+  const [consentFacial, setConsentFacial] = useState(false); // 2. Estado para o consentimento
   const [isExporting, setIsExporting] = useState(false);
   // NOVO: Estados para o upload da foto
   const [photoFile, setPhotoFile] = useState(null);
@@ -62,10 +66,22 @@ const Profile = () => {
   const { data: userData, isLoading: isUserLoading } = useQuery({
     queryKey: ["user-profile", user?.id],
     queryFn: async () => {
-      const response = await api.get(`/users/${user.id}`);
+      // Ajuste para buscar o perfil logado, que já inclui 'hasConsentFacialRecognition'
+      const response = await api.get(`/auth/profile`);
       return response.data;
     },
     enabled: !!user?.id,
+    onSuccess: (data) => {
+      // Popula o formulário E o estado de consentimento quando os dados chegam
+      setFormData({
+        name: data.name || "",
+        email: data.email || "",
+        phone: data.phone || "",
+        address: data.address || "",
+      });
+      setPhotoPreview(getAssetUrl(data.photoUrl));
+      setConsentFacial(data.hasConsentFacialRecognition || false); // 3. Atualiza estado do consentimento
+    },
   });
 
   // NOVO: Query para buscar as premiações (insígnias) do usuário
@@ -124,6 +140,7 @@ const Profile = () => {
         address: userData.address || "",
       });
       setPhotoPreview(getAssetUrl(userData.photoUrl));
+      setConsentFacial(userData.hasConsentFacialRecognition || false);
     }
   }, [userData]);
 
@@ -144,7 +161,6 @@ const Profile = () => {
     updateUserMutation.mutate(formData);
   };
 
-  // NOVO: Mutação para fazer o upload da nova foto de perfil
   const updatePhotoMutation = useMutation({
     mutationFn: (photoFormData) =>
       api.post(`/users/${user.id}/photo`, photoFormData, {
@@ -171,6 +187,27 @@ const Profile = () => {
     },
   });
 
+  const updateConsentMutation = useMutation({
+    mutationFn: (newConsentValue) =>
+      api.put("/users/me/consent-facial", { consent: newConsentValue }),
+    onSuccess: (data) => {
+      toast.success(
+        data.data.message || "Preferência de reconhecimento facial atualizada."
+      );
+      // Atualiza o estado local imediatamente
+      setConsentFacial(data.data.hasConsentFacialRecognition);
+      // Invalida a query do perfil para garantir consistência, se necessário
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.error || "Erro ao atualizar preferência."
+      );
+      // Reverte o switch visualmente em caso de erro
+      setConsentFacial((prev) => !prev);
+    },
+  });
+
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -190,6 +227,11 @@ const Profile = () => {
   const handleCancelPhoto = () => {
     setPhotoFile(null);
     setPhotoPreview(getAssetUrl(userData.photoUrl));
+  };
+
+  const handleConsentChange = (checked) => {
+    setConsentFacial(checked); // Atualiza visualmente primeiro
+    updateConsentMutation.mutate(checked); // Envia para a API
   };
 
   const exportUserData = async () => {
@@ -548,6 +590,49 @@ const Profile = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
+              {/* --- NOVA SEÇÃO: RECONHECIMENTO FACIAL --- */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center">
+                  <LockKeyhole className="h-5 w-5 mr-2 text-blue-600" />
+                  Reconhecimento Facial para Check-in
+                </h3>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <Label
+                      htmlFor="facial-consent-switch"
+                      className="font-semibold cursor-pointer"
+                    >
+                      Habilitar check-in por reconhecimento facial
+                    </Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Permitir que o sistema utilize sua foto de perfil para
+                      identificá-lo(a) nos pontos de check-in dos eventos. Seus
+                      dados biométricos serão processados apenas para esta
+                      finalidade.
+                    </p>
+                    {!userData?.photoUrl && consentFacial && (
+                      <Alert
+                        variant="warning"
+                        className="mt-2 text-yellow-800 border-yellow-300 bg-yellow-50"
+                      >
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          Você habilitou o reconhecimento facial, mas ainda não
+                          enviou uma foto de perfil. Adicione uma foto para que
+                          a função possa ser utilizada.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                  <Switch
+                    id="facial-consent-switch"
+                    checked={consentFacial}
+                    onCheckedChange={handleConsentChange}
+                    disabled={updateConsentMutation.isPending}
+                  />
+                </div>
+              </div>
+
               {/* Seção de Direitos do Usuário */}
               <div>
                 <h3 className="text-lg font-semibold mb-2">Seus Direitos</h3>

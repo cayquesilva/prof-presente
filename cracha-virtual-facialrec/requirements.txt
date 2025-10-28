@@ -1,0 +1,7 @@
+# facial-recognition-service-py/requirements.txt
+Flask>=2.0 # Ou FastAPI se preferir
+face_recognition>=1.3.0
+numpy>=1.18 # Dependência do face_recognition
+Pillow>=8.0 # Para manipulação de imagem
+requests>=2.25 # Para baixar imagens de URLs
+gunicorn>=20.0 # Servidor WSGI para produção (opcional mas recomendado)

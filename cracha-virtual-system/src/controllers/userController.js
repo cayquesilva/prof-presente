@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { body, validationResult } = require("express-validator");
 const { prisma } = require("../config/database");
+const axios = require("axios");
 
 // Validações para atualização de usuário
 const updateUserValidation = [
@@ -23,6 +24,37 @@ const updateUserValidation = [
     .isISO8601()
     .withMessage("Data de nascimento inválida"),
 ];
+
+// Função auxiliar para chamar o serviço facial (evita repetição)
+const callFacialServiceIndex = async (userId, photoUrl) => {
+  // Só tenta indexar se tivermos a URL do serviço e uma foto
+  if (!process.env.FACIAL_SERVICE_URL || !photoUrl) {
+    console.warn(
+      `[Facial Service] Indexação pulada para ${userId}. URL do serviço ou foto ausente.`
+    );
+    return null;
+  }
+  try {
+    console.log(
+      `[Facial Service] Iniciando indexação para usuário ${userId}...`
+    );
+    const response = await axios.post(
+      `${process.env.FACIAL_SERVICE_URL}/index-face`,
+      {
+        userId: userId,
+        photoUrl: photoUrl, // Passa a URL pública/relativa da foto
+      }
+    );
+    console.log(`[Facial Service] Indexação bem-sucedida para ${userId}.`);
+    return response.data.descriptor; // Retorna o descritor (array de números)
+  } catch (error) {
+    console.error(
+      `[Facial Service] Erro ao indexar face para ${userId}:`,
+      error.response?.data || error.message
+    );
+    return null; // Retorna null em caso de erro
+  }
+};
 
 // Listar todos os usuários (apenas admin)
 const getAllUsers = async (req, res) => {
@@ -253,26 +285,72 @@ const deleteUser = async (req, res) => {
 // Atualizar foto do perfil
 const updateProfilePhoto = async (req, res) => {
   try {
-    const { id } = req.params;
+    const userId = req.params.id; // <<-- CORRIGIDO: Usar req.params.id
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhum arquivo de foto enviado." });
+    }
     const photoUrl = `/uploads/profiles/${req.file.filename}`;
 
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { photoUrl },
+    const userBeforeUpdate = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, hasConsentFacialRecognition: true }, // Seleciona só o necessário
     });
 
-    // Remova a senha antes de enviar a resposta
-    const { password, ...userWithoutPassword } = updatedUser;
+    if (!userBeforeUpdate) {
+      // Se o usuário não existe, pode ser necessário deletar a foto órfã (lógica futura)
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    // Atualiza a URL da foto no banco
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { photoUrl },
+      // Seleciona os dados necessários para a resposta e lógica facial
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        photoUrl: true,
+        role: true,
+        updatedAt: true,
+        hasConsentFacialRecognition: true,
+      },
+    });
+
+    // --- LÓGICA FACIAL ---
+    if (updatedUser.hasConsentFacialRecognition) {
+      console.log(`Usuário ${userId} consentiu, (re)indexando nova foto...`);
+      const descriptor = await callFacialServiceIndex(
+        userId,
+        updatedUser.photoUrl
+      );
+      if (descriptor) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { faceDescriptor: descriptor },
+        });
+        console.log(`Descritor facial atualizado para ${userId}`);
+      } else {
+        console.warn(
+          `Falha ao gerar descritor para a nova foto do usuário ${userId}.`
+        );
+        // Considerar limpar o descritor antigo se a nova indexação falhar?
+        // await prisma.user.update({ where: { id: userId }, data: { faceDescriptor: null } });
+      }
+    }
+    // --- FIM LÓGICA FACIAL ---
+
+    // Remove dados sensíveis (senha já não estava selecionada)
+    const { faceDescriptor, ...userForResponse } = updatedUser;
 
     res.json({
       message: "Foto do perfil atualizada com sucesso",
-      user: userWithoutPassword, // Envie o usuário atualizado de volta
+      user: userForResponse, // Retorna dados atualizados sem o descritor
     });
   } catch (error) {
     console.error("Erro ao atualizar foto do perfil:", error);
-    res.status(500).json({
-      error: "Erro interno do servidor",
-    });
+    // Tentar deletar a foto salva se a atualização no DB falhar? (lógica futura)
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
@@ -392,6 +470,78 @@ const completeOnboarding = async (req, res) => {
   }
 };
 
+// --- NOVA FUNÇÃO: ATUALIZAR CONSENTIMENTO FACIAL ---
+const updateFacialConsent = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { consent } = req.body; // Espera um boolean { "consent": true/false }
+
+    if (typeof consent !== "boolean") {
+      return res
+        .status(400)
+        .json({ error: 'O campo "consent" (boolean) é obrigatório.' });
+    }
+
+    // Atualiza o status do consentimento
+    
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { hasConsentFacialRecognition: consent },
+      select: {
+        id: true,
+        photoUrl: true,
+        hasConsentFacialRecognition: true,
+        faceDescriptor: true,
+      }, // Seleciona campos relevantes
+    });
+
+    let message = `Consentimento facial ${consent ? "concedido" : "revogado"}.`;
+
+    // Se o consentimento foi dado E o usuário tem foto E ainda não tem descritor
+    if (consent && updatedUser.photoUrl && !updatedUser.faceDescriptor) {
+      console.log(
+        `Consentimento dado por ${userId}, indexando face pela primeira vez...`
+      );
+      const descriptor = await callFacialServiceIndex(
+        userId,
+        updatedUser.photoUrl
+      );
+      if (descriptor) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { faceDescriptor: descriptor },
+        });
+        message += " Rosto indexado com sucesso.";
+      } else {
+        message += " Falha ao indexar o rosto automaticamente.";
+        console.warn(
+          `Falha ao gerar descritor inicial para usuário ${userId} após consentimento.`
+        );
+      }
+    }
+    // Se o consentimento foi revogado, limpa o descritor (opcional, mas recomendado pela LGPD)
+    else if (!consent && updatedUser.faceDescriptor) {
+      console.log(
+        `Consentimento revogado por ${userId}, limpando descritor facial...`
+      );
+      await prisma.user.update({
+        where: { id: userId },
+        data: { faceDescriptor: null }, // Limpa o descritor
+      });
+      message += " Dados faciais removidos.";
+      // Opcional: Chamar a AWS/serviço facial para remover a face da coleção também
+    }
+
+    res.status(200).json({
+      message,
+      hasConsentFacialRecognition: updatedUser.hasConsentFacialRecognition,
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar consentimento facial:", error);
+    res.status(500).json({ error: "Erro interno do servidor." });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -402,4 +552,5 @@ module.exports = {
   updateUserRole,
   resetUserPassword,
   completeOnboarding,
+  updateFacialConsent,
 };

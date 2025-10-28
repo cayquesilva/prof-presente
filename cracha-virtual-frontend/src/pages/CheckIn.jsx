@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Scanner } from "@yudiel/react-qr-scanner";
+import Webcam from "react-webcam";
 import api from "../lib/api";
 import {
   CircleCheck as CheckCircle,
@@ -10,6 +11,9 @@ import {
   Camera,
   Calendar,
   AlertCircle,
+  UserCheck,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "../hooks/useDebounce";
@@ -33,14 +37,22 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+const SCAN_INTERVAL = 3000; // Intervalo entre tentativas de scan facial (em ms) - Ex: 2 segundos
+const RESULT_DISPLAY_TIME = 3000; // Tempo para exibir o alerta (2 segundos)
+
 const CheckIn = () => {
   const [scanResult, setScanResult] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState("");
   const [manualInput, setManualInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isScanning, setIsScanning] = useState(false);
+  const [isQrScanning, setIsQrScanning] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [scanError, setScanError] = useState(null);
+  const scanIntervalRef = useRef(null);
+  const isProcessingFacialRef = useRef(false);
+
+  const [isFacialScanning, setIsFacialScanning] = useState(false);
+  const webcamRef = useRef(null); // Ref para o componente Webcam
 
   // Buscar eventos disponíveis
   const { data: eventsData } = useQuery({
@@ -91,19 +103,96 @@ const CheckIn = () => {
     },
   });
 
-  const handleStartScanner = () => {
-    if (!selectedEvent) {
-      toast.error("Selecione um evento primeiro");
-      return;
+  // --- NOVA MUTAÇÃO PARA CHECK-IN FACIAL ---
+  const facialCheckinMutation = useMutation({
+    mutationFn: async (imageData) => {
+      isProcessingFacialRef.current = true;
+      try {
+        const response = await api.post("/checkins/facial", {
+          eventId: selectedEvent,
+          imageBase64: imageData.split(",")[1],
+        });
+        return response.data;
+      } finally {
+        // Pequeno delay antes de permitir novo scan, mesmo em erro
+        setTimeout(() => {
+          isProcessingFacialRef.current = false;
+        }, 500);
+      }
+    },
+    onSuccess: (data) => {
+      // Define o resultado para exibir o alerta
+      setScanResult({
+        success: true,
+        message: "Check-in OK!", // Mensagem curta para o alerta
+        data, // Mantém os dados para info adicional se necessário
+      });
+      toast.success(
+        `Check-in realizado: ${
+          data?.checkin?.userBadge?.user?.name || "Usuário"
+        }`
+      ); // Toast mais informativo
+
+      // Limpa o alerta após o tempo definido
+      setTimeout(() => {
+        // Só limpa se o scan ainda estiver ativo (evita limpar se o usuário parou)
+        if (scanIntervalRef.current) setScanResult(null);
+      }, RESULT_DISPLAY_TIME);
+    },
+    onError: (error) => {
+      const errorMessage = error.response?.data?.error || "Falha no Check-in";
+      // Define o resultado para exibir o alerta
+      setScanResult({ success: false, message: errorMessage });
+      toast.error(errorMessage); // Mantém o toast para detalhes
+
+      // Limpa o alerta após o tempo definido
+      setTimeout(() => {
+        if (scanIntervalRef.current) setScanResult(null);
+      }, RESULT_DISPLAY_TIME);
+    },
+  });
+
+  const runFacialScan = useCallback(() => {
+    if (
+      !webcamRef.current ||
+      !isFacialScanning ||
+      isProcessingFacialRef.current
+    ) {
+      return; // Sai se a câmera não está pronta, scan inativo ou já processando
     }
+
+    const imageSrc = webcamRef.current.getScreenshot();
+    if (imageSrc) {
+      // Envia para a API sem esperar confirmação manual
+      facialCheckinMutation.mutate(imageSrc);
+    }
+  }, [isFacialScanning, facialCheckinMutation]);
+
+  useEffect(() => {
+    if (isFacialScanning) {
+      // Limpa qualquer intervalo anterior
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+      // Inicia um novo intervalo que chama runFacialScan
+      scanIntervalRef.current = setInterval(runFacialScan, SCAN_INTERVAL);
+    } else {
+      // Se parou de escanear, limpa o intervalo
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    }
+
+    // Função de limpeza ao desmontar o componente
+    return () => {
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
+    };
+  }, [isFacialScanning, runFacialScan]);
+
+  const handleStartQrScanner = () => {
+    if (!selectedEvent) return toast.error("Selecione um evento primeiro");
     setScanError(null);
     setScanResult(null);
-    setIsScanning(true);
+    setIsQrScanning(true);
   };
 
-  const handleStopScanner = () => {
-    setIsScanning(false);
-  };
+  const handleStopQrScanner = () => setIsQrScanning(false);
 
   const handleManualCheckIn = () => {
     if (!selectedEvent) {
@@ -137,10 +226,32 @@ const CheckIn = () => {
     });
   };
 
+  // --- NOVOS HANDLERS PARA FACIAL ---
+  const handleStartFacialScanner = () => {
+    if (!selectedEvent) return toast.error("Selecione um evento primeiro");
+    setScanResult(null);
+    setIsFacialScanning(true);
+  };
+
+  const handleStopFacialScanner = () => {
+    setIsFacialScanning(false);
+    setScanResult(null);
+    if (scanIntervalRef.current) clearInterval(scanIntervalRef.current); // Garante limpeza
+  };
+
   // Limpa o resultado ao mudar de evento
   useEffect(() => {
     setScanResult(null);
+    setIsQrScanning(false);
+    setIsFacialScanning(false);
   }, [selectedEvent]);
+
+  // Configurações da Webcam
+  const videoConstraints = {
+    width: 480,
+    height: 480,
+    facingMode: "user", // Ou "environment" para câmera traseira
+  };
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-4xl">
@@ -183,7 +294,7 @@ const CheckIn = () => {
       {selectedEvent && (
         <>
           {/* Resultado do Check-in */}
-          {scanResult && (
+          {scanResult && !isFacialScanning && (
             <Alert
               className={`mb-6 ${
                 scanResult.success
@@ -216,7 +327,7 @@ const CheckIn = () => {
           {/* Métodos de Check-in */}
           <Tabs defaultValue="qr" className="w-full">
             <div className="w-full overflow-x-auto pb-2 scrollbar-thin">
-              <TabsList className="inline-flex w-auto space-x-2 sm:grid sm:w-full sm:grid-cols-3">
+              <TabsList className="inline-flex w-auto space-x-2 sm:grid sm:w-full sm:grid-cols-4">
                 <TabsTrigger value="qr">
                   <QrCode className="h-4 w-4 mr-2" />
                   QR Code
@@ -226,8 +337,12 @@ const CheckIn = () => {
                   Código Manual
                 </TabsTrigger>
                 <TabsTrigger value="search">
-                  <Camera className="h-4 w-4 mr-2" />
+                  <UserCheck className="h-4 w-4 mr-2" />
                   Buscar Nome
+                </TabsTrigger>
+                <TabsTrigger value="facial">
+                  <Camera className="h-4 w-4 mr-2" />
+                  Facial
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -243,14 +358,14 @@ const CheckIn = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {!isScanning ? (
-                    <Button onClick={handleStartScanner} className="w-full">
+                  {!isQrScanning ? (
+                    <Button onClick={handleStartQrScanner} className="w-full">
                       <Camera className="h-4 w-4 mr-2" />
                       Ativar Câmera
                     </Button>
                   ) : (
                     <Button
-                      onClick={handleStopScanner}
+                      onClick={handleStopQrScanner}
                       variant="destructive"
                       className="w-full"
                     >
@@ -258,7 +373,7 @@ const CheckIn = () => {
                     </Button>
                   )}
 
-                  {isScanning && (
+                  {isQrScanning && (
                     <div className="mt-4">
                       <Scanner
                         onScan={(detectedCodes) => {
@@ -269,7 +384,7 @@ const CheckIn = () => {
                           if (text) {
                             console.log("✅ QR Code detectado:", text);
                             toast.success("QR Code lido com sucesso!");
-                            setIsScanning(false);
+                            setIsQrScanning(false);
                             setScanError(null);
 
                             checkInMutation.mutate({
@@ -413,6 +528,106 @@ const CheckIn = () => {
                         Nenhum participante encontrado
                       </p>
                     )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* --- NOVA ABA FACIAL --- */}
+            <TabsContent value="facial">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Check-in Facial Contínuo</CardTitle>
+                  <CardDescription>
+                    A câmera buscará e processará rostos automaticamente.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 flex flex-col items-center">
+                  {!isFacialScanning ? (
+                    <Button
+                      onClick={handleStartFacialScanner}
+                      className="w-full max-w-sm"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Iniciar Scanner Facial
+                    </Button>
+                  ) : (
+                    <>
+                      {/* --- CONTAINER PARA WEBCAM E ALERTA --- */}
+                      <div className="w-full max-w-sm border rounded-lg overflow-hidden relative">
+                        <Webcam
+                          audio={false}
+                          ref={webcamRef}
+                          screenshotFormat="image/jpeg"
+                          width={480}
+                          height={480}
+                          videoConstraints={videoConstraints}
+                          mirrored={videoConstraints.facingMode === "user"}
+                        />
+
+                        {/* --- ALERTA SOBREPOSTO --- */}
+                        {scanResult && (
+                          <div
+                            className={`absolute inset-0 flex flex-col items-center justify-center p-4 text-white text-center transition-opacity duration-300 ${
+                              scanResult.success
+                                ? "bg-green-600/90"
+                                : "bg-red-600/90"
+                            }`}
+                          >
+                            {scanResult.success ? (
+                              <CheckCircle className="h-16 w-16 mb-2" />
+                            ) : (
+                              <XCircle className="h-16 w-16 mb-2" />
+                            )}
+                            <p className="text-xl font-bold mb-1">
+                              {scanResult.success
+                                ? "Check-in Confirmado!"
+                                : "Falha no Check-in"}
+                            </p>
+                            {scanResult.data?.checkin?.userBadge?.user
+                              ?.name && (
+                              <p className="text-lg">
+                                {scanResult.data.checkin.userBadge.user.name}
+                              </p>
+                            )}
+                            {!scanResult.success && (
+                              <p className="text-sm mt-1">
+                                {scanResult.message}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Indicador de processamento (pode coexistir com o alerta ou não, ajuste a opacidade se necessário) */}
+                        {(facialCheckinMutation.isPending ||
+                          isProcessingFacialRef.current) &&
+                          !scanResult && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <Loader2 className="h-8 w-8 text-white animate-spin" />
+                            </div>
+                          )}
+                      </div>
+                      <Button
+                        onClick={handleStopFacialScanner}
+                        variant="destructive"
+                        className="w-full max-w-sm"
+                      >
+                        Parar Scanner
+                      </Button>
+                    </>
+                  )}
+
+                  <Alert
+                    variant="warning"
+                    className="w-full max-w-sm text-yellow-800 border-yellow-300 bg-yellow-50"
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      Certifique-se de boa iluminação e que o rosto esteja bem
+                      visível. Esta função não possui detecção de vivacidade
+                      (anti-fraude). Utilize os métodos alternativos (QR
+                      Code/Manual) se necessário.
+                    </AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
             </TabsContent>
