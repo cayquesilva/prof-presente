@@ -10,7 +10,15 @@ services:
       - PORT=${PORT}
       - NODE_ENV=${NODE_ENV}
       - CORS_ORIGIN=${CORS_ORIGIN}
-      - FACIAL_SERVICE_URL=http://facial-service:3001/api
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - PUBLIC_API_URL=${PUBLIC_API_URL}
+      - PUBLIC_LOGO_URL=${PUBLIC_LOGO_URL}
+      - FACIAL_SERVICE_URL=http://facial-service-py:3002/api
     volumes:
       - backend_uploads:/app/uploads
     networks:
@@ -19,14 +27,13 @@ services:
       - prof-presente-internal
     depends_on:
       - prof_presente_db
+      - facial-service-py
     command: >
       sh -c "
         echo 'Aguardando 20 segundos extras para estabilização da rede...' &&
         sleep 20 &&
         echo 'Rodando prisma migrade deploy...' &&
         npx prisma migrate deploy &&
-        -- remover caso rodando em produção echo 'Rodando a seed com dados iniciais...' &&
-        -- remover caso rodando em produção npm run db:seed &&
         echo 'Iniciando container...' &&
         npm start
       "
@@ -42,7 +49,6 @@ services:
 
   # Serviço do Frontend (React + Nginx)
   frontend:
-    # ALTERAÇÃO: Aponta para a imagem no Docker Hub e remove a seção 'build'
     image: cayquesilva/prof-presente-frontend:latest
     environment:
       - VITE_API_URL=https://api.checkin.simplisoft.com.br/api
@@ -80,24 +86,32 @@ services:
       placement:
         constraints: [node.role == manager]
 
-  # Serviço de reconhecimento facial
-  facial-service:
-    image: cayquesilva/prof-presente-facial:latest # Ou imagem pré-construída
+  facial-service-py:
+    # Use a imagem que você construiu com o Dockerfile Python
+    image: cayquesilva/prof-presente-facialrec:latest # <-- Use o nome/tag correto da sua imagem Python
     environment:
-      - PORT=3002
-      - PUBLIC_API_URL=${PUBLIC_API_URL} # Necessário para baixar fotos
-      # Adicione outras variáveis se necessário
+      - PORT=3002 # Porta interna que o Flask/Gunicorn vai usar
+      - PUBLIC_API_URL=${PUBLIC_API_URL} # Necessário para o serviço baixar fotos de perfil
+      # Adicione outras variáveis se o serviço Python precisar (ex: Limiar de confiança)
+      # - FACE_RECOGNITION_TOLERANCE=0.55
     networks:
-      - prof-presente-internal # Apenas rede interna
+      - prof-presente-internal # Apenas na rede interna, não exposto externamente
+    # Se os modelos NÃO estiverem na imagem, monte um volume (requer modelos no nó do Swarm)
+    # volumes:
+    #   - /path/no/host/dos/modelos:/app/models # Exemplo de montagem de volume
     deploy:
-      replicas: 1
-      # Considere constraints se precisar de mais CPU/RAM para este serviço
-    # Não precisa de volume para modelos, face_recognition geralmente os embute
+      replicas: 1 # Comece com 1 réplica
+      # Considere adicionar constraints de recursos se o serviço for pesado
+      # resources:
+      #   limits:
+      #     cpus: '1.0'
+      #     memory: 1G
+      # placement:
+      #   constraints: [node.labels.purpose == compute] # Exemplo: rodar em nós específicos
 
 volumes:
   db_data:
   backend_uploads:
-  facial_models:
 
 networks:
   prof-presente-internal:

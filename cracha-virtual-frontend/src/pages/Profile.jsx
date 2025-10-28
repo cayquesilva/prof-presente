@@ -191,20 +191,15 @@ const Profile = () => {
     mutationFn: (newConsentValue) =>
       api.put("/users/me/consent-facial", { consent: newConsentValue }),
     onSuccess: (data) => {
-      toast.success(
-        data.data.message || "Preferência de reconhecimento facial atualizada."
-      );
-      // Atualiza o estado local imediatamente
-      setConsentFacial(data.data.hasConsentFacialRecognition);
-      // Invalida a query do perfil para garantir consistência, se necessário
+      toast.success(data.data.message || "Consentimento atualizado.");
+      setConsentFacial(data.data.hasConsentFacialRecognition); // Atualiza estado local
       queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
     },
     onError: (error) => {
       toast.error(
-        error.response?.data?.error || "Erro ao atualizar preferência."
+        error.response?.data?.error || "Erro ao atualizar consentimento."
       );
-      // Reverte o switch visualmente em caso de erro
-      setConsentFacial((prev) => !prev);
+      setConsentFacial((prev) => !prev); // Reverte o switch visualmente
     },
   });
 
@@ -230,7 +225,7 @@ const Profile = () => {
   };
 
   const handleConsentChange = (checked) => {
-    setConsentFacial(checked); // Atualiza visualmente primeiro
+    setConsentFacial(checked); // Atualiza visualmente primeiro (otimista)
     updateConsentMutation.mutate(checked); // Envia para a API
   };
 

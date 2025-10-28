@@ -472,9 +472,10 @@ const completeOnboarding = async (req, res) => {
 
 // --- NOVA FUNÇÃO: ATUALIZAR CONSENTIMENTO FACIAL ---
 const updateFacialConsent = async (req, res) => {
+  // Usamos um try/catch geral para a lógica principal síncrona
   try {
     const userId = req.user.id;
-    const { consent } = req.body; // Espera um boolean { "consent": true/false }
+    const { consent } = req.body;
 
     if (typeof consent !== "boolean") {
       return res
@@ -482,8 +483,7 @@ const updateFacialConsent = async (req, res) => {
         .json({ error: 'O campo "consent" (boolean) é obrigatório.' });
     }
 
-    // Atualiza o status do consentimento
-    
+    // 1. Atualiza o status do consentimento IMEDIATAMENTE
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { hasConsentFacialRecognition: consent },
@@ -492,53 +492,99 @@ const updateFacialConsent = async (req, res) => {
         photoUrl: true,
         hasConsentFacialRecognition: true,
         faceDescriptor: true,
-      }, // Seleciona campos relevantes
+      },
     });
 
     let message = `Consentimento facial ${consent ? "concedido" : "revogado"}.`;
 
-    // Se o consentimento foi dado E o usuário tem foto E ainda não tem descritor
+    // 2. Decide se a indexação/limpeza precisa ser feita EM SEGUNDO PLANO
+    let backgroundTaskNeeded = false;
     if (consent && updatedUser.photoUrl && !updatedUser.faceDescriptor) {
+      console.log(`[Async Task] Indexação facial necessária para ${userId}.`);
+      backgroundTaskNeeded = true;
+      message += " Processamento facial iniciado em segundo plano.";
+    } else if (!consent && updatedUser.faceDescriptor) {
       console.log(
-        `Consentimento dado por ${userId}, indexando face pela primeira vez...`
+        `[Async Task] Remoção de descritor facial necessária para ${userId}.`
       );
-      const descriptor = await callFacialServiceIndex(
-        userId,
-        updatedUser.photoUrl
-      );
-      if (descriptor) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { faceDescriptor: descriptor },
-        });
-        message += " Rosto indexado com sucesso.";
-      } else {
-        message += " Falha ao indexar o rosto automaticamente.";
-        console.warn(
-          `Falha ao gerar descritor inicial para usuário ${userId} após consentimento.`
-        );
-      }
-    }
-    // Se o consentimento foi revogado, limpa o descritor (opcional, mas recomendado pela LGPD)
-    else if (!consent && updatedUser.faceDescriptor) {
-      console.log(
-        `Consentimento revogado por ${userId}, limpando descritor facial...`
-      );
-      await prisma.user.update({
-        where: { id: userId },
-        data: { faceDescriptor: null }, // Limpa o descritor
-      });
-      message += " Dados faciais removidos.";
-      // Opcional: Chamar a AWS/serviço facial para remover a face da coleção também
+      backgroundTaskNeeded = true;
+      message += " Remoção de dados faciais iniciada em segundo plano.";
+    } else if (consent && !updatedUser.photoUrl) {
+      message +=
+        " Adicione uma foto de perfil para habilitar o reconhecimento.";
+    } else if (consent && updatedUser.faceDescriptor) {
+      message += " Reconhecimento facial já estava ativo e indexado.";
     }
 
+    // 3. ENVIA A RESPOSTA PARA O FRONTEND IMEDIATAMENTE!
     res.status(200).json({
       message,
       hasConsentFacialRecognition: updatedUser.hasConsentFacialRecognition,
     });
+
+    // 4. EXECUTA A TAREFA EM SEGUNDO PLANO (SE NECESSÁRIO)
+    // Usamos uma função auto-executável (IIFE) com async para não bloquear
+    if (backgroundTaskNeeded) {
+      (async () => {
+        if (consent) {
+          // Tarefa de Indexação
+          console.log(
+            `[Background Index] Iniciando indexação para ${userId}...`
+          );
+          const descriptor = await callFacialServiceIndex(
+            userId,
+            updatedUser.photoUrl
+          );
+          if (descriptor) {
+            try {
+              await prisma.user.update({
+                where: { id: userId },
+                data: { faceDescriptor: descriptor },
+              });
+              console.log(
+                `[Background Index] Descritor salvo com sucesso para ${userId}.`
+              );
+            } catch (prismaError) {
+              console.error(
+                `[Background Index] ERRO ao salvar descritor para ${userId}:`,
+                prismaError
+              );
+              // Logar o erro é importante, mas não podemos enviar resposta ao frontend aqui
+            }
+          } else {
+            console.warn(
+              `[Background Index] Falha ao gerar descritor para ${userId}.`
+            );
+          }
+        } else {
+          // Tarefa de Limpeza
+          console.log(
+            `[Background Clear] Limpando descritor para ${userId}...`
+          );
+          try {
+            await prisma.user.update({
+              where: { id: userId },
+              data: { faceDescriptor: null },
+            });
+            console.log(
+              `[Background Clear] Descritor limpo com sucesso para ${userId}.`
+            );
+            // Chamar API Python/AWS para remover face da coleção seria aqui
+          } catch (prismaError) {
+            console.error(
+              `[Background Clear] ERRO ao limpar descritor para ${userId}:`,
+              prismaError
+            );
+          }
+        }
+      })(); // Chama a função imediatamente
+    }
   } catch (error) {
-    console.error("Erro ao atualizar consentimento facial:", error);
-    res.status(500).json({ error: "Erro interno do servidor." });
+    // Catch para erros na parte síncrona (update inicial do consentimento)
+    console.error("Erro (síncrono) ao atualizar consentimento facial:", error);
+    res
+      .status(500)
+      .json({ error: "Erro interno do servidor ao atualizar consentimento." });
   }
 };
 

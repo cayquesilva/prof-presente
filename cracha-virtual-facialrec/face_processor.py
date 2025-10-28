@@ -37,7 +37,7 @@ def get_face_descriptor(image_np):
         return None
     try:
         # Localiza as caixas delimitadoras das faces
-        face_locations = face_recognition.face_locations(image_np, model="cnn") # 'cnn' é mais preciso, 'hog' é mais rápido
+        face_locations = face_recognition.face_locations(image_np, model="hog") # 'cnn' é mais preciso, 'hog' é mais rápido
 
         if not face_locations:
             print("Nenhuma face encontrada na imagem.")
