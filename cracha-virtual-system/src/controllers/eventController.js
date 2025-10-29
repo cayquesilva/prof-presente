@@ -589,15 +589,17 @@ const uploadCertificateTemplate = async (req, res) => {
 
 // NOVA FUNÇÃO: Para enviar certificados para todos os participantes elegíveis
 const sendEventCertificates = async (req, res) => {
-  const { id: eventId } = req.params;
+  const { id: parentEventId } = req.params; // Renomeado para clareza
 
   try {
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    const parentEvent = await prisma.event.findUnique({
+      where: { id: parentEventId },
+    });
 
     if (
-      !event ||
-      !event.certificateTemplateUrl ||
-      !event.certificateTemplateConfig
+      !parentEvent ||
+      !parentEvent.certificateTemplateUrl ||
+      !parentEvent.certificateTemplateConfig
     ) {
       return res.status(404).json({
         error:
@@ -605,12 +607,18 @@ const sendEventCertificates = async (req, res) => {
       });
     }
 
-    // --- INÍCIO DA CORREÇÃO ---
+    // --- INÍCIO DA NOVA LÓGICA (Baseada no certificateController) ---
 
-    // ETAPA 1: Encontrar os IDs de todos os usuários que fizeram check-in neste evento.
-    const checkIns = await prisma.userCheckin.findMany({
+    // 1. Encontrar todos os eventos-filho
+    const childEvents = await prisma.event.findMany({
+      where: { parentId: parentEventId },
+    });
+    const eventIds = [parentEventId, ...childEvents.map((e) => e.id)];
+
+    // 2. Encontrar TODOS os check-ins de TODOS os usuários nesses eventos
+    const allCheckIns = await prisma.userCheckin.findMany({
       where: {
-        eventId: eventId,
+        eventId: { in: eventIds },
       },
       select: {
         userBadge: {
@@ -621,116 +629,104 @@ const sendEventCertificates = async (req, res) => {
       },
     });
 
-    // Extrai os IDs únicos dos usuários que compareceram.
+    // 3. Obter a lista de IDs de usuários únicos que compareceram
     const attendedUserIds = [
-      ...new Set(checkIns.map((checkin) => checkin.userBadge.userId)),
+      ...new Set(allCheckIns.map((checkin) => checkin.userBadge.userId)),
     ];
 
     if (attendedUserIds.length === 0) {
       return res
         .status(400)
-        .json({ error: "Nenhum participante fez check-in neste evento." });
+        .json({ error: "Nenhum participante fez check-in nestes eventos." });
     }
 
-    // ETAPA 2: Agora, encontre as inscrições aprovadas que pertencem a esses usuários.
-    const enrollments = await prisma.enrollment.findMany({
+    // 4. Buscar os dados desses usuários (nome, email)
+    const eligibleUsers = await prisma.user.findMany({
       where: {
-        eventId: eventId,
-        status: "APPROVED",
-        userId: {
-          in: attendedUserIds, // Filtra pela lista de IDs que encontramos.
-        },
+        id: { in: attendedUserIds },
       },
-      include: {
-        user: true,
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
     });
 
-    // --- FIM DA CORREÇÃO ---
+    // --- FIM DA LÓGICA DE BUSCA ---
 
-    if (enrollments.length === 0) {
-      return res.status(400).json({
-        error:
-          "Nenhum participante elegível (inscrito e com check-in) foi encontrado.",
-      });
-    }
-
-    // Retorna a resposta para o admin imediatamente e continua o processo em segundo plano
+    // Retorna a resposta para o admin imediatamente
     res.status(202).json({
-      message: `O processo de envio de ${enrollments.length} certificados foi iniciado.`,
+      message: `O processo de envio de ${eligibleUsers.length} certificados foi iniciado.`,
     });
 
-    // Lógica de geração e envio (continua a mesma)
-    const templatePath = path.join(process.cwd(), event.certificateTemplateUrl);
+    // --- INÍCIO DO PROCESSO EM SEGUNDO PLANO ---
+
+    // Carrega o template e a config UMA VEZ
+    const templatePath = path.join(
+      process.cwd(),
+      parentEvent.certificateTemplateUrl
+    );
     const templateImageBuffer = await fs.readFile(templatePath);
-    const config = event.certificateTemplateConfig;
-    const totalHours = (
-      (new Date(event.endDate) - new Date(event.startDate)) /
-      (1000 * 60 * 60)
-    ).toFixed(1);
+    const config = parentEvent.certificateTemplateConfig;
 
-    for (const enrollment of enrollments) {
-      const { user } = enrollment;
+    // Buscamos todos os eventos de uma vez e colocamos num Map para performance
+    const eventsData = await prisma.event.findMany({
+      where: { id: { in: eventIds } },
+      select: { id: true, startDate: true, endDate: true },
+    });
+    const eventsMap = new Map(eventsData.map((event) => [event.id, event]));
+
+    // Itera sobre cada usuário elegível
+    for (const user of eligibleUsers) {
       try {
-        // ... (o restante da função para gerar o PDF e enviar o e-mail continua igual) ...
-        // 1. Gera a imagem do certificado com os dados do usuário
-        const nameSvg = `<svg width="800" height="100"><text x="0" y="${
-          config.name.fontSize || 24
-        }" font-family="sans-serif" font-size="${
-          config.name.fontSize || 24
-        }" fill="${config.name.color || "#000000"}">${user.name}</text></svg>`;
-        const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
-          config.hours.fontSize || 18
-        }" font-family="sans-serif" font-size="${
-          config.hours.fontSize || 18
-        }" fill="${
-          config.hours.color || "#333333"
-        }">${totalHours} horas</text></svg>`;
-
-        const finalCertificateBuffer = await sharp(templateImageBuffer)
-          .composite([
-            {
-              input: Buffer.from(nameSvg),
-              top: config.name.y,
-              left: config.name.x,
-            },
-            {
-              input: Buffer.from(hoursSvg),
-              top: config.hours.y,
-              left: config.hours.x,
-            },
-          ])
-          .jpeg()
-          .toBuffer();
-
-        // 2. Cria o PDF
-        const pdfDoc = await PDFDocument.create();
-        const certificateImage = await pdfDoc.embedJpg(finalCertificateBuffer);
-        const page = pdfDoc.addPage([
-          certificateImage.width,
-          certificateImage.height,
-        ]);
-        page.drawImage(certificateImage, {
-          x: 0,
-          y: 0,
-          width: page.getWidth(),
-          height: page.getHeight(),
+        // 5. Encontrar os check-ins específicos DESTE usuário (SEM INCLUDE)
+        const userCheckins = await prisma.userCheckin.findMany({
+          where: {
+            eventId: { in: eventIds },
+            userBadge: { userId: user.id },
+          },
+          // O 'include: { event: true }' foi removido daqui
         });
+
+        // 6. Calcular a soma das horas DESTE usuário (usando o Map)
+        let totalMilliseconds = 0;
+        const attendedEvents = new Set();
+        userCheckins.forEach((checkin) => {
+          if (!attendedEvents.has(checkin.eventId)) {
+            // Pega os dados do evento que buscamos ANTES do loop
+            const event = eventsMap.get(checkin.eventId);
+
+            if (event) {
+              // Garante que o evento foi encontrado no Map
+              const duration =
+                new Date(event.endDate) - new Date(event.startDate);
+              totalMilliseconds += duration;
+              attendedEvents.add(checkin.eventId);
+            }
+          }
+        });
+
+        if (totalMilliseconds === 0) {
+          throw new Error("Participação não resultou em horas (duração 0).");
+        }
+        const totalHours = (totalMilliseconds / (1000 * 60 * 60)).toFixed(1);
+
+        // 7. Gerar o PDF (usando a função auxiliar)
         const pdfBytes = await generateCertificatePdf(
           user,
           config,
           templateImageBuffer,
           totalHours
-        ); // Lógica de geração extraída para clareza
+        );
 
-        // 3. Envia o e-mail
+        // 8. Envia o e-mail
         await sendEmail({
           to: user.email,
-          subject: `Seu certificado do evento: ${event.title}`,
+          subject: `Seu certificado do evento: ${parentEvent.title}`,
           html: `
           <p>Olá, ${user.name}!</p>
-          <p>Agradecemos sua participação no evento "${event.title}".</p>
-          <p>Seu certificado de participação está em anexo.</p>
+          <p>Agradecemos sua participação no evento "${parentEvent.title}".</p>
+          <p>Seu certificado de participação, com um total de ${totalHours} h. , está em anexo.</p>
           <br>
           <p>Atenciosamente,</p>
           <p>Equipe Organizadora</p>
@@ -744,32 +740,62 @@ const sendEventCertificates = async (req, res) => {
           ],
         });
 
-        // CORREÇÃO: Registra o SUCESSO no banco de dados
-        await prisma.certificateLog.create({
-          data: {
-            status: "SUCCESS",
-            eventId: eventId,
-            userId: user.id,
-          },
+        // 9. Registra o SUCESSO no banco de dados
+        const successData = {
+          status: "SUCCESS",
+          details: null,
+          createdAt: new Date(),
+          userId: user.id,
+          eventId: parentEventId,
+        };
+
+        const existingLogSuccess = await prisma.certificateLog.findFirst({
+          where: { userId: user.id, eventId: parentEventId },
         });
+
+        if (existingLogSuccess) {
+          await prisma.certificateLog.update({
+            where: { id: existingLogSuccess.id },
+            data: successData,
+          });
+        } else {
+          await prisma.certificateLog.create({
+            data: successData,
+          });
+        }
       } catch (error) {
         console.error(
           `Falha ao processar certificado para ${user.email}:`,
-          error
+          error.message
         );
-        // CORREÇÃO: Registra a FALHA no banco de dados
-        await prisma.certificateLog.create({
-          data: {
-            status: "FAILED",
-            details: error.message,
-            eventId: eventId,
-            userId: user.id,
-          },
+        // 10. Registra a FALHA no banco de dados
+        const failData = {
+          status: "FAILED",
+          details: error.message,
+          createdAt: new Date(),
+          userId: user.id,
+          eventId: parentEventId,
+        };
+
+        const existingLogFail = await prisma.certificateLog.findFirst({
+          where: { userId: user.id, eventId: parentEventId },
         });
+
+        if (existingLogFail) {
+          await prisma.certificateLog.update({
+            where: { id: existingLogFail.id },
+            data: failData,
+          });
+        } else {
+          await prisma.certificateLog.create({
+            data: failData,
+          });
+        }
       }
     }
   } catch (error) {
     console.error("Erro CRÍTICO ao iniciar o envio de certificados:", error);
+    // Nota: Não podemos enviar um 'res' aqui porque a resposta 202 já foi enviada.
   }
 };
 
@@ -785,13 +811,13 @@ async function generateCertificatePdf(
   }" font-family="sans-serif" font-size="${config.name.fontSize || 24}" fill="${
     config.name.color || "#000000"
   }">${user.name}</text></svg>`;
+  const hoursText = `${totalHours} h.`;
+
   const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
     config.hours.fontSize || 18
   }" font-family="sans-serif" font-size="${
     config.hours.fontSize || 18
-  }" fill="${
-    config.hours.color || "#333333"
-  }">${totalHours} horas</text></svg>`;
+  }" fill="${config.hours.color || "#333333"}">${hoursText}</text></svg>`;
 
   const finalCertificateBuffer = await sharp(templateImageBuffer)
     .composite([
@@ -867,7 +893,7 @@ const getCertificateLogsForEvent = async (req, res) => {
         userName: enrollment.user.name,
         userEmail: enrollment.user.email,
         status: log ? log.status : "PENDING", // Se não há log, o status é "Pendente"
-        sentAt: log ? log.createdAt : null,
+        createdAt: log ? log.createdAt : null,
       };
     });
 

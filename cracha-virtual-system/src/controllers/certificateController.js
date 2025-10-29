@@ -76,12 +76,10 @@ const generateCertificate = async (req, res) => {
       config.name.fontSize || 24
     }" fill="${config.name.color || "#000000"}">${user.name}</text></svg>`;
     const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
-      config.hours.fontSize || 18
+      config.hours.fontSize || 22
     }" font-family="DejaVu Sans" font-size="${
-      config.hours.fontSize || 18
-    }" fill="${
-      config.hours.color || "#333333"
-    }">${totalHours} horas</text></svg>`;
+      config.hours.fontSize || 22
+    }" fill="${config.hours.color || "#333333"}">${totalHours} h.</text></svg>`;
 
     // 3. Compõe a imagem final com os textos
     const finalCertificateBuffer = await sharp(templateImageBuffer)

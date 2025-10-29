@@ -48,9 +48,9 @@ const CertificatePreview = ({ templateImage, config, onConfigChange }) => {
       const hoursConfig = {
         x: config.hoursX || 20,
         y: config.hoursY || 60,
-        fontSize: config.hoursFontSize || 18,
+        fontSize: config.hoursFontSize || 20,
         color: config.hoursColor || "#333333",
-        text: "XX,X horas",
+        text: "XX,X h",
       };
       ctx.fillStyle = hoursConfig.color;
       ctx.font = `${hoursConfig.fontSize}px sans-serif`;
