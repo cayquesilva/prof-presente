@@ -27,9 +27,7 @@ import { toast } from "sonner";
 import api from "../lib/api";
 // NOVO: Importa os ícones para as estatísticas
 import {
-  Users,
   CheckCircle,
-  Star,
   Download,
   AlertTriangle,
   Trash2,
@@ -141,6 +139,7 @@ const Profile = () => {
       });
       setPhotoPreview(getAssetUrl(userData.photoUrl));
       setConsentFacial(userData.hasConsentFacialRecognition || false);
+      console.log(userData.hasConsentFacialRecognition);
     }
   }, [userData]);
 
@@ -192,8 +191,25 @@ const Profile = () => {
       api.put("/users/me/consent-facial", { consent: newConsentValue }),
     onSuccess: (data) => {
       toast.success(data.data.message || "Consentimento atualizado.");
-      setConsentFacial(data.data.hasConsentFacialRecognition); // Atualiza estado local
-      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+
+      // 1. Pega o novo valor booleano retornado pela API
+      const newConsent = data.data.hasConsentFacialRecognition;
+
+      // 2. (Opcional, mas recomendado) Atualiza o contexto de autenticação global
+      updateAuthUser({ hasConsentFacialRecognition: newConsent });
+
+      // 3. ATUALIZA O CACHE DO REACT-QUERY DIRETAMENTE
+      // Isso evita a "race condition" da invalidação
+      queryClient.setQueryData(["user-profile", user.id], (oldData) => {
+        // oldData é o valor atual em cache para a query "user-profile"
+        if (oldData) {
+          return {
+            ...oldData,
+            hasConsentFacialRecognition: newConsent, // Atualiza o campo específico
+          };
+        }
+        return oldData;
+      });
     },
     onError: (error) => {
       toast.error(

@@ -289,6 +289,7 @@ const getProfile = async (req, res) => {
         photoUrl: true,
         role: true,
         hasCompletedOnboarding: true,
+        hasConsentFacialRecognition: true,
         createdAt: true,
         updatedAt: true,
       },

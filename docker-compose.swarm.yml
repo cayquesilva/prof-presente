@@ -27,7 +27,6 @@ services:
       - prof-presente-internal
     depends_on:
       - prof_presente_db
-      - facial-service-py
     command: >
       sh -c "
         echo 'Aguardando 20 segundos extras para estabilização da rede...' &&
@@ -101,13 +100,11 @@ services:
     #   - /path/no/host/dos/modelos:/app/models # Exemplo de montagem de volume
     deploy:
       replicas: 1 # Comece com 1 réplica
-      # Considere adicionar constraints de recursos se o serviço for pesado
-      # resources:
-      #   limits:
-      #     cpus: '1.0'
-      #     memory: 1G
-      # placement:
-      #   constraints: [node.labels.purpose == compute] # Exemplo: rodar em nós específicos
+      resources:
+        limits:
+          memory: 16G # Exemplo: Limita a 2 Gigabytes de RAM
+        reservations:
+          memory: 10G # Exemplo: Tenta garantir pelo menos 1 Gigabyte de RAM
 
 volumes:
   db_data:

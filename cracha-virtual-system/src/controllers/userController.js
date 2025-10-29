@@ -43,7 +43,7 @@ const callFacialServiceIndex = async (userId, photoUrl) => {
       {
         userId: userId,
         photoUrl: photoUrl,
-      },
+      }
     );
     console.log(`[Facial Service] Indexação bem-sucedida para ${userId}.`);
     return response.data.descriptor; // Retorna o descritor (array de números)
@@ -142,6 +142,7 @@ const getUserById = async (req, res) => {
         address: true,
         photoUrl: true,
         role: true,
+        hasConsentFacialRecognition: true,
         createdAt: true,
         updatedAt: true,
         _count: {

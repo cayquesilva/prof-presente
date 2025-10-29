@@ -27,6 +27,9 @@ RUN npm prune --production
 # Começamos de uma imagem Node limpa e leve
 FROM node:18-alpine
 
+# Instala as fontes DejaVu no estágio final para que estejam disponíveis para a aplicação
+RUN apk add --no-cache ttf-dejavu
+
 # Define o diretório de trabalho
 WORKDIR /app
 

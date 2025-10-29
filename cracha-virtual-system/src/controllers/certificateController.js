@@ -72,12 +72,12 @@ const generateCertificate = async (req, res) => {
     // 2. Cria SVGs para os textos
     const nameSvg = `<svg width="800" height="100"><text x="0" y="${
       config.name.fontSize || 24
-    }" font-family="sans-serif" font-size="${
+    }" font-family="DejaVu Sans" font-size="${
       config.name.fontSize || 24
     }" fill="${config.name.color || "#000000"}">${user.name}</text></svg>`;
     const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
       config.hours.fontSize || 18
-    }" font-family="sans-serif" font-size="${
+    }" font-family="DejaVu Sans" font-size="${
       config.hours.fontSize || 18
     }" fill="${
       config.hours.color || "#333333"
