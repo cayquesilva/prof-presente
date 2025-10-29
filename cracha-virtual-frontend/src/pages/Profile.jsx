@@ -139,7 +139,6 @@ const Profile = () => {
       });
       setPhotoPreview(getAssetUrl(userData.photoUrl));
       setConsentFacial(userData.hasConsentFacialRecognition || false);
-      console.log(userData.hasConsentFacialRecognition);
     }
   }, [userData]);
 
