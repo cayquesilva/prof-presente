@@ -124,6 +124,7 @@ const getAllEvents = async (req, res) => {
         badgeTemplateConfig: true,
         certificateTemplateUrl: true,
         certificateTemplateConfig: true,
+        parentId: true,
         _count: {
           select: {
             enrollments: {
