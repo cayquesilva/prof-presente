@@ -710,7 +710,8 @@ const sendEventCertificates = async (req, res) => {
         if (totalMilliseconds === 0) {
           throw new Error("Participação não resultou em horas (duração 0).");
         }
-        const totalHours = (totalMilliseconds / (1000 * 60 * 60)).toFixed(1);
+        const roundedHours = Math.round(totalMilliseconds / (1000 * 60 * 60));
+        const totalHours = roundedHours.toString().padStart(2, "0");
 
         // 7. Gerar o PDF (usando a função auxiliar)
         const pdfBytes = await generateCertificatePdf(

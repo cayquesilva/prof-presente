@@ -57,8 +57,8 @@ const generateCertificate = async (req, res) => {
         attendedEvents.add(checkin.eventId);
       }
     });
-    const totalHours = (totalMilliseconds / (1000 * 60 * 60)).toFixed(1);
-
+    const roundedHours = Math.round(totalMilliseconds / (1000 * 60 * 60));
+    const totalHours = roundedHours.toString().padStart(2, "0");
     // 5. Gerar o PDF (lógica similar à do crachá)
     // 1. Carrega a imagem de fundo (template)
     const templatePath = path.join(
