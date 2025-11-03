@@ -6,6 +6,8 @@ const fs = require("fs/promises");
 const path = require("path");
 const { sendEmail } = require("../utils/email");
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Corrige a data armazenada no banco (que foi salva como UTC por engano)
  * para um objeto Date que reflete o fuso horário correto (-03:00) para comparação.
@@ -794,6 +796,7 @@ const sendEventCertificates = async (req, res) => {
           });
         }
       }
+      await delay(2000);
     }
   } catch (error) {
     console.error("Erro CRÍTICO ao iniciar o envio de certificados:", error);
