@@ -1198,9 +1198,9 @@ const Admin = () => {
                                   <TableCell className="text-right text-xs">
                                     {/* Exibe a data apenas se houver uma */}
                                     {report.sentAt
-                                      ? new Date(report.sentAt).toLocaleString(
-                                          "pt-BR"
-                                        )
+                                      ? new Date(
+                                          report.CreatedAt
+                                        ).toLocaleString("pt-BR")
                                       : "—"}
                                   </TableCell>
                                 </TableRow>
