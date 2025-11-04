@@ -13,6 +13,7 @@ const {
   uploadCertificateTemplate,
   sendEventCertificates,
   getCertificateLogsForEvent,
+  uploadEventThumbnailController,
 } = require("../controllers/eventController");
 
 const { authenticateToken, requireAdmin } = require("../middleware/auth");
@@ -20,6 +21,7 @@ const { authenticateToken, requireAdmin } = require("../middleware/auth");
 const {
   uploadBadgeTemplate,
   uploadCertificate,
+  uploadEventThumbnail,
 } = require("../middleware/upload");
 
 // Listar todos os eventos (público)
@@ -59,6 +61,14 @@ router.put(
 
 // Deletar evento (apenas admin)
 router.delete("/:id", authenticateToken, requireAdmin, deleteEvent);
+
+router.post(
+  "/:id/thumbnail",
+  authenticateToken,
+  requireAdmin,
+  uploadEventThumbnail, // Middleware de upload
+  uploadEventThumbnailController // Controller
+);
 
 //Criar certificados para o evento
 router.post(

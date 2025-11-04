@@ -16,6 +16,8 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { Calendar, MapPin, Users, Search } from "lucide-react";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+
 // --- NOVO: Componente de Card Reutilizável ---
 const EventCard = ({ event }) => {
   const formatDate = (dateString) => {
@@ -42,8 +44,29 @@ const EventCard = ({ event }) => {
 
   const eventStatus = getEventStatus(event.startDate, event.endDate);
 
+  // Constrói a URL completa da imagem
+  const eventImageUrl = event.imageUrl
+    ? event.imageUrl.startsWith("http") // Se for URL externa (http)
+      ? event.imageUrl
+      : `${API_BASE_URL}${event.imageUrl}` // Se for local (ex: /uploads/...)
+    : null; // Se for nula
+
   return (
     <Card className="hover:shadow-lg transition-shadow flex flex-col">
+      {/* --- IMAGEM ADICIONADA AQUI --- */}
+      {eventImageUrl ? (
+        <img
+          src={eventImageUrl}
+          alt={event.title}
+          className="w-full h-40 object-cover" // Ajuste a altura (h-40) como preferir
+        />
+      ) : (
+        // Placeholder se não houver imagem
+        <div className="w-full h-40 bg-gray-200 flex items-center justify-center">
+          <Calendar className="h-12 w-12 text-gray-400" />
+        </div>
+      )}
+      {/* --- FIM DA IMAGEM --- */}
       <CardHeader>
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">

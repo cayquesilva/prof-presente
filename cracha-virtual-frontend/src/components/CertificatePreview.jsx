@@ -133,7 +133,7 @@ const CertificatePreview = ({ templateImage, config, onConfigChange }) => {
   return (
     <div>
       <h4 className="font-medium mb-2">Pré-visualização</h4>
-      <div className="p-4 border rounded-lg bg-gray-200 flex justify-center items-center">
+      <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
         {templateImage ? (
           <canvas
             ref={canvasRef}
@@ -141,6 +141,7 @@ const CertificatePreview = ({ templateImage, config, onConfigChange }) => {
               maxWidth: "100%",
               height: "auto",
               cursor: draggingElement ? "grabbing" : "grab",
+              backgroundcolor: "#ccc",
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}

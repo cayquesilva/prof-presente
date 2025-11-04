@@ -123,10 +123,44 @@ const uploadCertificate = multer({
   limits: { fileSize: 1024 * 1024 * 5 }, // 5MB
 }).single("certificateTemplate");
 
+// --- NOVO STORAGE PARA CAPAS DE EVENTO ---
+const eventThumbnailStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/events/"; // Salva em /uploads/events/
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    // timestamp-id_do_evento-nome_original.ext
+    const uniqueSuffix = Date.now() + "-" + req.params.id;
+    const extension = path.extname(file.originalname);
+    cb(null, uniqueSuffix + extension);
+  },
+});
+
+// Middleware de upload para capas
+const uploadEventThumbnail = multer({
+  storage: eventThumbnailStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limite de 5MB
+  fileFilter: (req, file, cb) => {
+    // Filtro para aceitar apenas imagens
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Erro: Apenas arquivos de imagem são permitidos!"));
+  },
+}).single("eventThumbnail"); // 'eventThumbnail' é o nome do campo no FormData
+
 module.exports = {
   uploadProfilePhoto,
   uploadBadgeTemplate,
   uploadInsignia,
   handleUploadError,
   uploadCertificate,
+  uploadEventThumbnail,
 };

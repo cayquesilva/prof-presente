@@ -908,6 +908,37 @@ const getCertificateLogsForEvent = async (req, res) => {
   }
 };
 
+// --- NOVA FUNÇÃO PARA UPLOAD DA CAPA ---
+const uploadEventThumbnailController = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ error: "Nenhum arquivo de imagem foi enviado." });
+    }
+
+    // Normaliza o caminho para salvar no banco (ex: /uploads/events/...)
+    const imageUrl = `/${req.file.path.replace(/\\/g, "/")}`;
+
+    // Atualiza o evento no banco com a nova URL
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { imageUrl },
+      select: { id: true, imageUrl: true }, // Retorna só o necessário
+    });
+
+    res.json({
+      message: "Imagem de capa atualizada com sucesso!",
+      event: updatedEvent,
+    });
+  } catch (error) {
+    console.error("Erro no upload da capa do evento:", error);
+    res.status(500).json({ error: "Erro interno do servidor." });
+  }
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -920,4 +951,5 @@ module.exports = {
   uploadCertificateTemplate,
   sendEventCertificates,
   getCertificateLogsForEvent,
+  uploadEventThumbnailController,
 };

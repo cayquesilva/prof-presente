@@ -119,6 +119,10 @@ const Admin = () => {
 
   const [badgeTemplatePreviewUrl, setBadgeTemplatePreviewUrl] = useState(null);
 
+  const [eventThumbnailFile, setEventThumbnailFile] = useState(null);
+  const [eventThumbnailPreviewUrl, setEventThumbnailPreviewUrl] =
+    useState(null);
+
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ["admin-events"],
     queryFn: async () => {
@@ -289,6 +293,34 @@ const Admin = () => {
     },
   });
 
+  // --- ADICIONE ESTA NOVA MUTATION ---
+  const uploadThumbnailMutation = useMutation({
+    mutationFn: async ({ id, formData }) => {
+      const response = await api.post(`/events/${id}/thumbnail`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // Atualiza os dados no cache
+      queryClient.invalidateQueries(["admin-events"]);
+      queryClient.invalidateQueries(["events"]);
+
+      // ATUALIZA O ESTADO LOCAL: Isso atualiza a preview sem fechar o modal
+      setEditingEvent((prev) => ({ ...prev, imageUrl: data.event.imageUrl }));
+
+      toast.success("Imagem de capa salva com sucesso!");
+      // Limpa os arquivos para o próximo upload
+      setEventThumbnailFile(null);
+      setEventThumbnailPreviewUrl(null);
+    },
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.error || "Erro ao salvar imagem de capa."
+      );
+    },
+  });
+
   const resetForm = () => {
     setEventForm({
       title: "",
@@ -325,6 +357,8 @@ const Admin = () => {
       hoursFontSize: "",
       hoursColor: "#333333",
     });
+    setEventThumbnailFile(null);
+    setEventThumbnailPreviewUrl(null);
   };
 
   const handleSubmit = (e) => {
@@ -403,6 +437,9 @@ const Admin = () => {
         hoursColor: config.hours?.color || "#333333",
       });
     }
+
+    setEventThumbnailFile(null);
+    setEventThumbnailPreviewUrl(null);
   };
 
   const handleFileChange = (e) => {
@@ -539,6 +576,30 @@ const Admin = () => {
     }
   };
 
+  const handleThumbnailFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEventThumbnailFile(file);
+      if (eventThumbnailPreviewUrl) {
+        URL.revokeObjectURL(eventThumbnailPreviewUrl);
+      }
+      setEventThumbnailPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleThumbnailSubmit = (e) => {
+    e.preventDefault();
+    if (!editingEvent || !eventThumbnailFile) {
+      toast.info("Por favor, selecione um arquivo de imagem primeiro.");
+      return;
+    }
+
+    const formData = new FormData();
+    // 'eventThumbnail' deve bater com o nome do campo no middleware
+    formData.append("eventThumbnail", eventThumbnailFile);
+    uploadThumbnailMutation.mutate({ id: editingEvent.id, formData });
+  };
+
   // Efeito para limpar as URLs de preview ao desmontar o componente ou ao mudar a URL
   useEffect(() => {
     return () => {
@@ -548,6 +609,9 @@ const Admin = () => {
       }
       if (certificateTemplatePreviewUrl) {
         URL.revokeObjectURL(certificateTemplatePreviewUrl);
+      }
+      if (eventThumbnailPreviewUrl) {
+        URL.revokeObjectURL(eventThumbnailPreviewUrl);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -666,6 +730,8 @@ const Admin = () => {
                 if (!open) {
                   setEditingEvent(null);
                   resetForm();
+                  setEventThumbnailFile(null);
+                  setEventThumbnailPreviewUrl(null);
                 }
               }}
             >
@@ -831,10 +897,80 @@ const Admin = () => {
                   </div>
                 </form>
 
+                {/* ===== INÍCIO DO NOVO BLOCO DE UPLOAD DE CAPA ===== */}
+                {editingEvent && (
+                  <form
+                    onSubmit={handleThumbnailSubmit}
+                    className="space-y-4 pt-4"
+                  >
+                    <Separator />
+                    <h3 className="text-lg font-semibold pt-4">
+                      Imagem de Capa do Evento
+                    </h3>
+                    <div className="p-4 border rounded-lg space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="eventThumbnail">
+                          Anexar Imagem (.jpg, .png)
+                        </Label>
+                        <Input
+                          id="eventThumbnail"
+                          type="file"
+                          onChange={handleThumbnailFileChange}
+                          accept="image/png, image/jpeg, image/webp"
+                        />
+                      </div>
+
+                      {/* Preview da Imagem */}
+                      <div className="w-full">
+                        <p className="text-sm font-medium mb-2">
+                          Pré-visualização:
+                        </p>
+                        <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {/* Prioriza o preview do novo upload */}
+                          {eventThumbnailPreviewUrl ? (
+                            <img
+                              src={eventThumbnailPreviewUrl}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : // Se não houver, mostra a imagem atual salva no evento
+                          editingEvent.imageUrl ? (
+                            <img
+                              src={`${API_BASE_URL}${editingEvent.imageUrl}`}
+                              alt="Imagem Atual"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            // Placeholder
+                            <span className="text-sm text-gray-500">
+                              Sem imagem de capa
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          type="submit"
+                          disabled={
+                            !eventThumbnailFile ||
+                            uploadThumbnailMutation.isPending
+                          }
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {uploadThumbnailMutation.isPending
+                            ? "Salvando Imagem..."
+                            : "Salvar Imagem de Capa"}
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
                 {editingEvent && (
                   <>
                     <Separator className="my-4" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-4 border rounded-lg space-y-4">
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">
                           Modelo do Crachá Impresso
@@ -947,22 +1083,8 @@ const Admin = () => {
                               }
                             />
                           </div>
-
-                          <div className="flex justify-end pt-2">
-                            <Button
-                              type="button"
-                              onClick={handleTemplateSubmit}
-                              disabled={uploadTemplateMutation.isPending}
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              {uploadTemplateMutation.isPending
-                                ? "Salvando..."
-                                : "Salvar Modelo"}
-                            </Button>
-                          </div>
                         </div>
                       </div>
-
                       <div className="space-y-4">
                         <BadgePreview
                           templateImage={
@@ -976,6 +1098,18 @@ const Admin = () => {
                           onConfigChange={setBadgeConfig}
                         />
                       </div>
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          type="button"
+                          onClick={handleTemplateSubmit}
+                          disabled={uploadTemplateMutation.isPending}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {uploadTemplateMutation.isPending
+                            ? "Salvando..."
+                            : "Salvar Modelo do Crachá"}
+                        </Button>
+                      </div>
                     </div>
 
                     <Separator className="my-4" />
@@ -984,7 +1118,7 @@ const Admin = () => {
                       onSubmit={handleCertificateTemplateSubmit}
                       className="space-y-4"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-4 border rounded-lg space-y-4">
                         <div className="space-y-4">
                           <h3 className="text-lg font-semibold">
                             Modelo do Certificado
@@ -1108,16 +1242,6 @@ const Admin = () => {
                                 }
                               />
                             </div>
-
-                            <div className="flex justify-end pt-2">
-                              <Button
-                                type="submit"
-                                disabled={uploadCertificateMutation.isPending}
-                              >
-                                <Upload className="h-4 w-4 mr-2" />
-                                Salvar Modelo
-                              </Button>
-                            </div>
                           </div>
                         </div>
 
@@ -1132,10 +1256,20 @@ const Admin = () => {
                           config={certificateConfig}
                           onConfigChange={setCertificateConfig}
                         />
+                        <div className="flex justify-end pt-2">
+                          <Button
+                            type="submit"
+                            disabled={uploadCertificateMutation.isPending}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Salvar Modelo do Certificado
+                          </Button>
+                        </div>
                       </div>
                     </form>
-                    {/* NOVA SEÇÃO: LOGS DE ENVIO */}
+
                     <Separator className="my-4" />
+
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">
                         Histórico de Envio de Certificados
