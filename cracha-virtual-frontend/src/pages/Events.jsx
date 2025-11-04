@@ -15,8 +15,7 @@ import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { Calendar, MapPin, Users, Search } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+import { getAssetUrl } from "../lib/utils";
 
 // --- NOVO: Componente de Card Reutilizável ---
 const EventCard = ({ event }) => {
@@ -45,11 +44,7 @@ const EventCard = ({ event }) => {
   const eventStatus = getEventStatus(event.startDate, event.endDate);
 
   // Constrói a URL completa da imagem
-  const eventImageUrl = event.imageUrl
-    ? event.imageUrl.startsWith("http") // Se for URL externa (http)
-      ? event.imageUrl
-      : `${API_BASE_URL}${event.imageUrl}` // Se for local (ex: /uploads/...)
-    : null; // Se for nula
+  const eventImageUrl = getAssetUrl(event.imageUrl); // <-- USE A FUNÇÃO AQUI
 
   return (
     <Card className="hover:shadow-lg transition-shadow flex flex-col">
@@ -58,7 +53,7 @@ const EventCard = ({ event }) => {
         <img
           src={eventImageUrl}
           alt={event.title}
-          className="w-full h-40 object-cover" // Ajuste a altura (h-40) como preferir
+          className="w-full object-cover" // Ajuste a altura (h-40) como preferir
         />
       ) : (
         // Placeholder se não houver imagem

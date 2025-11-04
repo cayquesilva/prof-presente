@@ -66,8 +66,7 @@ import ReportsDashboard from "../components/ReportsDashboard";
 import CertificatePreview from "../components/CertificatePreview";
 import { Badge } from "../components/ui/badge";
 import { Combobox } from "../components/ui/combobox";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
+import { getAssetUrl } from "../lib/utils"; // <-- ADICIONE ESTA IMPORTAÇÃO
 
 const Admin = () => {
   const { isAdmin } = useAuth();
@@ -936,8 +935,7 @@ const Admin = () => {
                           ) : // Se não houver, mostra a imagem atual salva no evento
                           editingEvent.imageUrl ? (
                             <img
-                              src={`${API_BASE_URL}${editingEvent.imageUrl}`}
-                              alt="Imagem Atual"
+                              src={getAssetUrl(editingEvent.imageUrl)} // <-- USE A FUNÇÃO AQUI                              alt="Imagem Atual"
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -1089,9 +1087,7 @@ const Admin = () => {
                         <BadgePreview
                           templateImage={
                             badgeTemplatePreviewUrl ||
-                            (editingEvent.badgeTemplateUrl
-                              ? `${API_BASE_URL}${editingEvent.badgeTemplateUrl}`
-                              : null)
+                            getAssetUrl(editingEvent.badgeTemplateUrl)
                           }
                           config={badgeConfig}
                           qrCodeImageSrc="/sample-qrcode.png"
@@ -1249,9 +1245,7 @@ const Admin = () => {
                         <CertificatePreview
                           templateImage={
                             certificateTemplatePreviewUrl ||
-                            (editingEvent.certificateTemplateUrl
-                              ? `${API_BASE_URL}${editingEvent.certificateTemplateUrl}`
-                              : null)
+                            getAssetUrl(editingEvent.certificateTemplateUrl)
                           }
                           config={certificateConfig}
                           onConfigChange={setCertificateConfig}
