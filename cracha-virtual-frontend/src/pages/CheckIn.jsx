@@ -63,6 +63,15 @@ const CheckIn = () => {
     },
   });
 
+  // NOVO: Filtra os eventos para mostrar apenas os que estão "Em Andamento"
+  const ongoingEvents = eventsData?.events?.filter((event) => {
+    const now = new Date();
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
+    // Retorna true apenas se a data/hora atual estiver ENTRE o início e o fim
+    return start <= now && end >= now;
+  });
+
   // Buscar usuários por nome
   const { data: usersData } = useQuery({
     queryKey: ["users-search", debouncedSearch, selectedEvent],
@@ -280,12 +289,18 @@ const CheckIn = () => {
               <SelectValue placeholder="Selecione um evento" />
             </SelectTrigger>
             <SelectContent>
-              {eventsData?.events?.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.title} -{" "}
-                  {new Date(event.startDate).toLocaleDateString("pt-BR")}
-                </SelectItem>
-              ))}
+              {ongoingEvents?.length > 0 ? (
+                ongoingEvents.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.title} -{" "}
+                    {new Date(event.startDate).toLocaleDateString("pt-BR")}
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-gray-500">
+                  Nenhum evento ocorrendo no momento.
+                </div>
+              )}
             </SelectContent>
           </Select>
         </CardContent>

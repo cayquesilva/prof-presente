@@ -107,6 +107,7 @@ const Events = () => {
           page: pageParam,
           limit: 9,
           search: debouncedSearchTerm,
+          upcoming: true,
         },
       });
       return response.data;

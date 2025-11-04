@@ -63,8 +63,7 @@ const getAllEvents = async (req, res) => {
     }
 
     if (upcoming === "true") {
-      const adjustedDate = new Date(Date.now() - 3 * 60 * 60 * 1000);
-      baseWhere.startDate = { gte: adjustedDate };
+      baseWhere.endDate = { gte: new Date() };
     }
 
     // Construção da cláusula final de visibilidade
