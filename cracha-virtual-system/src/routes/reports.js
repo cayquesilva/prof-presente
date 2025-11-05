@@ -13,7 +13,11 @@ const {
   getReportFilterOptions,
 } = require("../controllers/reportController");
 
-const { authenticateToken, requireAdmin } = require("../middleware/auth");
+const {
+  authenticateToken,
+  requireAdmin,
+  requireAdminOrOrganizer,
+} = require("../middleware/auth");
 
 // --- ROTAS ESPECÍFICAS PRIMEIRO ---
 
@@ -21,7 +25,7 @@ const { authenticateToken, requireAdmin } = require("../middleware/auth");
 router.get(
   "/filters/options",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getReportFilterOptions
 );
 
@@ -29,7 +33,7 @@ router.get(
 router.get(
   "/frequency/by-filter",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getFilteredFrequencyReport
 );
 
@@ -39,7 +43,7 @@ router.get(
 router.get(
   "/checkins/:eventId",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getCheckinReport
 );
 
@@ -47,7 +51,7 @@ router.get(
 router.get(
   "/frequency/:eventId",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getFrequencyReport
 );
 
@@ -55,7 +59,7 @@ router.get(
 router.get(
   "/workplace/:workplaceId",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getWorkplaceReport
 );
 
@@ -63,7 +67,7 @@ router.get(
 router.get(
   "/event-summary/:eventId",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getEventSummaryReport
 );
 
