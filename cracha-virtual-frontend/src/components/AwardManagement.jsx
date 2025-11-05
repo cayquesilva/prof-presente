@@ -24,8 +24,8 @@ import {
 } from "./ui/table";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { getAssetUrl } from "../lib/utils"; // NOVO: Para resolver a URL da imagem
 
-const API_BASE_URL = import.meta.env.VITE_API_URL.replace("/api", "");
 
 const AwardManagement = () => {
   const queryClient = useQueryClient();
@@ -82,7 +82,7 @@ const AwardManagement = () => {
         description: award.description,
         criteria: award.criteria,
       });
-      setPreviewUrl(award.imageUrl ? `${API_BASE_URL}${award.imageUrl}` : null);
+      setPreviewUrl(award.imageUrl ? getAssetUrl(award.imageUrl) : null);
     } else {
       setForm({ name: "", description: "", criteria: "" });
       setPreviewUrl(null);

@@ -35,7 +35,7 @@ const registerValidation = [
     .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
   body("contractType")
     .optional()
-    .isIn(["EFETIVO", "PRESTADOR"])
+    .isIn(["EFETIVO", "PRESTADOR", "ESTUDANTE"])
     .withMessage("Tipo de vínculo inválido"),
   body("workShifts")
     .optional()
@@ -49,7 +49,7 @@ const registerValidation = [
     .isArray()
     .withMessage("Segmentos de ensino devem ser um array."),
   body("teachingSegments.*")
-    .isIn(["INFANTIL", "FUNDAMENTAL1", "FUNDAMENTAL2", "EJA", "ADMINISTRATIVO"])
+    .isIn(["INFANTIL", "FUNDAMENTAL1", "FUNDAMENTAL2", "EJA", "ADMINISTRATIVO", "SUPERIOR"])
     .withMessage("Segmento de ensino inválido."),
 ];
 

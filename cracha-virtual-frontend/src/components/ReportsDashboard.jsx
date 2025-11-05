@@ -46,6 +46,7 @@ import { Combobox } from "./ui/combobox";
 import { Separator } from "./ui/separator";
 
 const teachingSegmentOptions = [
+  { value: "SUPERIOR", label: "Superior" },
   { value: "ADMINISTRATIVO", label: "Administrativo" },
   { value: "INFANTIL", label: "Ed. Infantil" },
   { value: "FUNDAMENTAL1", label: "Fundamental I" },
@@ -56,6 +57,7 @@ const teachingSegmentOptions = [
 const contractTypeOptions = [
   { value: "EFETIVO", label: "Efetivo" },
   { value: "PRESTADOR", label: "Prestador" },
+  { value: "ESTUDANTE", label: "Estudante" },
 ];
 
 const ReportsDashboard = () => {

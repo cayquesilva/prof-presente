@@ -48,6 +48,7 @@ const workShiftOptions = [
 ];
 
 const teachingSegmentOptions = [
+  { value: "SUPERIOR", label: "Superior" },
   { value: "ADMINISTRATIVO", label: "Administrativo" },
   { value: "INFANTIL", label: "Ed. Infantil" },
   { value: "FUNDAMENTAL1", label: "Fundamental I" },
@@ -552,6 +553,7 @@ const Register = () => {
                     <SelectContent>
                       <SelectItem value="EFETIVO">Efetivo</SelectItem>
                       <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                      <SelectItem value="ESTUDANTE">Estudante</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
