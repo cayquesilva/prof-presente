@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     isAdmin: user?.role === "ADMIN",
     isGestor: user?.role === "GESTOR_ESCOLA",
+    isOrg: user?.role === "ORGANIZER",
     updateAuthUser, // Exporta a função unificada
   };
 

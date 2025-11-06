@@ -40,7 +40,7 @@ import { getAssetUrl } from "../lib/utils"; // NOVO: Importa a função auxiliar
 import AppTour from "./AppTour";
 
 const Layout = ({ children }) => {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isOrg } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -111,11 +111,11 @@ const Layout = ({ children }) => {
       id: "nav-link-meu-perfil",
     },
     { name: "Avaliações", href: "/evaluations", icon: Star },
-    ...(isAdmin || user?.role === "CHECKIN_COORDINATOR"
+    ...(isAdmin || user?.role === "CHECKIN_COORDINATOR" || isOrg
       ? [{ name: "Check-in", href: "/check-in", icon: QrCode }]
       : []),
     { name: "Ranking de Checkins", href: "/ranking", icon: Trophy },
-    ...(isAdmin || user?.role === "GESTOR_ESCOLA"
+    ...(isAdmin || user?.role === "GESTOR_ESCOLA" || isOrg
       ? [{ name: "Administração", href: "/admin", icon: Shield }]
       : []),
   ];
