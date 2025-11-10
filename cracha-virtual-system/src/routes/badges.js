@@ -9,6 +9,7 @@ const {
   searchUsersByName,
   generateMissingBadges,
   getMissingBadgesCount,
+  downloadMyUserBadge,
 } = require("../controllers/badgeController");
 
 const {
@@ -36,6 +37,14 @@ router.get(
   getUserBadge
 );
 router.get("/my-badge", authenticateToken, getMyUserBadge);
+
+// O middleware 'authenticateToken' garante que só o usuário logado baixe seu crachá.
+router.get(
+  "/download",
+  authenticateToken,
+  downloadMyUserBadge
+);
+
 router.post(
   "/validate",
   authenticateToken,

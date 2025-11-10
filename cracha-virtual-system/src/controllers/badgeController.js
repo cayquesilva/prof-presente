@@ -2,6 +2,8 @@
 // Ele gerencia apenas o crachá universal do usuário.
 const { prisma } = require("../config/database");
 const { generateQRCode } = require("../utils/qrcode");
+const nodeHtmlToImage = require("node-html-to-image");
+const { generateBadgeHtml } = require("../utils/badgeService");
 
 // Função auxiliar para gerar um código legível para o crachá.
 const generateBadgeCode = (userName) => {
@@ -444,6 +446,60 @@ const getMissingBadgesCount = async (req, res) => {
   }
 };
 
+/**
+ * Gera e envia o crachá do usuário logado como um arquivo PNG para download.
+ * Usa a mesma lógica HTML da confirmação de e-mail.
+ */
+const downloadMyUserBadge = async (req, res) => {
+  try {
+    const userId = req.user.id; // Pego pelo middleware authenticateToken
+
+    // 1. Buscar todos os dados necessários (usuário, crachá, premiações)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    const userBadge = await prisma.userBadge.findUnique({
+      where: { userId },
+    });
+
+    // Busca as 5 primeiras premiações (assim como no frontend)
+    const userAwardsData = await prisma.userAward.findMany({
+      where: { userId },
+      include: { award: true }, // Inclui os dados do 'award'
+      take: 5,
+      orderBy: { awardedAt: "desc" }, // Garante que pegamos as mais recentes
+    });
+
+    if (!user || !userBadge) {
+      return res
+        .status(404)
+        .json({ error: "Dados do usuário ou crachá não encontrados." });
+    }
+
+    // 2. Gerar o HTML (a "fonte da verdade" do seu e-mail)
+    const badgeHtml = await generateBadgeHtml(user, userBadge, userAwardsData);
+
+    // 3. Converter o HTML em um Buffer de imagem PNG
+    const imageBuffer = await nodeHtmlToImage({
+      html: badgeHtml,
+      type: "png",
+      quality: 100,
+    });
+
+    // 4. Enviar a imagem como um anexo de download
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="cracha_${user.name.replace(/\s+/g, "_")}.png"`
+    );
+    res.send(imageBuffer);
+  } catch (error) {
+    console.error("Erro ao gerar PNG do crachá no backend:", error);
+    res.status(500).json({ error: "Erro ao gerar imagem do crachá." });
+  }
+};
+
 module.exports = {
   createUserBadge,
   getUserBadge,
@@ -452,4 +508,5 @@ module.exports = {
   searchUsersByName,
   generateMissingBadges,
   getMissingBadgesCount,
+  downloadMyUserBadge,
 };

@@ -241,7 +241,7 @@ const login = async (req, res) => {
 
     if (!user) {
       return res.status(401).json({
-        error: "Credenciais inválidas",
+        error: "Credenciais inválidas. Verifique seu email e senha.",
       });
     }
 
@@ -250,7 +250,7 @@ const login = async (req, res) => {
 
     if (!passwordMatch) {
       return res.status(401).json({
-        error: "Credenciais inválidas",
+        error: "Credenciais inválidas. Verifique seu email e senha.",
       });
     }
 

@@ -108,14 +108,35 @@ const generateBadgeHtml = (user, badge, awards = []) => {
     .join("");
 
   const badgeHtml = `
-    <div style="width: 500px; height: 300px; border-radius: 1rem; color: white; background: linear-gradient(to bottom right, #1f2937, #111827, #000); padding: 24px; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <div style="width: 320px; height: 512px; border-radius: 1rem; color: white; background: linear-gradient(to bottom right, #1f2937, #111827, #000); padding: 24px; font-family: Arial, sans-serif; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
 
-      <div style="text-align: center; padding: 10px">
-        <h2 style="font-size: 1.5rem; font-weight: bold; margin: 0;">${user.name}</h2>
+      <!-- 1. HEADER: Logo e Insígnias -->
+      <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+        <img src="${logoUrl}" alt="Logo" style="height: 28px;" />
+        <div style="display: flex; gap: 8px;">
+          ${awardsHtml}
+        </div>
       </div>
 
+      <!-- 2. MEIO: Avatar e Nome -->
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 8px;">
+        <img 
+          src="${userPhotoSource}" 
+          alt="${user.name}" 
+          style="width: 96px; height: 96px; border-radius: 50%; margin-bottom: 4px; border: 2px solid rgba(255,255,255,0.8); object-fit: cover;" 
+        />
+        <h2 style="font-size: 1.5rem; font-weight: bold; margin: 0; line-height: 1.2;">
+          ${user.name}
+        </h2>
+      </div>
+
+      <!-- 3. BAIXO: QR Code -->
       <div style="background-color: rgba(255, 255, 255, 0.95); padding: 16px; border-radius: 0.75rem; width: 100%; text-align: center;">
-        <img src="${qrCodeUrl}" alt="QR Code" style="width: 100%; max-width: 180px; height: auto; margin: 0 auto;" />
+        <img 
+          src="${qrCodeUrl}" 
+          alt="QR Code" 
+          style="width: 100%; max-width: 256px; height: auto; margin: 0 auto;" 
+        />
         <p style="margin-top: 8px; font-family: monospace; font-size: 0.875rem; font-weight: bold; letter-spacing: 0.05em; color: #1f2937;">
           ${badge.badgeCode}
         </p>
