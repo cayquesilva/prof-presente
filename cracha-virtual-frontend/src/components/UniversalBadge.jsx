@@ -25,12 +25,8 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
     domtoimage
       .toPng(node, {
         quality: 1.0, // Qualidade da imagem (para PNG não tem tanto efeito quanto JPG)
-        width: node.offsetWidth * 2, // Opcional: Aumenta a resolução para melhor qualidade
-        height: node.offsetHeight * 2, // Opcional: Aumenta a resolução para melhor qualidade
-        style: {
-          transform: "scale(2)", // Garante que o conteúdo seja renderizado no tamanho maior
-          transformOrigin: "top left",
-        },
+        width: node.offsetWidth, // Opcional: Aumenta a resolução para melhor qualidade
+        height: node.offsetHeight, // Opcional: Aumenta a resolução para melhor qualidade
       })
       .then((dataUrl) => {
         const link = document.createElement("a");
@@ -60,7 +56,14 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
     <div className="flex flex-col items-center gap-6">
       <div
         ref={badgeRef}
-        className="relative w-[320px] h-[512px] rounded-2xl shadow-lg overflow-hidden text-white bg-gradient-to-br from-gray-800 via-gray-900 to-black p-6"
+        className="relative w-[320px] h-[512px] rounded-2xl shadow-lg overflow-hidden p-6"
+        // AJUSTE 1: Removemos as classes de gradiente e cor do Tailwind
+        // e as substituímos por estilos inline que o dom-to-image-more entende.
+        style={{
+          color: "#ffffff",
+          background:
+            "linear-gradient(to bottom right, #1f2937, #111827, #000000)",
+        }}
       >
         <div className="relative z-10 flex flex-col items-center justify-between h-full">
           <div className="flex items-center justify-between w-full">
@@ -73,20 +76,38 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
                     src={getAssetUrl(award.imageUrl)}
                     alt={award.name}
                     title={award.name}
-                    className="h-7 w-7 rounded-full border-1 border-white/50"
+                    className="h-7 w-7 rounded-full"
+                    // AJUSTE 1: Corrigindo a borda para RGBA
+                    style={{
+                      borderWidth: "1px",
+                      borderColor: "rgba(255, 255, 255, 0.5)",
+                    }}
+                    // AJUSTE 2: Adicionando crossOrigin, que estava faltando
+                    crossOrigin="anonymous"
                   />
                 ))}
               </div>
             )}
           </div>
           <div className="flex flex-col items-center text-center mt-2">
-            <Avatar className="w-24 h-24 border-2 border-white/80 mb-1 shadow-lg">
+            <Avatar
+              className="w-24 h-24 mb-1 shadow-lg"
+              // AJUSTE 1: Corrigindo a borda para RGBA
+              style={{
+                borderWidth: "2px",
+                borderColor: "rgba(255, 255, 255, 0.8)",
+              }}
+            >
               <AvatarImage
                 src={getAssetUrl(user.photoUrl)}
                 alt={user.name}
-                crossOrigin="anonymous"
+                crossOrigin="anonymous" // Isto já estava correto
               />
-              <AvatarFallback className="text-3xl bg-gray-700">
+              <AvatarFallback
+                className="text-3xl"
+                // AJUSTE 1: Corrigindo o fundo para HEX
+                style={{ backgroundColor: "#374151" }}
+              >
                 {user.name
                   ?.split(" ")
                   .map((n) => n[0])
@@ -98,7 +119,11 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               {user.name}
             </h2>
           </div>
-          <div className="flex flex-col items-center text-center bg-white/95 p-4 rounded-xl backdrop-blur-sm w-[100%]">
+          <div
+            className="flex flex-col items-center text-center p-4 rounded-xl backdrop-blur-sm w-[100%]"
+            // AJUSTE 1: Corrigindo o fundo para RGBA
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.95)" }}
+          >
             <QRCode
               size={256}
               style={{ height: "auto", maxWidth: "100%", width: "100%" }}
@@ -109,7 +134,11 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
               })}
               viewBox={`0 0 256 256`}
             />
-            <p className="mt-2 font-mono text-sm font-bold tracking-wider text-gray-800">
+            <p
+              className="mt-2 font-mono text-sm font-bold tracking-wider"
+              // AJUSTE 1: Corrigindo o texto para HEX
+              style={{ color: "#1f2937" }}
+            >
               {badge.badgeCode}
             </p>
           </div>
