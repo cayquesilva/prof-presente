@@ -94,7 +94,7 @@ const generateBadgeHtml = (user, badge, awards = []) => {
 
   // Este é o layout CORRETO (320x512)
   const badgeHtml = `
-    <div style="width: 320px; height: 560px; border-radius: 1rem; color: white; background-color: #111827; background: linear-gradient(to bottom right, #1f2937, #111827, #000); padding: 24px; font-family: Arial, sans-serif; box-sizing: border-box;">
+    <div id="badge-container" style="width: 320px; height: 560px; border-radius: 1rem; color: white; background-color: #111827; background: linear-gradient(to bottom right, #1f2937, #111827, #000); padding: 24px; font-family: Arial, sans-serif; box-sizing: border-box;">
       
       <table style="width: 100%; height: 100%; border-collapse: collapse;">
         

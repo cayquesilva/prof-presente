@@ -485,6 +485,7 @@ const downloadMyUserBadge = async (req, res) => {
       html: badgeHtml,
       type: "png",
       quality: 100,
+      selector: '#badge-container',
       puppeteerArgs: {
         args: [
           '--no-sandbox',
