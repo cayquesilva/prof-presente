@@ -5,6 +5,10 @@ FROM node:18-alpine AS builder
 # Define o diretório de trabalho
 WORKDIR /app
 
+# Diz ao Puppeteer (usado pelo node-html-to-image) para não baixar o Chrome.
+# Nós vamos instalá-lo manualmente no estágio de produção.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 # Copia os arquivos de definição de pacotes
 COPY package*.json ./
 
@@ -28,7 +32,16 @@ RUN npm prune --production
 FROM node:18-alpine
 
 # Instala as fontes DejaVu no estágio final para que estejam disponíveis para a aplicação
-RUN apk add --no-cache ttf-dejavu
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-dejavu
+
+# Diz ao Puppeteer onde encontrar o executável do Chromium
+ENV PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium-browser"
 
 # Define o diretório de trabalho
 WORKDIR /app

@@ -58,7 +58,7 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
     <div className="flex flex-col items-center gap-6">
       <div
         ref={badgeRef}
-        className="relative w-[320px] h-[512px] rounded-2xl shadow-lg overflow-hidden text-white bg-gradient-to-br from-gray-800 via-gray-900 to-black p-6" // AJUSTE 1: Removemos as classes de gradiente e cor do Tailwind
+        className="relative w-[320px] h-[560px] rounded-2xl shadow-lg overflow-hidden text-white bg-gradient-to-br from-gray-800 via-gray-900 to-black p-6" // AJUSTE 1: Removemos as classes de gradiente e cor do Tailwind
       >
         <div className="relative z-10 flex flex-col items-center justify-between h-full">
           <div className="flex items-center justify-between w-full">
