@@ -485,6 +485,13 @@ const downloadMyUserBadge = async (req, res) => {
       html: badgeHtml,
       type: "png",
       quality: 100,
+      puppeteerArgs: {
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage', // Também é uma boa prática em Docker
+        ],
+      },
     });
 
     // 4. Enviar a imagem como um anexo de download
