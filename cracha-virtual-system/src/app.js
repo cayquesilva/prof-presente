@@ -9,6 +9,13 @@ const { setupSecurity, apiLimiter } = require('./middleware/security');
 
 const app = express();
 
+// Log para depuração de ambiente (v22-FIX-ASSETS)
+const dbUrl = process.env.DATABASE_URL || "";
+const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ":****@");
+console.log(`[v22-FIX-ASSETS] Database Host: ${dbUrl.split('@')[1] || 'não definido'}`);
+console.log(`[v22-FIX-ASSETS] DATABASE_URL (mascarada): ${maskedUrl}`);
+console.log(`[v22-FIX-ASSETS] NODE_ENV: ${process.env.NODE_ENV}`);
+
 // Confiar no proxy (Traefik) para o rate-limit e logs de IP
 app.set('trust proxy', 1);
 
@@ -22,10 +29,22 @@ connectDatabase();
 // Middleware básico
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? (process.env.CORS_ORIGIN || "https://eduagenda.simplisoft.com.br")
-        : ["http://localhost:5173", "http://localhost:3001"],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "https://eduagenda.simplisoft.com.br",
+        "http://localhost:5173",
+        "http://localhost:3001"
+      ];
+
+      // Permitir requisições sem origin (como apps mobile ou curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );

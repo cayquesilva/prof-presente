@@ -3,9 +3,9 @@ version: "3.8"
 services:
   # Serviço do Backend (API)
   backend:
-    image: cayquesilva/prof-presente-backend:latest
+    image: vydhal/eduagenda-backend:latest
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@prof_presente_db:5432/${POSTGRES_DB}?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       - JWT_SECRET=${JWT_SECRET}
       - PORT=${PORT}
       - NODE_ENV=${NODE_ENV}
@@ -28,7 +28,7 @@ services:
       - SimpliSoft
       - prof-presente-internal
     depends_on:
-      - prof_presente_db
+      - db
     command: >
       sh -c "
         echo 'Aguardando 20 segundos extras para estabilização da rede...' &&
@@ -43,7 +43,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=SimpliSoft"
-        - "traefik.http.routers.prof-presente-api.rule=Host(`api.checkin.simplisoft.com.br`)"
+        - "traefik.http.routers.prof-presente-api.rule=Host(`api.eduagenda.simplisoft.com.br`)"
         - "traefik.http.routers.prof-presente-api.entrypoints=websecure"
         - "traefik.http.routers.prof-presente-api.tls.certresolver=letsencryptresolver"
         - "traefik.http.services.prof-presente-api.loadbalancer.server.port=3000"
@@ -61,9 +61,9 @@ services:
 
   # Serviço do Frontend (React + Nginx)
   frontend:
-    image: cayquesilva/prof-presente-frontend:latest
+    image: vydhal/eduagenda-frontend:latest
     environment:
-      - VITE_API_URL=https://api.checkin.simplisoft.com.br/api
+      - VITE_API_URL=https://api.eduagenda.simplisoft.com.br/api
     networks:
       - SimpliSoft
     depends_on:
@@ -73,7 +73,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=SimpliSoft"
-        - "traefik.http.routers.prof-presente-app.rule=Host(`checkin.simplisoft.com.br`)"
+        - "traefik.http.routers.prof-presente-app.rule=Host(`eduagenda.simplisoft.com.br`)"
         - "traefik.http.routers.prof-presente-app.entrypoints=websecure"
         - "traefik.http.routers.prof-presente-app.tls.certresolver=letsencryptresolver"
         - "traefik.http.services.prof-presente-app.loadbalancer.server.port=80"

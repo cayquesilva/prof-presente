@@ -160,13 +160,9 @@ function App() {
                     <Route
                       path="/events"
                       element={
-                        <ProtectedRoute>
-                          <Layout>
-                            <LazyWrapper>
-                              <Events />
-                            </LazyWrapper>
-                          </Layout>
-                        </ProtectedRoute>
+                        <LazyWrapper>
+                          <Events />
+                        </LazyWrapper>
                       }
                     />
 

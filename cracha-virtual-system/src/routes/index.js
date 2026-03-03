@@ -21,6 +21,7 @@ const settingsRoutes = require("./settings");
 const spaceRoutes = require("./spaces");
 const equipmentRoutes = require("./equipments");
 const proposalRoutes = require("./proposals");
+const categoryRoutes = require("./categories");
 
 // Configurar rotas
 router.use("/auth", authRoutes);
@@ -42,6 +43,7 @@ router.use("/banners", bannerRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/spaces", spaceRoutes);
 router.use("/equipments", equipmentRoutes);
+router.use("/categories", categoryRoutes);
 
 // Rota de status da API
 router.get("/status", (req, res) => {

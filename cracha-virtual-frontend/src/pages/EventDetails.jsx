@@ -10,6 +10,8 @@ import { toast } from "sonner"; // Assuming sonner is used for notifications bas
 import { getAssetUrl } from "../lib/utils";
 import { useBranding } from "../contexts/BrandingContext";
 
+import PublicLayout from "../components/PublicLayout";
+
 const EventDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -31,12 +33,8 @@ const EventDetails = () => {
   const { data: enrollmentData, isLoading: isLoadingEnrollment } = useQuery({
     queryKey: ["enrollment-status", id, user?.id],
     queryFn: async () => {
-      // Busca inscrições do usuário filtrando por este evento
-      // Nota: A API getUserEnrollments pode retornar todas, então filtramos no front se n suportar filtro na API
-      // Mas a API.js sugere params. Vamos tentar passar eventId.
       const response = await enrollmentsAPI.getUserEnrollments(user.id);
       const enrollments = response.data?.enrollments || response.data || [];
-      // Encontra a inscrição para este evento
       return enrollments.find(e => e.eventId === id);
     },
     enabled: !!user && !!id,
@@ -51,7 +49,6 @@ const EventDetails = () => {
       toast.success("Inscrição realizada com sucesso!");
       queryClient.invalidateQueries(["event", id]);
       queryClient.invalidateQueries(["enrollment-status", id, user?.id]);
-      // navigate("/my-enrollments"); // Opcional: redirecionar ou manter na página
     },
     onError: (error) => {
       const msg = error.response?.data?.message || "Erro ao realizar inscrição.";
@@ -96,19 +93,23 @@ const EventDetails = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#137fec]" />
-      </div>
+      <PublicLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#137fec]" />
+        </div>
+      </PublicLayout>
     );
   }
 
   if (isError || !event) {
     return (
-      <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] flex flex-col items-center justify-center text-slate-500">
-        <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Evento não encontrado</h2>
-        <Link to="/" className="text-[#137fec] hover:underline">Voltar para o início</Link>
-      </div>
+      <PublicLayout>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-slate-500">
+          <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Evento não encontrado</h2>
+          <Link to="/" className="text-[#137fec] hover:underline">Voltar para o início</Link>
+        </div>
+      </PublicLayout>
     );
   }
 
@@ -134,7 +135,7 @@ const EventDetails = () => {
   // Calculate status/capacity
   const isFull = event.maxAttendees && event.enrolledCount >= event.maxAttendees;
   const isClosed = new Date(event.endDate) < new Date();
-  const canRegister = (!isClosed && !isFull) || isEnrolled; // Se já inscrito, ok (para visualizar)
+  const canRegister = (!isClosed && !isFull) || isEnrolled;
 
   // Default image if missing
   const bgImage = event.imageUrl
@@ -142,47 +143,8 @@ const EventDetails = () => {
     : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop";
 
   return (
-    <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#0d141b] dark:text-slate-100 font-sans">
-      {/* Componente de Sorteio (Overlay) */}
-      {/* Componente de Sorteio (Overlay) - Removido */}
-
-      {/* HEADER: Condicional */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#101922]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center gap-3">
-              {logoUrl ? (
-                <img src={logoUrl} alt={platformName} className="h-8 w-auto object-contain" />
-              ) : (
-                <div className="text-[#137fec]">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
-                  </svg>
-                </div>
-              )}
-              <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{platformName}</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              {user ? (
-                <Link to="/dashboard">
-                  <Button variant="outline" className="gap-2 border-slate-200 dark:border-slate-700">
-                    <LayoutDashboard className="w-4 h-4" />
-                    Ir para Dashboard
-                  </Button>
-                </Link>
-              ) : (
-                <Link to="/login">
-                  <Button className="bg-[#137fec] hover:bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20">
-                    Entrar / Cadastrar-se
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <PublicLayout>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
           <Link to="/" className="hover:text-[#137fec]">Início</Link>
@@ -470,7 +432,6 @@ const EventDetails = () => {
               </div>
             </div>
 
-            {/* Info Card */}
             <div className="bg-slate-900 text-white rounded-xl p-6 relative overflow-hidden shadow-xl">
               <div className="relative z-10 space-y-3">
                 <h4 className="font-bold">Dúvidas sobre o evento?</h4>
@@ -484,31 +445,10 @@ const EventDetails = () => {
                 <AlertCircle className="w-24 h-24" />
               </div>
             </div>
-
           </aside>
         </div>
-      </main >
-
-      <footer className="bg-white dark:bg-[#101922] border-t border-slate-200 dark:border-slate-800 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3 opacity-50">
-              {logoUrl ? (
-                <img src={logoUrl} alt={platformName} className="h-6 w-auto object-contain grayscale" />
-              ) : (
-                <div className="w-8 h-8 bg-slate-200 rounded-md flex items-center justify-center">
-                  <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
-                  </svg>
-                </div>
-              )}
-              <p className="text-sm font-bold text-slate-500">{platformName}</p>
-            </div>
-            <p className="text-xs text-slate-400">© 2026 {platformName}. Todos os direitos reservados.</p>
-          </div>
-        </div>
-      </footer>
-    </div >
+      </main>
+    </PublicLayout>
   );
 };
 

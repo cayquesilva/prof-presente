@@ -53,9 +53,13 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/server.js ./server.js
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/start.sh ./start.sh
+
+# Dá permissão de execução ao script
+RUN chmod +x ./start.sh
 
 # Expõe a porta que a aplicação usa
 EXPOSE 3000
 
 # Comando para iniciar a aplicação, referenciando o script 'start' do seu package.json
-CMD [ "npm", "start" ]
+CMD [ "/bin/sh", "./start.sh" ]

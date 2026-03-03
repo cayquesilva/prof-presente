@@ -66,9 +66,11 @@ import {
   Pencil, // Re-adicionado
   Image as ImageIcon,
   Palette,
+  Tags,
 } from "lucide-react";
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
+import AdminCategories from "../components/AdminCategories";
 import BadgePreview from "../components/BadgePreview";
 import AwardManagement from "../components/AwardManagement";
 import WorkplaceManagement from "../components/WorkplaceManagement";
@@ -134,6 +136,7 @@ const Admin = () => {
     schedule: "",
     speakerName: "",
     speakerRole: "",
+    categoryId: "",
     isPrivate: false,
   });
 
@@ -167,6 +170,14 @@ const Admin = () => {
     queryFn: async () => {
       const response = await api.get("/events?limit=100");
       return response.data.events;
+    },
+  });
+
+  const { data: categoriesArray } = useQuery({
+    queryKey: ["categories-list"],
+    queryFn: async () => {
+      const response = await api.get("/categories");
+      return response.data;
     },
   });
 
@@ -397,6 +408,7 @@ const Admin = () => {
       schedule: "",
       speakerName: "",
       speakerRole: "",
+      categoryId: "",
     });
 
     setBadgeTemplateFile(null);
@@ -439,6 +451,7 @@ const Admin = () => {
       maxAttendees: eventForm.maxAttendees
         ? parseInt(eventForm.maxAttendees)
         : null,
+      categoryId: eventForm.categoryId || null,
       isPrivate: eventForm.isPrivate,
     };
 
@@ -469,6 +482,7 @@ const Admin = () => {
       schedule: event.schedule || "",
       speakerName: event.speakerName || "",
       speakerRole: event.speakerRole || "",
+      categoryId: event.categoryId || "",
       isPrivate: event.isPrivate ?? false,
     });
 
@@ -773,6 +787,10 @@ const Admin = () => {
                   <Palette className="h-4 w-4 mr-2" />
                   Personalização
                 </TabsTrigger>
+                <TabsTrigger value="categories">
+                  <Tags className="h-4 w-4 mr-2" />
+                  Categorias
+                </TabsTrigger>
               </>
             )}
             <TabsTrigger value="reports">
@@ -838,6 +856,10 @@ const Admin = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <AdminCategories />
         </TabsContent>
 
         <TabsContent value="events" className="space-y-4">
@@ -945,6 +967,25 @@ const Admin = () => {
                           Selecione se este evento faz parte de um evento maior (ex:
                           uma palestra dentro de um congresso).
                         </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Categoria do Evento (Opcional)</Label>
+                        <Combobox
+                          options={[
+                            {
+                              value: "",
+                              label: "Sem categoria",
+                            },
+                            ...(categoriesArray?.map((c) => ({ value: c.id, label: c.name })) || []),
+                          ]}
+                          value={eventForm.categoryId}
+                          onSelect={(value) =>
+                            setEventForm({ ...eventForm, categoryId: value })
+                          }
+                          placeholder="Selecione a categoria..."
+                          searchPlaceholder="Pesquisar categoria..."
+                        />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">

@@ -20,8 +20,6 @@ enum UserRole {
   CERIMONIAL // Gestão de espaços e eventos
 }
 
-
-
 model Question {
   id        String   @id @default(uuid())
   text      String
@@ -30,11 +28,11 @@ model Question {
   eventId   String
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
-  isApproved Boolean @default(false)
-  isAnswered Boolean @default(false)
+
+  isApproved    Boolean @default(false)
+  isAnswered    Boolean @default(false)
   isHighlighted Boolean @default(false) // Pergunta em destaque no telão
-  votes      Int     @default(0)
+  votes         Int     @default(0)
 
   @@index([eventId])
 }
@@ -82,47 +80,46 @@ enum TeachingSegment {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  name        String
-  email       String    @unique
-  password    String
-  cpf         String?   @unique
-  birthDate   DateTime
-  phone       String?
-  address     String?
-  photoUrl    String?
-  role        UserRole  @default(TEACHER)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  neighborhood    String?         // Bairro
+  id                          String           @id @default(uuid())
+  name                        String
+  email                       String           @unique
+  password                    String
+  cpf                         String?          @unique
+  birthDate                   DateTime
+  phone                       String?
+  address                     String?
+  photoUrl                    String?
+  role                        UserRole         @default(TEACHER)
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
+  neighborhood                String? // Bairro
   // workShifts      WorkShift[]     // <-- ADICIONE ESTA (NO PLURAL) - SQLite não suporta array
-  workShifts      String?         // Adaptado para SQLite
-  contractType    ContractType?   // Tipo de vínculo
+  workShifts                  String? // Adaptado para SQLite
+  contractType                ContractType? // Tipo de vínculo
   // teachingSegments TeachingSegment[] // <-- ADICIONE ESTA (NO PLURAL) - SQLite não suporta array
-  teachingSegments String?        // Adaptado para SQLite
-  professionId    String?         @map("profession_id")
-  certificateLogs CertificateLog[]
-  hasCompletedOnboarding  Boolean   @default(false) @map("has_completed_onboarding")
-  hasConsentFacialRecognition Boolean @default(false) @map("has_consent_facial_recognition")
-  faceDescriptor              Json?   @map("face_descriptor") // Armazena o vetor facial
+  teachingSegments            String? // Adaptado para SQLite
+  professionId                String?          @map("profession_id")
+  certificateLogs             CertificateLog[]
+  hasCompletedOnboarding      Boolean          @default(false) @map("has_completed_onboarding")
+  hasConsentFacialRecognition Boolean          @default(false) @map("has_consent_facial_recognition")
+  faceDescriptor              Json?            @map("face_descriptor") // Armazena o vetor facial
 
   // Relacionamentos
-  enrollments   Enrollment[]
-  userAwards    UserAward[]
-  userBadge     UserBadge?
-  profession    Profession? @relation(fields: [professionId], references: [id], onDelete: SetNull) // Novo relacionamento
-  workplaces    Workplace[] @relation("UserWorkplaces")
-  createdEvents Event[] @relation("CreatedEvents") // Eventos criados pelo usuário
-  questions     Question[]
-  wonGiveaways  Giveaway[]
-  staffEvents   EventStaff[]
-  trackEnrollments TrackEnrollment[]
+  enrollments       Enrollment[]
+  userAwards        UserAward[]
+  userBadge         UserBadge?
+  profession        Profession?        @relation(fields: [professionId], references: [id], onDelete: SetNull) // Novo relacionamento
+  workplaces        Workplace[]        @relation("UserWorkplaces")
+  createdEvents     Event[]            @relation("CreatedEvents") // Eventos criados pelo usuário
+  questions         Question[]
+  wonGiveaways      Giveaway[]
+  staffEvents       EventStaff[]
+  trackEnrollments  TrackEnrollment[]
   spaceReservations SpaceReservation[]
-
 
   @@index([email])
   @@index([role])
-  @@index([professionId]) 
+  @@index([professionId])
   @@index([createdAt])
   @@map("users")
 }
@@ -141,7 +138,7 @@ model Profession {
 }
 
 model Event {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   title        String
   description  String
   startDate    DateTime
@@ -149,19 +146,19 @@ model Event {
   location     String
   maxAttendees Int?
   imageUrl     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // NOVOS CAMPOS: Detalhes do evento
-  schedule        String?   // Descrição da programação (texto livre ou JSON string)
-  speakerName     String?   @map("speaker_name")
-  speakerRole     String?   @map("speaker_role")
-  speakerPhotoUrl String?   @map("speaker_photo_url")
-  mapLink         String?   @map("map_link")
+  schedule        String? // Descrição da programação (texto livre ou JSON string)
+  speakerName     String? @map("speaker_name")
+  speakerRole     String? @map("speaker_role")
+  speakerPhotoUrl String? @map("speaker_photo_url")
+  mapLink         String? @map("map_link")
 
-   // NOVOS CAMPOS: Para o crachá impresso personalizado
-  badgeTemplateUrl    String?   @map("badge_template_url")
-  badgeTemplateConfig Json?     @map("badge_template_config")
+  // NOVOS CAMPOS: Para o crachá impresso personalizado
+  badgeTemplateUrl    String? @map("badge_template_url")
+  badgeTemplateConfig Json?   @map("badge_template_config")
 
   // --- NOVOS CAMPOS PARA EVENTOS PRIVADOS ---
   isPrivate Boolean @default(false)
@@ -169,24 +166,24 @@ model Event {
   creator   User?   @relation("CreatedEvents", fields: [creatorId], references: [id], onDelete: SetNull)
 
   // Relacionamento de Pai-Filho
-  parentId     String?     @map("parent_id")
-  parent       Event?      @relation("EventTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children     Event[]     @relation("EventTree")
+  parentId String? @map("parent_id")
+  parent   Event?  @relation("EventTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Event[] @relation("EventTree")
 
   // Campo para o template do certificado (apenas no evento "pai")
-  certificateTemplateUrl String? @map("certificate_template_url")
-  certificateTemplateConfig Json? @map("certificate_template_config")
-  certificateLogs CertificateLog[]
-
-
+  certificateTemplateUrl    String?          @map("certificate_template_url")
+  certificateTemplateConfig Json?            @map("certificate_template_config")
+  certificateLogs           CertificateLog[]
 
   // Relacionamentos
-  enrollments Enrollment[]
-  questions   Question[]
-  giveaways   Giveaway[]
-  staff       EventStaff[]
-  trackEvents TrackEvent[]
+  enrollments  Enrollment[]
+  questions    Question[]
+  giveaways    Giveaway[]
+  staff        EventStaff[]
+  trackEvents  TrackEvent[]
   userCheckins UserCheckin[]
+  category     Category?     @relation(fields: [categoryId], references: [id])
+  categoryId   String?       @map("category_id")
 
   @@index([startDate])
   @@index([endDate])
@@ -194,6 +191,18 @@ model Event {
   @@index([creatorId])
   @@index([createdAt])
   @@map("events")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String   @default("#137fec")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  events Event[]
+
+  @@map("categories")
 }
 
 model Enrollment {
@@ -272,18 +281,18 @@ model CourseEvaluation {
 }
 
 model UserBadge {
-  id             String    @id @default(uuid())
-  userId         String    @unique
-  badgeCode      String    @unique
-  qrCodeUrl      String
-  badgeImageUrl  String
-  issuedAt       DateTime  @default(now())
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  badgeCode     String   @unique
+  qrCodeUrl     String
+  badgeImageUrl String
+  issuedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relacionamentos
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userCheckins   UserCheckin[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userCheckins UserCheckin[]
 
   @@index([badgeCode])
   @@index([issuedAt])
@@ -292,13 +301,13 @@ model UserBadge {
 }
 
 model UserCheckin {
-  id            String      @id @default(uuid())
-  userBadgeId   String
-  eventId       String
-  checkinTime   DateTime    @default(now())
-  location      String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id          String   @id @default(uuid())
+  userBadgeId String
+  eventId     String
+  checkinTime DateTime @default(now())
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relacionamentos
   userBadge UserBadge @relation(fields: [userBadgeId], references: [id], onDelete: Cascade)
@@ -334,16 +343,16 @@ model CertificateLog {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
   status    String // "SUCCESS" ou "FAILED"
-  details   String?  // Para mensagens de erro
+  details   String? // Para mensagens de erro
 
-  eventId   String?
-  event     Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  trackId   String?
-  track     LearningTrack? @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId String?
+  track   LearningTrack? @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
   @@index([trackId])
@@ -357,8 +366,8 @@ model EventStaff {
   role      UserRole // CHECKIN_COORDINATOR ou SPEAKER
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
   @@index([userId])
@@ -368,18 +377,18 @@ model EventStaff {
 }
 
 model LearningTrack {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
   description String
   imageUrl    String?
 
   // Campo para o template do certificado
-  certificateTemplateUrl String? @map("certificate_template_url")
-  certificateTemplateConfig Json? @map("certificate_template_config")
-  certificateLogs CertificateLog[]
+  certificateTemplateUrl    String?          @map("certificate_template_url")
+  certificateTemplateConfig Json?            @map("certificate_template_config")
+  certificateLogs           CertificateLog[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relacionamentos
   events      TrackEvent[]
@@ -403,14 +412,14 @@ model TrackEvent {
 }
 
 model TrackEnrollment {
-  id             String    @id @default(uuid())
-  trackId        String
-  userId         String
-  progress       Float     @default(0)
-  isCompleted    Boolean   @default(false)
-  completedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  trackId     String
+  userId      String
+  progress    Float     @default(0)
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   track LearningTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -418,7 +427,6 @@ model TrackEnrollment {
   @@unique([trackId, userId])
   @@map("track_enrollments")
 }
-
 
 model Banner {
   id          String   @id @default(uuid())
@@ -435,14 +443,14 @@ model Banner {
 }
 
 model SystemSettings {
-  id             String   @id @default(uuid())
-  platformName   String   @default("SEDUC Eventos")
-  logoUrl        String?  @map("logo_url")
-  faviconUrl     String?  @map("favicon_url")
-  primaryColor   String   @default("#137fec") @map("primary_color")
-  reservationConfig Json?   @map("reservation_config") // Configurações dinâmicas de equipamentos e setores
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  platformName      String   @default("SEDUC Eventos")
+  logoUrl           String?  @map("logo_url")
+  faviconUrl        String?  @map("favicon_url")
+  primaryColor      String   @default("#137fec") @map("primary_color")
+  reservationConfig Json?    @map("reservation_config") // Configurações dinâmicas de equipamentos e setores
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
 }
@@ -480,25 +488,25 @@ enum ReservationStatus {
 }
 
 model SpaceReservation {
-  id             String            @id @default(uuid())
-  spaceId        String            @map("space_id")
-  requesterId    String            @map("requester_id")
-  eventTitle     String            @map("event_title")
-  requesterName  String            @map("requester_name")
-  oneDocNumber   String?           @map("one_doc_number") // Número do chamado 1Doc
-  needsCerimonial Boolean          @default(false) @map("needs_cerimonial") // Necessita de suporte do cerimonial
-  eventScriptUrl String?           @map("event_script_url") // Link Google Docs da minuta/roteiro
-  sector         String
-  date           DateTime
-  startTime      DateTime?         @map("start_time")
-  endTime        DateTime?         @map("end_time")
-  description    String?
-  status         ReservationStatus @default(PENDING)
-  observations   String?
-  equipment      Json?             // { som: boolean, mic: boolean, datashow: boolean, notebook: boolean, mesa: boolean, cadeiras: boolean }
-  reallocatedTo  String?           @map("reallocated_to")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
+  id              String            @id @default(uuid())
+  spaceId         String            @map("space_id")
+  requesterId     String            @map("requester_id")
+  eventTitle      String            @map("event_title")
+  requesterName   String            @map("requester_name")
+  oneDocNumber    String?           @map("one_doc_number") // Número do chamado 1Doc
+  needsCerimonial Boolean           @default(false) @map("needs_cerimonial") // Necessita de suporte do cerimonial
+  eventScriptUrl  String?           @map("event_script_url") // Link Google Docs da minuta/roteiro
+  sector          String
+  date            DateTime
+  startTime       DateTime?         @map("start_time")
+  endTime         DateTime?         @map("end_time")
+  description     String?
+  status          ReservationStatus @default(PENDING)
+  observations    String?
+  equipment       Json? // { som: boolean, mic: boolean, datashow: boolean, notebook: boolean, mesa: boolean, cadeiras: boolean }
+  reallocatedTo   String?           @map("reallocated_to")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
 
   space     Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   requester User  @relation(fields: [requesterId], references: [id], onDelete: Cascade)

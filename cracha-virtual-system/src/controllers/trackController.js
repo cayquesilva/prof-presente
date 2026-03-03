@@ -180,14 +180,105 @@ const enrollInTrack = async (req, res) => {
             return res.status(400).json({ error: "Você já está inscrito nesta trilha" });
         }
 
-        const enrollment = await prisma.trackEnrollment.create({
+        const trackEnrollment = await prisma.trackEnrollment.create({
             data: { trackId, userId }
         });
+
+        // --- Lógica de inscrição automática nos eventos da trilha ---
+        // 1. Buscar todos os eventos associados a esta trilha
+        const trackEvents = await prisma.trackEvent.findMany({
+            where: { trackId },
+            include: {
+                event: {
+                    include: {
+                        _count: {
+                            select: { enrollments: { where: { status: "APPROVED" } } }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 2. Buscar inscrições existentes do usuário nesses eventos
+        const eventIds = trackEvents.map(te => te.eventId);
+        const existingEnrollments = await prisma.enrollment.findMany({
+            where: {
+                userId,
+                eventId: { in: eventIds },
+            }
+        });
+        const enrolledEventIds = new Set(existingEnrollments.map(e => e.eventId));
+
+        const enrolledEvents = [];
+        const fullEvents = [];
+        const enrollmentsToCreate = [];
+        const enrollmentsToUpdate = [];
+
+        for (const te of trackEvents) {
+            const event = te.event;
+
+            // Verifica lotação
+            const isFull = event.maxAttendees && event._count.enrollments >= event.maxAttendees;
+
+            // Pula se o evento já terminou
+            if (new Date() > new Date(event.endDate)) {
+                continue;
+            }
+
+            const existingUserEnrollment = existingEnrollments.find(e => e.eventId === event.id);
+
+            if (existingUserEnrollment) {
+                // Se o usuário tem inscrição cancelada ou rejeitada e há vaga, podemos reativar
+                if (["CANCELLED", "REJECTED"].includes(existingUserEnrollment.status)) {
+                    if (isFull) {
+                        fullEvents.push({ id: event.id, title: event.title });
+                    } else {
+                        enrollmentsToUpdate.push(existingUserEnrollment.id);
+                        enrolledEvents.push({ id: event.id, title: event.title });
+                    }
+                }
+                // Se já for APPROVED, ele já está inscrito
+                continue;
+            }
+
+            // O usuário não tem inscrição
+            if (isFull) {
+                fullEvents.push({ id: event.id, title: event.title });
+            } else {
+                enrollmentsToCreate.push({
+                    userId,
+                    eventId: event.id,
+                    status: "APPROVED"
+                });
+                enrolledEvents.push({ id: event.id, title: event.title });
+            }
+        }
+
+        // 3. Realiza as inscrições em lote
+        if (enrollmentsToCreate.length > 0) {
+            await prisma.enrollment.createMany({
+                data: enrollmentsToCreate,
+                skipDuplicates: true
+            });
+        }
+
+        // 4. Reativa inscrições em lote
+        if (enrollmentsToUpdate.length > 0) {
+            await prisma.enrollment.updateMany({
+                where: { id: { in: enrollmentsToUpdate } },
+                data: { status: "APPROVED", enrollmentDate: new Date() }
+            });
+        }
 
         // Calcular progresso inicial (pode ser que ele já tenha feito check-in em eventos da trilha)
         await calculateAndSaveProgress(userId, trackId);
 
-        res.status(201).json(enrollment);
+        res.status(201).json({
+            message: "Inscrição na trilha realizada.",
+            trackEnrollment,
+            enrolledEvents,
+            fullEvents
+        });
     } catch (error) {
         console.error("Erro ao se inscrever na trilha:", error);
         res.status(500).json({ error: "Erro interno do servidor" });

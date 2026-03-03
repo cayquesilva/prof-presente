@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useDebounce } from "../hooks/useDebounce";
-import api from "../lib/api";
+import api, { categoriesAPI } from "../lib/api";
 import {
   Card,
   CardContent,
@@ -14,8 +14,15 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
-import { Calendar, MapPin, Users, Search } from "lucide-react";
+import { Calendar, MapPin, Users, Search, Filter } from "lucide-react";
 import { getAssetUrl } from "../lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 // --- NOVO: Componente de Card Reutilizável ---
 const EventCard = ({ event }) => {
@@ -60,7 +67,7 @@ const EventCard = ({ event }) => {
         <img
           src={eventImageUrl}
           alt={event.title}
-          className="w-full object-cover" // Ajuste a altura (h-40) como preferir
+          className="w-full h-48 object-cover" // Altura fixa para consistência
         />
       ) : (
         // Placeholder se não houver imagem
@@ -113,9 +120,60 @@ const EventCard = ({ event }) => {
   );
 };
 
+import PublicLayout from "../components/PublicLayout";
+
 const Events = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
+  const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");
+  const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // Sincroniza o estado quando a URL muda (ex: vindo da Home)
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get("category");
+    setSelectedCategory(categoryFromUrl || "all");
+
+    setStartDate(searchParams.get("startDate") || "");
+    setEndDate(searchParams.get("endDate") || "");
+  }, [searchParams]);
+
+  // Atualiza a URL quando os filtros mudam
+  const updateFilters = (newFilters) => {
+    const params = new URLSearchParams(searchParams);
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value && value !== "all") {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    setSearchParams(params);
+  };
+
+  const handleCategoryChange = (value) => {
+    setSelectedCategory(value);
+    updateFilters({ category: value });
+  };
+
+  const handleDateChange = (type, value) => {
+    if (type === 'start') {
+      setStartDate(value);
+      updateFilters({ startDate: value });
+    } else {
+      setEndDate(value);
+      updateFilters({ endDate: value });
+    }
+  };
+
+  const { data: categoriesArray } = useQuery({
+    queryKey: ["events-categories"],
+    queryFn: async () => {
+      const response = await categoriesAPI.getAll();
+      return response.data;
+    },
+  });
 
   const {
     data,
@@ -125,14 +183,16 @@ const Events = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["events", debouncedSearchTerm],
+    queryKey: ["events", debouncedSearchTerm, selectedCategory, startDate, endDate],
     queryFn: async ({ pageParam = 1 }) => {
       const response = await api.get("/events", {
         params: {
           page: pageParam,
           limit: 9,
           search: debouncedSearchTerm,
-          upcoming: true,
+          categoryId: selectedCategory === "all" ? undefined : selectedCategory,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         },
       });
       return response.data;
@@ -150,86 +210,148 @@ const Events = () => {
   const publicEvents = allEvents.filter((event) => !event.isPrivate);
 
   if (isLoading && allEvents.length === 0) {
-    return <div className="p-6">Carregando eventos...</div>;
+    return (
+      <PublicLayout>
+        <div className="max-w-7xl mx-auto p-6 md:p-12 flex justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-[#137fec] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-500 font-medium font-sans">Carregando eventos...</p>
+          </div>
+        </div>
+      </PublicLayout>
+    );
   }
 
   if (error) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-red-600">
-          Erro ao carregar eventos: {error.message}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Tentar novamente
-        </Button>
-      </div>
+      <PublicLayout>
+        <div className="max-w-7xl mx-auto p-6 text-center py-20">
+          <p className="text-red-600 font-sans">
+            Erro ao carregar eventos: {error.message}
+          </p>
+          <Button onClick={() => window.location.reload()} className="mt-4 bg-[#137fec]">
+            Tentar novamente
+          </Button>
+        </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="p-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Eventos</h1>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="Pesquisar por título, descrição ou local..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {allEvents.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-600">
-            {debouncedSearchTerm
-              ? "Nenhum evento encontrado para sua pesquisa."
-              : "Nenhum evento disponível para você no momento."}
-          </p>
+    <PublicLayout>
+      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12 space-y-8 font-sans">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">Eventos</h1>
+            <p className="text-slate-500">Explore e inscreva-se em eventos educacionais.</p>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* --- NOVA SEÇÃO DE EVENTOS PRIVADOS --- */}
-          {privateEvents.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-2xl font-bold">Eventos da sua Unidade</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {privateEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-              </div>
-            </section>
-          )}
 
-          {privateEvents.length > 0 && publicEvents.length > 0 && <Separator />}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-12 lg:col-span-5 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Pesquisar por título, descrição ou local..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none"
+              />
+            </div>
 
-          {/* --- NOVA SEÇÃO DE EVENTOS PÚBLICOS --- */}
-          {publicEvents.length > 0 && (
-            <section id="events-list" className="space-y-4">
-              {" "}
-              <h2 className="text-2xl font-bold">Eventos Públicos</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {publicEvents.map((event) => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
+            <div className="md:col-span-6 lg:col-span-3">
+              <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                <SelectTrigger className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-[#137fec]" />
+                    <SelectValue placeholder="Categoria" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Categorias</SelectItem>
+                  {categoriesArray?.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                        {cat.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Botão de Paginação "Carregar Mais" */}
-      <div className="flex justify-center mt-6">
-        {hasNextPage && (
-          <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? "Carregando..." : "Carregar Mais"}
-          </Button>
+            <div className="md:col-span-3 lg:col-span-2">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => handleDateChange('start', e.target.value)}
+                className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-xs"
+                placeholder="Início"
+              />
+            </div>
+
+            <div className="md:col-span-3 lg:col-span-2">
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => handleDateChange('end', e.target.value)}
+                className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none text-xs"
+                placeholder="Fim"
+              />
+            </div>
+          </div>
+        </div>
+
+        {allEvents.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">
+              {debouncedSearchTerm
+                ? "Nenhum evento encontrado para sua pesquisa."
+                : "Nenhum evento disponível para você no momento."}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* --- NOVA SEÇÃO DE EVENTOS PRIVADOS --- */}
+            {privateEvents.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="text-2xl font-bold">Eventos da sua Unidade</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {privateEvents.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {privateEvents.length > 0 && publicEvents.length > 0 && <Separator />}
+
+            {/* --- NOVA SEÇÃO DE EVENTOS PÚBLICOS --- */}
+            {publicEvents.length > 0 && (
+              <section id="events-list" className="space-y-4">
+                {" "}
+                <h2 className="text-2xl font-bold">Eventos Públicos</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {publicEvents.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
+
+        {/* Botão de Paginação "Carregar Mais" */}
+        <div className="flex justify-center mt-6">
+          {hasNextPage && (
+            <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+              {isFetchingNextPage ? "Carregando..." : "Carregar Mais"}
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 };
 

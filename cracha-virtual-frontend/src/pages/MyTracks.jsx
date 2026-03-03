@@ -55,9 +55,21 @@ const MyTracks = () => {
     // Mutação para se inscrever
     const enrollMutation = useMutation({
         mutationFn: (trackId) => tracksAPI.enroll(trackId),
-        onSuccess: () => {
+        onSuccess: (response) => {
             queryClient.invalidateQueries(['my-tracks']);
-            toast.success('Inscrição realizada com sucesso!');
+
+            const data = response?.data || {};
+            const enrolledEvents = data.enrolledEvents || [];
+            const fullEvents = data.fullEvents || [];
+
+            toast.success('Inscrição na trilha realizada com sucesso!');
+
+            if (enrolledEvents.length > 0) {
+                toast.success(`Inscrito automaticamente em ${enrolledEvents.length} evento(s) da trilha.`);
+            }
+            if (fullEvents.length > 0) {
+                toast.warning(`Atenção: ${fullEvents.length} evento(s) esgotados. Sua inscrição não pôde ser feita neles.`);
+            }
         },
         onError: (err) => {
             toast.error(err.response?.data?.error || 'Erro ao se inscrever');

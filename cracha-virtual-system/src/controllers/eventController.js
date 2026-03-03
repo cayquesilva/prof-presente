@@ -68,7 +68,7 @@ const checkValidation = (req, res) => {
 // Listar todos os eventos
 const getAllEvents = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, upcoming } = req.query;
+    const { page = 1, limit = 10, search, upcoming, categoryId, startDate, endDate } = req.query;
     const skip = (page - 1) * limit;
     const user = req.user; // Usuário autenticado pelo middleware
 
@@ -84,9 +84,25 @@ const getAllEvents = async (req, res) => {
     }
 
     if (upcoming === "true") {
-      // O evento permanece visível por até 4 horas (14.400.000 ms) após o término
-      const visibilityThreshold = new Date(Date.now() - 4 * 60 * 60 * 1000);
-      baseWhere.endDate = { gte: visibilityThreshold };
+      // O evento permanece visível por até 4 horas após o término (buffer padrão do sistema)
+      const now = new Date();
+      const threshold = new Date(now.getTime() - 4 * 60 * 60 * 1000); // 4h atrás
+      baseWhere.endDate = { gte: threshold };
+    }
+
+    // Filtros de período (Data Início e Fim)
+    if (startDate || endDate) {
+      baseWhere.AND = baseWhere.AND || [];
+      if (startDate) {
+        baseWhere.AND.push({ startDate: { gte: new Date(startDate) } });
+      }
+      if (endDate) {
+        baseWhere.AND.push({ endDate: { lte: new Date(endDate) } });
+      }
+    }
+
+    if (categoryId && categoryId !== 'all') {
+      baseWhere.categoryId = categoryId;
     }
 
     // Construção da cláusula final de visibilidade
@@ -174,6 +190,14 @@ const getAllEvents = async (req, res) => {
         speakerRole: true,
         speakerPhotoUrl: true,
         mapLink: true,
+        categoryId: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        },
         _count: {
           select: {
             enrollments: {
@@ -283,6 +307,7 @@ const createEvent = async (req, res) => {
       speakerName,
       speakerRole,
       speakerPhotoUrl,
+      categoryId,
     } = req.body;
 
     // 1. Pegamos o usuário logado que está fazendo a requisição
@@ -309,6 +334,7 @@ const createEvent = async (req, res) => {
       speakerName,
       speakerRole,
       speakerPhotoUrl,
+      categoryId: categoryId || null,
     };
 
     // 3. Se o criador for um GESTOR_ESCOLA ou ORGANIZER, associamos o criador
@@ -357,6 +383,7 @@ const updateEvent = async (req, res) => {
       speakerName,
       speakerRole,
       speakerPhotoUrl,
+      categoryId,
     } = req.body;
 
     // Verificar se o evento existe
@@ -399,6 +426,7 @@ const updateEvent = async (req, res) => {
     if (speakerName !== undefined) updateData.speakerName = speakerName;
     if (speakerRole !== undefined) updateData.speakerRole = speakerRole;
     if (speakerPhotoUrl !== undefined) updateData.speakerPhotoUrl = speakerPhotoUrl;
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null;
 
     // Atualizar evento
     const updatedEvent = await prisma.event.update({

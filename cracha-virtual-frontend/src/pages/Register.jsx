@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Eye, EyeOff, Loader2, ChevronsUpDown, X, User, Briefcase, MapPin } from "lucide-react";
+import LogoDefaultWhite from "../assets/logo-prof-presente-white.svg";
 import LogoDefault from "../assets/logo-prof-presente.svg";
 import { useBranding } from "../contexts/BrandingContext";
 import api from "../lib/api";
@@ -56,6 +57,16 @@ const teachingSegmentOptions = [
   { value: "FUNDAMENTAL2", label: "Fundamental II" },
   { value: "EJA", label: "EJA" },
 ];
+
+/** Helper para renderizar wrapper de campo com label */
+const FieldWrapper = ({ label, children, required = true }) => (
+  <div className="space-y-1.5">
+    <Label className="text-sm font-medium text-foreground">
+      {label} {required && <span className="text-red-500">*</span>}
+    </Label>
+    {children}
+  </div>
+);
 
 const Register = () => {
   const { platformName, logoUrl } = useBranding();
@@ -239,34 +250,24 @@ const Register = () => {
     setLoading(false);
   };
 
-  /** Helper para renderizar wrapper de campo com label */
-  const FieldWrapper = ({ label, children, required = true }) => (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-gray-700">
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
-      {children}
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="auth-container min-h-screen overflow-y-auto py-12 px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
         <img
-          src={logoUrl || LogoDefault}
+          src={logoUrl || LogoDefaultWhite}
           alt={platformName}
           className="mx-auto h-16 w-auto mb-4"
         />
-        <h2 className="text-3xl font-extrabold text-gray-900">
+        <h2 className="text-3xl font-extrabold text-foreground">
           {platformName}
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Crie sua conta no {platformName} para acessar o sistema.
         </p>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
-        <Card className="bg-white shadow-xl rounded-lg border-0">
+        <Card className="bg-card/80 backdrop-blur-sm border-border shadow-xl rounded-lg">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
               {error && (
@@ -558,8 +559,8 @@ const Register = () => {
 
             </form>
 
-            <div className="mt-8 text-center border-t pt-6">
-              <p className="text-sm text-gray-600">
+            <div className="mt-8 text-center border-t border-border pt-6">
+              <p className="text-sm text-muted-foreground">
                 Já possui uma conta?{" "}
                 <Link to="/login" className="font-semibold text-primary hover:underline">
                   Fazer Login

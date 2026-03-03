@@ -139,13 +139,13 @@ const Layout = ({ children }) => {
       ? [{ name: "Check-in", href: "/check-in", icon: QrCode }]
       : []),
     { name: "Ranking de Checkins", href: "/ranking", icon: Trophy },
-    ...(isAdmin || user?.role === "GESTOR_ESCOLA" || isOrg
+    ...(user && (isAdmin || user?.role === "GESTOR_ESCOLA" || isOrg)
       ? [
         { name: "Administração", href: "/admin", icon: Shield },
         { name: "Gerenciar Trilhas", href: "/admin/tracks", icon: GraduationCap }
       ]
       : []),
-    ...(isAdmin || isOrg || user?.role === "CERIMONIAL"
+    ...(user && (isAdmin || isOrg || user?.role === "CERIMONIAL")
       ? [{ name: "Gestão de Espaços", href: "/spaces", icon: Calendar, id: "nav-link-spaces" }]
       : []),
   ];
@@ -186,26 +186,28 @@ const Layout = ({ children }) => {
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t">
-        <div className="flex items-center space-x-3">
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={getAssetUrl(user?.photoUrl)} alt={user?.name} />
-            <AvatarFallback>
-              {user?.name
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </p>
+      {user && (
+        <div className="px-4 py-4 border-t">
+          <div className="flex items-center space-x-3">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={getAssetUrl(user?.photoUrl)} alt={user?.name} />
+              <AvatarFallback>
+                {user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -279,51 +281,58 @@ const Layout = ({ children }) => {
                   Instalar App
                 </Button>
               )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    id="user-avatar-button"
-                    variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={getAssetUrl(user?.photoUrl)}
-                        alt={user?.name}
-                      />
-                      <AvatarFallback>
-                        {user?.name
-                          ?.split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user?.name}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Perfil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="user-avatar-button"
+                      variant="ghost"
+                      className="relative h-8 w-8 rounded-full"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={getAssetUrl(user?.photoUrl)}
+                          alt={user?.name}
+                        />
+                        <AvatarFallback>
+                          {user?.name
+                            ?.split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.name}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Perfil</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link to="/login">
+                  <Button size="sm">Entrar</Button>
+                </Link>
+              )}
             </div>
           </div>
         </header>

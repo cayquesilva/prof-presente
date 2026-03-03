@@ -23,8 +23,7 @@ const prisma = new PrismaClient({
 
           if (after - before > 1000) {
             console.warn(
-              `Slow query detected: ${model}.${operation} took ${
-                after - before
+              `Slow query detected: ${model}.${operation} took ${after - before
               }ms`
             );
           }
@@ -65,7 +64,9 @@ async function connectDatabase() {
       "✅ Conectado ao banco de dados PostgreSQL com connection pooling"
     );
   } catch (error) {
-    console.error("❌ Erro ao conectar com o banco de dados:", error);
+    console.error("❌ [v12-DEBUG] Erro FATAL ao conectar com o banco de dados:");
+    console.error("Motivo:", error.message);
+    console.log("DICA: Se for P1000, verifique se o volume db_data no Portainer precisa ser deletado para aceitar as novas senhas.");
     process.exit(1);
   }
 }

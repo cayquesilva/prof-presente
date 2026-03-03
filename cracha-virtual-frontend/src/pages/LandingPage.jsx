@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { eventsAPI, tracksAPI, proposalsAPI } from "../lib/api";
+import { eventsAPI, tracksAPI, proposalsAPI, categoriesAPI } from "../lib/api";
+import { getAssetUrl } from "../lib/utils";
 import { useAuth } from "../hooks/useAuth.jsx";
 import { useTheme } from "../contexts/ThemeContext";
 import { Button } from "../components/ui/button";
@@ -135,14 +136,13 @@ const LandingPage = () => {
 
     // Fetch Public Events
     const { data: allEvents, isLoading, isError, error } = useQuery({
-        queryKey: ["landing-public-events-v3"], // Force refresh
+        queryKey: ["landing-public-events"],
         queryFn: async () => {
-            // We use public: true to ensure access for unauthenticated users
-            // We use limit: 100 to ensure we catch 'In Progress' events 
-            const response = await eventsAPI.getAll({ public: true, limit: 100 });
+            const response = await eventsAPI.getAll({ public: true, upcoming: true, limit: 100 });
             const data = response.data?.events || response.data;
             return Array.isArray(data) ? data : [];
         },
+        staleTime: 30000, // 30 seconds
     });
 
     // Fetch Public Tracks
@@ -152,8 +152,18 @@ const LandingPage = () => {
             const response = await tracksAPI.getAll();
             return Array.isArray(response.data) ? response.data : [];
         },
+        staleTime: 30000,
     });
 
+    // Fetch Categories
+    const { data: categoriesArray } = useQuery({
+        queryKey: ["landing-categories"],
+        queryFn: async () => {
+            const response = await categoriesAPI.getAll();
+            return response.data;
+        },
+        staleTime: 30000,
+    });
 
     // Client-side filtering for MODAL
     const searchResults = allEvents?.filter(event => {
@@ -166,8 +176,21 @@ const LandingPage = () => {
         );
     }) || [];
 
-    // Main grid always shows upcoming (no filter)
-    const upcomingEvents = allEvents?.slice(0, 6) || [];
+    // Main grid: Show events that are either in progress or upcoming
+    const upcomingEvents = allEvents?.filter(e => {
+        if (!e.endDate) return false;
+        const now = new Date();
+        const endDate = new Date(e.endDate);
+
+        // DEBUG: Se o título contém "Passado", removemos sumariamente
+        if (e.title?.toLowerCase().includes("passado")) return false;
+        if (e.title?.toLowerCase().includes("mock")) return false;
+
+        // Filtro de tempo restrito
+        return endDate.getTime() > now.getTime();
+    })
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+        .slice(0, 6) || [];
 
     const handleSearchClick = () => {
         setSearchModalOpen(true);
@@ -218,7 +241,7 @@ const LandingPage = () => {
                                         onClick={() => setSearchModalOpen(false)}
                                     >
                                         <div className="w-12 h-12 rounded-md bg-slate-200 shrink-0 overflow-hidden">
-                                            <img src={event.imageUrl || "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"} className="w-full h-full object-cover" />
+                                            <img src={event.imageUrl ? getAssetUrl(event.imageUrl) : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"} className="w-full h-full object-cover" />
                                         </div>
                                         <div>
                                             <h4 className="font-semibold text-sm group-hover:text-[#137fec]">{event.title}</h4>
@@ -339,23 +362,33 @@ const LandingPage = () => {
                 {/* HERO SECTION */}
                 <HeroCarousel />
 
-                {/* CATEGORY TABS (Static for prototype) */}
+                {/* CATEGORY TABS (Dynamic) */}
                 <section className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-                    <Button className="rounded-full bg-[#137fec] text-white hover:bg-[#137fec]/90 gap-2 px-6">
-                        <LayoutGrid className="h-5 w-5" /> Todos os Eventos
-                    </Button>
-                    <Button variant="outline" className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 gap-2 px-6 text-slate-700 dark:text-slate-200 border-none">
-                        <GraduationCap className="h-5 w-5" /> Pedagogia
-                    </Button>
-                    <Button variant="outline" className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 gap-2 px-6 text-slate-700 dark:text-slate-200 border-none">
-                        <Laptop className="h-5 w-5" /> Tecnologia
-                    </Button>
-                    <Button variant="outline" className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 gap-2 px-6 text-slate-700 dark:text-slate-200 border-none">
-                        <Palette className="h-5 w-5" /> Arte & Cultura
-                    </Button>
-                    <Button variant="outline" className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 gap-2 px-6 text-slate-700 dark:text-slate-200 border-none">
-                        <Users className="h-5 w-5" /> Gestão
-                    </Button>
+                    <Link to="/events">
+                        <Button className={`rounded-full gap-2 px-6 ${!searchTerm ? 'bg-[#137fec] text-white' : 'variant-outline text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800'}`}>
+                            <LayoutGrid className="h-5 w-5" /> Todos os Eventos
+                        </Button>
+                    </Link>
+                    {categoriesArray?.map((cat) => {
+                        // Map category name to icon
+                        let Icon = GraduationCap;
+                        if (cat.name.toLowerCase().includes('tecnologia')) Icon = Laptop;
+                        if (cat.name.toLowerCase().includes('arte') || cat.name.toLowerCase().includes('cultura')) Icon = Palette;
+                        if (cat.name.toLowerCase().includes('gestão')) Icon = Users;
+                        if (cat.name.toLowerCase().includes('ciência')) Icon = FlaskConical;
+
+                        return (
+                            <Link to={`/events?category=${cat.id}`} key={cat.id}>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-full border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 gap-2 px-6 text-slate-700 dark:text-slate-200 border-none"
+                                >
+                                    <Icon className="h-4 w-4" style={{ color: cat.color }} />
+                                    {cat.name}
+                                </Button>
+                            </Link>
+                        );
+                    })}
                 </section>
 
                 {/* LEARNING TRACKS SECTION (BENTO GRID) */}
@@ -464,11 +497,14 @@ const LandingPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8" id="events">
 
                     <div className="lg:col-span-8 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-2xl font-bold tracking-tight">Próximos Eventos</h3>
-                            <a href="#" className="text-[#137fec] text-sm font-semibold flex items-center gap-1 hover:underline">
-                                Ver Todos <ChevronRight className="h-4 w-4" />
-                            </a>
+                        <div className="flex items-center justify-between mb-8">
+                            <h3 className="text-3xl font-black tracking-tight drop-shadow-sm flex items-center gap-2">
+                                Próximos Eventos
+                                <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded">v22-FIX-ASSETS</span>
+                            </h3>
+                            <Link to="/events" className="text-[#137fec] hover:underline text-sm font-bold flex items-center gap-1 group">
+                                Ver Todos <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            </Link>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -488,12 +524,23 @@ const LandingPage = () => {
                             ) : (
                                 upcomingEvents.map(event => (
                                     <div key={event.id} className="bg-white dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:border-[#137fec]/50 transition-all hover:scale-[1.02] shadow-sm hover:shadow-lg group cursor-pointer">
-                                        <div className="relative h-48">
-                                            <img
-                                                src={event.imageUrl || "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"}
-                                                alt={event.title}
-                                                className="w-full h-full object-cover"
-                                            />
+                                        <div className="relative h-48 bg-slate-200 flex items-center justify-center overflow-hidden">
+                                            {event.imageUrl ? (
+                                                <img
+                                                    src={getAssetUrl(event.imageUrl)}
+                                                    alt={event.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <img
+                                                    src="/placeholder-event.jpg"
+                                                    alt="Placeholder"
+                                                    className="w-full h-full object-cover opacity-50"
+                                                    onError={(e) => {
+                                                        e.target.src = "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop";
+                                                    }}
+                                                />
+                                            )}
                                             <div className="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-lg text-center shadow-lg">
                                                 <span className="block text-xs font-bold text-[#137fec] uppercase">{getMonthAbbr(event.startDate)}</span>
                                                 <span className="block text-lg font-black dark:text-white leading-tight">{getDay(event.startDate)}</span>
