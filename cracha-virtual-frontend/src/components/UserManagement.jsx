@@ -300,6 +300,33 @@ const UserManagement = () => {
                         <p className="text-sm break-all">{user.email}</p>
                       </div>
 
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {user.professionName && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Profissão</p>
+                            <p className="capitalize">{user.professionName}</p>
+                          </div>
+                        )}
+                        {user.workload && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Carga H.</p>
+                            <p>{user.workload}</p>
+                          </div>
+                        )}
+                        {user.serie && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Série</p>
+                            <p className="capitalize">{user.serie}</p>
+                          </div>
+                        )}
+                        {user.subject && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Comp. Curr.</p>
+                            <p className="capitalize">{user.subject}</p>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex justify-end gap-2 pt-2 border-t">
                         {isAdmin && (
                           <Button
@@ -347,22 +374,23 @@ const UserManagement = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Profissão</TableHead>
+                    <TableHead>Série</TableHead>
+                    <TableHead>Componente</TableHead>
+                    <TableHead>Carga H.</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         Buscando...
                       </TableCell>
                     </TableRow>
                   ) : users.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="text-center py-8 text-gray-500"
-                      >
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                         Nenhum usuário encontrado
                       </TableCell>
                     </TableRow>
@@ -372,6 +400,10 @@ const UserManagement = () => {
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell className="capitalize text-xs">{user.professionName || "-"}</TableCell>
+                        <TableCell className="capitalize text-xs">{user.serie || "-"}</TableCell>
+                        <TableCell className="capitalize text-xs">{user.subject || "-"}</TableCell>
+                        <TableCell className="text-xs">{user.workload || "-"}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button
                             size="sm"

@@ -103,6 +103,9 @@ model User {
   hasCompletedOnboarding      Boolean          @default(false) @map("has_completed_onboarding")
   hasConsentFacialRecognition Boolean          @default(false) @map("has_consent_facial_recognition")
   faceDescriptor              Json?            @map("face_descriptor") // Armazena o vetor facial
+  serie                       String? // Série (para professores)
+  subject                     String? // Componente Curricular / Disciplina
+  workload                    String? // Carga Horária
 
   // Relacionamentos
   enrollments       Enrollment[]

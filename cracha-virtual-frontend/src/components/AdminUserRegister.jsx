@@ -47,6 +47,43 @@ const teachingSegmentOptions = [
     { value: "EJA", label: "EJA" },
 ];
 
+const professionOptions = [
+    { value: "gestor", label: "Gestor" },
+    { value: "gestor adjunto", label: "Gestor Adjunto" },
+    { value: "secretário", label: "Secretário" },
+    { value: "supervisor", label: "Supervisor" },
+    { value: "educador social voluntário", label: "Educador Social Voluntário" },
+    { value: "professor", label: "Professor" },
+    { value: "merendeiro", label: "Merendeiro" },
+    { value: "apoio", label: "Apoio" },
+    { value: "organizador", label: "Organizador" },
+];
+
+const serieOptions = [
+    { value: "bercário I", label: "Bercário I" },
+    { value: "bercário II", label: "Bercário II" },
+    { value: "maternal I", label: "Maternal I" },
+    { value: "maternal II", label: "Maternal II" },
+    { value: "pré I", label: "Pré I" },
+    { value: "pré II", label: "Pré II" },
+    { value: "1º ao 9º", label: "1º ao 9º" },
+];
+
+const subjectOptions = [
+    { value: "Polivalente", label: "Polivalente" },
+    { value: "Português", label: "Português" },
+    { value: "Matemática", label: "Matemática" },
+    { value: "História", label: "História" },
+    { value: "Geografia", label: "Geografia" },
+    { value: "Ciências", label: "Ciências" },
+    { value: "Inglês", label: "Inglês" },
+    { value: "Artes", label: "Artes" },
+    { value: "Educação Física", label: "Educação Física" },
+    { value: "Ensino Religioso", label: "Ensino Religioso" },
+    { value: "Educação Especial", label: "Educação Especial" },
+    { value: "Outros", label: "Outros" },
+];
+
 const FieldWrapper = ({ label, children, required = true }) => (
     <div className="space-y-1.5">
         <Label className="text-sm font-medium text-gray-700">
@@ -72,6 +109,9 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
         workShifts: [],
         contractType: "",
         teachingSegments: [],
+        serie: "",
+        subject: "",
+        workload: "",
     });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -191,6 +231,12 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
         if (!formData.phone) return "Telefone é obrigatório";
         if (!formData.address) return "Endereço é obrigatório";
         if (!formData.neighborhood) return "Bairro é obrigatório";
+
+        // No AdminUserRegister, profissão ainda não era obrigatória, mas os novos campos dependem dela
+        if (formData.professionName === "professor") {
+            if (!formData.serie) return "Série é obrigatória para professores";
+            if (!formData.subject) return "Componente Curricular é obrigatório para professores";
+        }
 
         // Dados profissionais agora são opcionais
         // if (!formData.professionName) return "Profissão é obrigatória";
@@ -370,14 +416,68 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
                     <div className="grid grid-cols-1 gap-4">
                         <div className="grid grid-cols-2 gap-4">
                             <FieldWrapper label="Profissão / Cargo">
-                                <Input
-                                    name="professionName"
-                                    placeholder="Ex: Professor"
+                                <Select
                                     value={formData.professionName}
+                                    onValueChange={(value) => handleSelectChange("professionName", value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {professionOptions.map(opt => (
+                                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FieldWrapper>
+
+                            <FieldWrapper label="Carga Horária">
+                                <Input
+                                    name="workload"
+                                    placeholder="Ex: 40h"
+                                    value={formData.workload}
                                     onChange={handleChange}
                                 />
                             </FieldWrapper>
+                        </div>
 
+                        {formData.professionName === "professor" && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                                <FieldWrapper label="Série">
+                                    <Select
+                                        value={formData.serie}
+                                        onValueChange={(value) => handleSelectChange("serie", value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {serieOptions.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FieldWrapper>
+
+                                <FieldWrapper label="Comp. Curricular">
+                                    <Select
+                                        value={formData.subject}
+                                        onValueChange={(value) => handleSelectChange("subject", value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {subjectOptions.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FieldWrapper>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
                             <FieldWrapper label="Vínculo">
                                 <Select
                                     value={formData.contractType}

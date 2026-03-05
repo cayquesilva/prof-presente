@@ -500,7 +500,6 @@ const LandingPage = () => {
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-3xl font-black tracking-tight drop-shadow-sm flex items-center gap-2">
                                 Próximos Eventos
-                                <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded">v22-FIX-ASSETS</span>
                             </h3>
                             <Link to="/events" className="text-[#137fec] hover:underline text-sm font-bold flex items-center gap-1 group">
                                 Ver Todos <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

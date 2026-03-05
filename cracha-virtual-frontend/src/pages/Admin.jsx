@@ -154,8 +154,8 @@ const Admin = () => {
   const [badgeTemplatePreviewUrl, setBadgeTemplatePreviewUrl] = useState(null);
 
   const [eventThumbnailFile, setEventThumbnailFile] = useState(null);
-  const [eventThumbnailPreviewUrl, setEventThumbnailPreviewUrl] =
-    useState(null);
+  const [eventThumbnailPreviewUrl, setEventThumbnailPreviewUrl] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [speakerPhotoFile, setSpeakerPhotoFile] = useState(null);
   const [speakerPhotoPreviewUrl, setSpeakerPhotoPreviewUrl] = useState(null);
@@ -863,506 +863,517 @@ const Admin = () => {
         </TabsContent>
 
         <TabsContent value="events" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h2 className="text-2xl font-bold">Gerenciar Eventos</h2>
-            <Dialog
-              open={isCreateDialogOpen || !!editingEvent}
-              onOpenChange={(open) => {
-                setIsCreateDialogOpen(open);
-                if (!open) {
-                  setEditingEvent(null);
-                  resetForm();
-                  setEventThumbnailFile(null);
-                  setEventThumbnailPreviewUrl(null);
-                }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Evento
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="min-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingEvent ? "Editar Evento" : "Criar Novo Evento"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Gerencie os detalhes, personalização e equipe do evento.
-                  </DialogDescription>
-                </DialogHeader>
+            <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2 grow max-w-2xl">
+              <div className="relative grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar eventos por título ou local..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Dialog
+                open={isCreateDialogOpen || !!editingEvent}
+                onOpenChange={(open) => {
+                  setIsCreateDialogOpen(open);
+                  if (!open) {
+                    setEditingEvent(null);
+                    resetForm();
+                    setEventThumbnailFile(null);
+                    setEventThumbnailPreviewUrl(null);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Evento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-[1200px] h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-0">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingEvent ? "Editar Evento" : "Criar Novo Evento"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Gerencie os detalhes, personalização e equipe do evento.
+                    </DialogDescription>
+                  </DialogHeader>
 
-                <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="details">Detalhes</TabsTrigger>
-                    <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
-                    <TabsTrigger value="certificate" disabled={!editingEvent}>Certificado</TabsTrigger>
-                    <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
-                  </TabsList>
+                  <Tabs defaultValue="details" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="details">Detalhes</TabsTrigger>
+                      <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
+                      <TabsTrigger value="certificate" disabled={!editingEvent}>Certificado</TabsTrigger>
+                      <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
+                    </TabsList>
 
-                  <TabsContent value="details" className="space-y-4 py-4">
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      {/* ... Campos do formulário Principal ... */}
-                      <div className="space-y-2">
-                        <Label htmlFor="title">Título</Label>
-                        <Input
-                          id="title"
-                          value={eventForm.title}
-                          onChange={(e) =>
-                            setEventForm({ ...eventForm, title: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="description">Descrição</Label>
-                        <Textarea
-                          id="description"
-                          value={eventForm.description}
-                          onChange={(e) =>
-                            setEventForm({
-                              ...eventForm,
-                              description: e.target.value,
-                            })
-                          }
-                          rows={4}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="location">Local</Label>
-                        <Input
-                          id="location"
-                          value={eventForm.location}
-                          onChange={(e) =>
-                            setEventForm({ ...eventForm, location: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Evento Pai (Opcional)</Label>
-                        <Combobox
-                          options={[
-                            {
-                              value: "",
-                              label: "Nenhum (Este é um evento principal)",
-                            },
-                            ...(events
-                              ?.filter((e) => e.id !== editingEvent?.id)
-                              .map((e) => ({ value: e.id, label: e.title })) || []),
-                          ]}
-                          value={eventForm.parentId}
-                          onSelect={(value) =>
-                            setEventForm({ ...eventForm, parentId: value })
-                          }
-                          placeholder="Selecione o evento principal..."
-                          searchPlaceholder="Pesquisar evento..."
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Selecione se este evento faz parte de um evento maior (ex:
-                          uma palestra dentro de um congresso).
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Categoria do Evento (Opcional)</Label>
-                        <Combobox
-                          options={[
-                            {
-                              value: "",
-                              label: "Sem categoria",
-                            },
-                            ...(categoriesArray?.map((c) => ({ value: c.id, label: c.name })) || []),
-                          ]}
-                          value={eventForm.categoryId}
-                          onSelect={(value) =>
-                            setEventForm({ ...eventForm, categoryId: value })
-                          }
-                          placeholder="Selecione a categoria..."
-                          searchPlaceholder="Pesquisar categoria..."
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
+                    <TabsContent value="details" className="space-y-4 py-4">
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* ... Campos do formulário Principal ... */}
                         <div className="space-y-2">
-                          <Label htmlFor="mapLink">Link do Mapa (URL)</Label>
+                          <Label htmlFor="title">Título</Label>
                           <Input
-                            id="mapLink"
-                            value={eventForm.mapLink}
+                            id="title"
+                            value={eventForm.title}
                             onChange={(e) =>
-                              setEventForm({ ...eventForm, mapLink: e.target.value })
+                              setEventForm({ ...eventForm, title: e.target.value })
                             }
-                            placeholder="https://maps.google.com/..."
+                            required
                           />
                         </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="schedule">Programação (Resumo)</Label>
+                          <Label htmlFor="description">Descrição</Label>
                           <Textarea
-                            id="schedule"
-                            value={eventForm.schedule}
-                            onChange={(e) =>
-                              setEventForm({ ...eventForm, schedule: e.target.value })
-                            }
-                            placeholder="Descreva a programação..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="speakerName">Nome do Palestrante</Label>
-                          <Input
-                            id="speakerName"
-                            value={eventForm.speakerName}
-                            onChange={(e) =>
-                              setEventForm({ ...eventForm, speakerName: e.target.value })
-                            }
-                            placeholder="Ex: Dr. Fulano"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="speakerRole">Cargo do Palestrante</Label>
-                          <Input
-                            id="speakerRole"
-                            value={eventForm.speakerRole}
-                            onChange={(e) =>
-                              setEventForm({ ...eventForm, speakerRole: e.target.value })
-                            }
-                            placeholder="Ex: Secretário de Educação"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Upload de Foto removido daqui e movido para área de edição pós-criação */}
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="startDate">Data de Início</Label>
-                          <Input
-                            id="startDate"
-                            type="datetime-local"
-                            value={eventForm.startDate}
+                            id="description"
+                            value={eventForm.description}
                             onChange={(e) =>
                               setEventForm({
                                 ...eventForm,
-                                startDate: e.target.value,
+                                description: e.target.value,
                               })
+                            }
+                            rows={4}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="location">Local</Label>
+                          <Input
+                            id="location"
+                            value={eventForm.location}
+                            onChange={(e) =>
+                              setEventForm({ ...eventForm, location: e.target.value })
                             }
                             required
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="endDate">Data de Término</Label>
+                          <Label>Evento Pai (Opcional)</Label>
+                          <Combobox
+                            options={[
+                              {
+                                value: "",
+                                label: "Nenhum (Este é um evento principal)",
+                              },
+                              ...(events
+                                ?.filter((e) => e.id !== editingEvent?.id)
+                                .map((e) => ({ value: e.id, label: e.title })) || []),
+                            ]}
+                            value={eventForm.parentId}
+                            onSelect={(value) =>
+                              setEventForm({ ...eventForm, parentId: value })
+                            }
+                            placeholder="Selecione o evento principal..."
+                            searchPlaceholder="Pesquisar evento..."
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Selecione se este evento faz parte de um evento maior (ex:
+                            uma palestra dentro de um congresso).
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Categoria do Evento (Opcional)</Label>
+                          <Combobox
+                            options={[
+                              {
+                                value: "",
+                                label: "Sem categoria",
+                              },
+                              ...(categoriesArray?.map((c) => ({ value: c.id, label: c.name })) || []),
+                            ]}
+                            value={eventForm.categoryId}
+                            onSelect={(value) =>
+                              setEventForm({ ...eventForm, categoryId: value })
+                            }
+                            placeholder="Selecione a categoria..."
+                            searchPlaceholder="Pesquisar categoria..."
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="mapLink">Link do Mapa (URL)</Label>
+                            <Input
+                              id="mapLink"
+                              value={eventForm.mapLink}
+                              onChange={(e) =>
+                                setEventForm({ ...eventForm, mapLink: e.target.value })
+                              }
+                              placeholder="https://maps.google.com/..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="schedule">Programação (Resumo)</Label>
+                            <Textarea
+                              id="schedule"
+                              value={eventForm.schedule}
+                              onChange={(e) =>
+                                setEventForm({ ...eventForm, schedule: e.target.value })
+                              }
+                              placeholder="Descreva a programação..."
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="speakerName">Nome do Palestrante</Label>
+                            <Input
+                              id="speakerName"
+                              value={eventForm.speakerName}
+                              onChange={(e) =>
+                                setEventForm({ ...eventForm, speakerName: e.target.value })
+                              }
+                              placeholder="Ex: Dr. Fulano"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="speakerRole">Cargo do Palestrante</Label>
+                            <Input
+                              id="speakerRole"
+                              value={eventForm.speakerRole}
+                              onChange={(e) =>
+                                setEventForm({ ...eventForm, speakerRole: e.target.value })
+                              }
+                              placeholder="Ex: Secretário de Educação"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Upload de Foto removido daqui e movido para área de edição pós-criação */}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="startDate">Data de Início</Label>
+                            <Input
+                              id="startDate"
+                              type="datetime-local"
+                              value={eventForm.startDate}
+                              onChange={(e) =>
+                                setEventForm({
+                                  ...eventForm,
+                                  startDate: e.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="endDate">Data de Término</Label>
+                            <Input
+                              id="endDate"
+                              type="datetime-local"
+                              value={eventForm.endDate}
+                              onChange={(e) =>
+                                setEventForm({
+                                  ...eventForm,
+                                  endDate: e.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="maxAttendees">
+                            Máximo de Participantes (opcional)
+                          </Label>
                           <Input
-                            id="endDate"
-                            type="datetime-local"
-                            value={eventForm.endDate}
+                            id="maxAttendees"
+                            type="number"
+                            min="1"
+                            value={eventForm.maxAttendees}
                             onChange={(e) =>
                               setEventForm({
                                 ...eventForm,
-                                endDate: e.target.value,
+                                maxAttendees: e.target.value,
                               })
                             }
-                            required
                           />
                         </div>
-                      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="maxAttendees">
-                          Máximo de Participantes (opcional)
-                        </Label>
-                        <Input
-                          id="maxAttendees"
-                          type="number"
-                          min="1"
-                          value={eventForm.maxAttendees}
-                          onChange={(e) =>
-                            setEventForm({
-                              ...eventForm,
-                              maxAttendees: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
+                        <div className="flex items-center space-x-2 py-2">
+                          <input
+                            type="checkbox"
+                            id="isPrivate"
+                            checked={eventForm.isPrivate}
+                            onChange={(e) => setEventForm({ ...eventForm, isPrivate: e.target.checked })}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <Label htmlFor="isPrivate" className="cursor-pointer">
+                            Evento Privado (Ocultar da listagem pública)
+                          </Label>
+                        </div>
 
-                      <div className="flex items-center space-x-2 py-2">
-                        <input
-                          type="checkbox"
-                          id="isPrivate"
-                          checked={eventForm.isPrivate}
-                          onChange={(e) => setEventForm({ ...eventForm, isPrivate: e.target.checked })}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                        <Label htmlFor="isPrivate" className="cursor-pointer">
-                          Evento Privado (Ocultar da listagem pública)
-                        </Label>
-                      </div>
-
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingEvent(null);
-                            setIsCreateDialogOpen(false);
-                            resetForm();
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          type="submit"
-                          disabled={
-                            createEventMutation.isPending ||
-                            updateEventMutation.isPending
-                          }
-                        >
-                          {createEventMutation.isPending ||
-                            updateEventMutation.isPending
-                            ? "Salvando..."
-                            : editingEvent
-                              ? "Atualizar"
-                              : "Criar"}
-                        </Button>
-                      </div>
-                    </form>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingEvent(null);
+                              setIsCreateDialogOpen(false);
+                              resetForm();
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={
+                              createEventMutation.isPending ||
+                              updateEventMutation.isPending
+                            }
+                          >
+                            {createEventMutation.isPending ||
+                              updateEventMutation.isPending
+                              ? "Salvando..."
+                              : editingEvent
+                                ? "Atualizar"
+                                : "Criar"}
+                          </Button>
+                        </div>
+                      </form>
 
 
-                    {/* FOTO DO PALESTRANTE E CAPA NO TAB DETALHES TAMBÉM */}
-                    {editingEvent && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                        <div>
-                          <h3 className="font-semibold mb-2">Foto do Palestrante</h3>
-                          <form onSubmit={handleSpeakerPhotoSubmit} className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden shrink-0">
-                                {speakerPhotoPreviewUrl ? (
-                                  <img src={speakerPhotoPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                ) : editingEvent?.speakerPhotoUrl ? (
-                                  <img src={getAssetUrl(editingEvent.speakerPhotoUrl)} alt="Atual" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Users className="w-6 h-6 m-3 text-slate-400" />
-                                )}
+                      {/* FOTO DO PALESTRANTE E CAPA NO TAB DETALHES TAMBÉM */}
+                      {editingEvent && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                          <div>
+                            <h3 className="font-semibold mb-2">Foto do Palestrante</h3>
+                            <form onSubmit={handleSpeakerPhotoSubmit} className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden shrink-0">
+                                  {speakerPhotoPreviewUrl ? (
+                                    <img src={speakerPhotoPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                  ) : editingEvent?.speakerPhotoUrl ? (
+                                    <img src={getAssetUrl(editingEvent.speakerPhotoUrl)} alt="Atual" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Users className="w-6 h-6 m-3 text-slate-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <Input
+                                    type="file"
+                                    onChange={handleSpeakerPhotoChange}
+                                    accept="image/*"
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
                               </div>
-                              <div className="flex-1">
+                              <Button type="submit" size="sm" variant="secondary" className="w-full" disabled={uploadSpeakerPhotoMutation.isPending}>
+                                {uploadSpeakerPhotoMutation.isPending ? "Enviando..." : "Salvar Foto"}
+                              </Button>
+                            </form>
+                          </div>
+
+                          <div>
+                            <h3 className="font-semibold mb-2">Imagem de Capa</h3>
+                            <form onSubmit={handleThumbnailSubmit} className="space-y-3">
+                              <div className="space-y-2">
                                 <Input
                                   type="file"
-                                  onChange={handleSpeakerPhotoChange}
+                                  onChange={handleThumbnailFileChange}
                                   accept="image/*"
                                   className="h-8 text-xs"
                                 />
                               </div>
-                            </div>
-                            <Button type="submit" size="sm" variant="secondary" className="w-full" disabled={uploadSpeakerPhotoMutation.isPending}>
-                              {uploadSpeakerPhotoMutation.isPending ? "Enviando..." : "Salvar Foto"}
-                            </Button>
-                          </form>
-                        </div>
+                              {/* Preview Simplificado */}
+                              {(eventThumbnailPreviewUrl || editingEvent.imageUrl) && (
+                                <div className="h-24 w-full bg-slate-100 rounded overflow-hidden">
+                                  <img src={eventThumbnailPreviewUrl || getAssetUrl(editingEvent.imageUrl)} className="w-full h-full object-cover" />
+                                </div>
+                              )}
 
-                        <div>
-                          <h3 className="font-semibold mb-2">Imagem de Capa</h3>
-                          <form onSubmit={handleThumbnailSubmit} className="space-y-3">
-                            <div className="space-y-2">
-                              <Input
-                                type="file"
-                                onChange={handleThumbnailFileChange}
-                                accept="image/*"
-                                className="h-8 text-xs"
-                              />
-                            </div>
-                            {/* Preview Simplificado */}
-                            {(eventThumbnailPreviewUrl || editingEvent.imageUrl) && (
-                              <div className="h-24 w-full bg-slate-100 rounded overflow-hidden">
-                                <img src={eventThumbnailPreviewUrl || getAssetUrl(editingEvent.imageUrl)} className="w-full h-full object-cover" />
+                              <Button type="submit" size="sm" variant="secondary" className="w-full" disabled={uploadThumbnailMutation.isPending}>
+                                {uploadThumbnailMutation.isPending ? "Enviando..." : "Salvar Capa"}
+                              </Button>
+                            </form>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="badge" className="space-y-4 py-4">
+                      {editingEvent && (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Configuração do Crachá</h3>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintBadges(editingEvent.id, editingEvent.title)}
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir Crachás
+                            </Button>
+                          </div>
+
+                          <div className="p-4 border rounded-lg space-y-4">
+                            {/* ... Conteúdo do Crachá (Simplificado para caber no replace) ... */}
+                            <form onSubmit={handleTemplateSubmit} className="space-y-4">
+                              <div className="space-y-2">
+                                <Label>Imagem de Fundo</Label>
+                                <Input type="file" onChange={handleFileChange} accept="image/*" />
                               </div>
-                            )}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Posição Nome (X, Y)</Label>
+                                  <div className="flex gap-2">
+                                    <Input type="number" placeholder="X" value={badgeConfig.nameX} onChange={e => setBadgeConfig({ ...badgeConfig, nameX: e.target.value })} />
+                                    <Input type="number" placeholder="Y" value={badgeConfig.nameY} onChange={e => setBadgeConfig({ ...badgeConfig, nameY: e.target.value })} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label>Fonte (Tam, Cor)</Label>
+                                  <div className="flex gap-2">
+                                    <Input type="number" placeholder="px" value={badgeConfig.nameFontSize} onChange={e => setBadgeConfig({ ...badgeConfig, nameFontSize: e.target.value })} />
+                                    <Input type="color" value={badgeConfig.nameColor} onChange={e => setBadgeConfig({ ...badgeConfig, nameColor: e.target.value })} />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Posição QR (X, Y)</Label>
+                                  <div className="flex gap-2">
+                                    <Input type="number" placeholder="X" value={badgeConfig.qrX} onChange={e => setBadgeConfig({ ...badgeConfig, qrX: e.target.value })} />
+                                    <Input type="number" placeholder="Y" value={badgeConfig.qrY} onChange={e => setBadgeConfig({ ...badgeConfig, qrY: e.target.value })} />
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label>Tamanho QR</Label>
+                                  <Input type="number" placeholder="px" value={badgeConfig.qrSize} onChange={e => setBadgeConfig({ ...badgeConfig, qrSize: e.target.value })} />
+                                </div>
+                              </div>
 
-                            <Button type="submit" size="sm" variant="secondary" className="w-full" disabled={uploadThumbnailMutation.isPending}>
-                              {uploadThumbnailMutation.isPending ? "Enviando..." : "Salvar Capa"}
+                              <BadgePreview
+                                templateImage={badgeTemplatePreviewUrl || getAssetUrl(editingEvent.badgeTemplateUrl)}
+                                config={badgeConfig}
+                                onConfigChange={setBadgeConfig}
+                              />
+
+                              <Button type="submit" disabled={uploadTemplateMutation.isPending} className="w-full">
+                                <Upload className="h-4 w-4 mr-2" /> Salvar Modelo
+                              </Button>
+                            </form>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="certificate" className="space-y-4 py-4">
+                      {editingEvent && (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Configuração do Certificado</h3>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleSendCertificates(editingEvent.id, editingEvent.title)}
+                            >
+                              <Send className="h-4 w-4 mr-2" /> Enviar Certificados
                             </Button>
-                          </form>
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
+                          </div>
 
-                  <TabsContent value="badge" className="space-y-4 py-4">
-                    {editingEvent && (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-lg font-semibold">Configuração do Crachá</h3>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePrintBadges(editingEvent.id, editingEvent.title)}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Imprimir Crachás
-                          </Button>
-                        </div>
-
-                        <div className="p-4 border rounded-lg space-y-4">
-                          {/* ... Conteúdo do Crachá (Simplificado para caber no replace) ... */}
-                          <form onSubmit={handleTemplateSubmit} className="space-y-4">
+                          <form onSubmit={handleCertificateTemplateSubmit} className="space-y-4 border p-4 rounded-lg">
                             <div className="space-y-2">
                               <Label>Imagem de Fundo</Label>
-                              <Input type="file" onChange={handleFileChange} accept="image/*" />
+                              <Input type="file" onChange={handleCertificateFileChange} accept="image/*" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Config Nome */}
+                              <div>
+                                <Label>Posição Nome</Label>
+                                <div className="flex gap-2">
+                                  <Input placeholder="X" value={certificateConfig.nameX} onChange={e => setCertificateConfig({ ...certificateConfig, nameX: e.target.value })} />
+                                  <Input placeholder="Y" value={certificateConfig.nameY} onChange={e => setCertificateConfig({ ...certificateConfig, nameY: e.target.value })} />
+                                </div>
+                              </div>
+                              <div>
+                                <Label>Estilo Nome</Label>
+                                <div className="flex gap-2">
+                                  <Input placeholder="Font" value={certificateConfig.nameFontSize} onChange={e => setCertificateConfig({ ...certificateConfig, nameFontSize: e.target.value })} />
+                                  <Input type="color" value={certificateConfig.nameColor} onChange={e => setCertificateConfig({ ...certificateConfig, nameColor: e.target.value })} />
+                                </div>
+                              </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
+                              {/* Config Horas */}
                               <div>
-                                <Label>Posição Nome (X, Y)</Label>
+                                <Label>Posição Carga Horária</Label>
                                 <div className="flex gap-2">
-                                  <Input type="number" placeholder="X" value={badgeConfig.nameX} onChange={e => setBadgeConfig({ ...badgeConfig, nameX: e.target.value })} />
-                                  <Input type="number" placeholder="Y" value={badgeConfig.nameY} onChange={e => setBadgeConfig({ ...badgeConfig, nameY: e.target.value })} />
+                                  <Input placeholder="X" value={certificateConfig.hoursX} onChange={e => setCertificateConfig({ ...certificateConfig, hoursX: e.target.value })} />
+                                  <Input placeholder="Y" value={certificateConfig.hoursY} onChange={e => setCertificateConfig({ ...certificateConfig, hoursY: e.target.value })} />
                                 </div>
                               </div>
                               <div>
-                                <Label>Fonte (Tam, Cor)</Label>
+                                <Label>Estilo Carga Horária</Label>
                                 <div className="flex gap-2">
-                                  <Input type="number" placeholder="px" value={badgeConfig.nameFontSize} onChange={e => setBadgeConfig({ ...badgeConfig, nameFontSize: e.target.value })} />
-                                  <Input type="color" value={badgeConfig.nameColor} onChange={e => setBadgeConfig({ ...badgeConfig, nameColor: e.target.value })} />
+                                  <Input placeholder="Font" value={certificateConfig.hoursFontSize} onChange={e => setCertificateConfig({ ...certificateConfig, hoursFontSize: e.target.value })} />
+                                  <Input type="color" value={certificateConfig.hoursColor} onChange={e => setCertificateConfig({ ...certificateConfig, hoursColor: e.target.value })} />
                                 </div>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label>Posição QR (X, Y)</Label>
-                                <div className="flex gap-2">
-                                  <Input type="number" placeholder="X" value={badgeConfig.qrX} onChange={e => setBadgeConfig({ ...badgeConfig, qrX: e.target.value })} />
-                                  <Input type="number" placeholder="Y" value={badgeConfig.qrY} onChange={e => setBadgeConfig({ ...badgeConfig, qrY: e.target.value })} />
-                                </div>
-                              </div>
-                              <div>
-                                <Label>Tamanho QR</Label>
-                                <Input type="number" placeholder="px" value={badgeConfig.qrSize} onChange={e => setBadgeConfig({ ...badgeConfig, qrSize: e.target.value })} />
                               </div>
                             </div>
 
-                            <BadgePreview
-                              templateImage={badgeTemplatePreviewUrl || getAssetUrl(editingEvent.badgeTemplateUrl)}
-                              config={badgeConfig}
-                              onConfigChange={setBadgeConfig}
+                            <CertificatePreview
+                              templateImage={certificateTemplatePreviewUrl || getAssetUrl(editingEvent.certificateTemplateUrl)}
+                              config={certificateConfig}
+                              onConfigChange={setCertificateConfig}
                             />
 
-                            <Button type="submit" disabled={uploadTemplateMutation.isPending} className="w-full">
-                              <Upload className="h-4 w-4 mr-2" /> Salvar Modelo
+                            <Button type="submit" disabled={uploadCertificateMutation.isPending} className="w-full">
+                              <Upload className="h-4 w-4 mr-2" /> Salvar Certificado
                             </Button>
                           </form>
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
 
-                  <TabsContent value="certificate" className="space-y-4 py-4">
-                    {editingEvent && (
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-lg font-semibold">Configuração do Certificado</h3>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleSendCertificates(editingEvent.id, editingEvent.title)}
-                          >
-                            <Send className="h-4 w-4 mr-2" /> Enviar Certificados
-                          </Button>
-                        </div>
-
-                        <form onSubmit={handleCertificateTemplateSubmit} className="space-y-4 border p-4 rounded-lg">
-                          <div className="space-y-2">
-                            <Label>Imagem de Fundo</Label>
-                            <Input type="file" onChange={handleCertificateFileChange} accept="image/*" />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            {/* Config Nome */}
-                            <div>
-                              <Label>Posição Nome</Label>
-                              <div className="flex gap-2">
-                                <Input placeholder="X" value={certificateConfig.nameX} onChange={e => setCertificateConfig({ ...certificateConfig, nameX: e.target.value })} />
-                                <Input placeholder="Y" value={certificateConfig.nameY} onChange={e => setCertificateConfig({ ...certificateConfig, nameY: e.target.value })} />
-                              </div>
-                            </div>
-                            <div>
-                              <Label>Estilo Nome</Label>
-                              <div className="flex gap-2">
-                                <Input placeholder="Font" value={certificateConfig.nameFontSize} onChange={e => setCertificateConfig({ ...certificateConfig, nameFontSize: e.target.value })} />
-                                <Input type="color" value={certificateConfig.nameColor} onChange={e => setCertificateConfig({ ...certificateConfig, nameColor: e.target.value })} />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            {/* Config Horas */}
-                            <div>
-                              <Label>Posição Carga Horária</Label>
-                              <div className="flex gap-2">
-                                <Input placeholder="X" value={certificateConfig.hoursX} onChange={e => setCertificateConfig({ ...certificateConfig, hoursX: e.target.value })} />
-                                <Input placeholder="Y" value={certificateConfig.hoursY} onChange={e => setCertificateConfig({ ...certificateConfig, hoursY: e.target.value })} />
-                              </div>
-                            </div>
-                            <div>
-                              <Label>Estilo Carga Horária</Label>
-                              <div className="flex gap-2">
-                                <Input placeholder="Font" value={certificateConfig.hoursFontSize} onChange={e => setCertificateConfig({ ...certificateConfig, hoursFontSize: e.target.value })} />
-                                <Input type="color" value={certificateConfig.hoursColor} onChange={e => setCertificateConfig({ ...certificateConfig, hoursColor: e.target.value })} />
-                              </div>
-                            </div>
-                          </div>
-
-                          <CertificatePreview
-                            templateImage={certificateTemplatePreviewUrl || getAssetUrl(editingEvent.certificateTemplateUrl)}
-                            config={certificateConfig}
-                            onConfigChange={setCertificateConfig}
-                          />
-
-                          <Button type="submit" disabled={uploadCertificateMutation.isPending} className="w-full">
-                            <Upload className="h-4 w-4 mr-2" /> Salvar Certificado
-                          </Button>
-                        </form>
-
-                        <div className="mt-6">
-                          <h4 className="font-semibold mb-2">Histórico de Envios</h4>
-                          <div className="border rounded-lg max-h-48 overflow-y-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Nome</TableHead>
-                                  <TableHead>Status</TableHead>
-                                  <TableHead>Data</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {logsLoading ? (
-                                  <TableRow><TableCell colSpan={3}>Carregando...</TableCell></TableRow>
-                                ) : certificateLogs?.map(log => (
-                                  <TableRow key={log.userId}>
-                                    <TableCell>{log.userName}</TableCell>
-                                    <TableCell>{log.status}</TableCell>
-                                    <TableCell>{log.sentAt ? new Date(log.sentAt).toLocaleDateString() : '-'}</TableCell>
+                          <div className="mt-6">
+                            <h4 className="font-semibold mb-2">Histórico de Envios</h4>
+                            <div className="border rounded-lg max-h-48 overflow-y-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Nome</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Data</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {logsLoading ? (
+                                    <TableRow><TableCell colSpan={3}>Carregando...</TableCell></TableRow>
+                                  ) : certificateLogs?.map(log => (
+                                    <TableRow key={log.userId}>
+                                      <TableCell>{log.userName}</TableCell>
+                                      <TableCell>{log.status}</TableCell>
+                                      <TableCell>{log.sentAt ? new Date(log.sentAt).toLocaleDateString() : '-'}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </TabsContent>
+                      )}
+                    </TabsContent>
 
-                  <TabsContent value="staff" className="space-y-4 py-4">
-                    {editingEvent && (
-                      <EventStaffManager eventId={editingEvent.id} />
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </DialogContent>
-            </Dialog>
+                    <TabsContent value="staff" className="space-y-4 py-4">
+                      {editingEvent && (
+                        <EventStaffManager eventId={editingEvent.id} />
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           <Card className="border-none shadow-none md:border md:shadow-sm">
@@ -1374,78 +1385,91 @@ const Admin = () => {
                 ) : events?.length === 0 ? (
                   <div className="text-center p-4">Nenhum evento cadastrado</div>
                 ) : (
-                  events?.map((event) => (
-                    <Card key={event.id} className="overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
-                        <span className="font-semibold truncate max-w-[200px]">{event.title}</span>
-                        {event.isPrivate ? (
-                          <Badge variant="secondary" className="text-[10px]">Privado</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px]">Público</Badge>
-                        )}
-                      </div>
-                      <CardContent className="p-4 space-y-2">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <p className="text-muted-foreground text-xs">Início</p>
-                            <p>{formatDate(event.startDate)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-xs">Término</p>
-                            <p>{formatDate(event.endDate)}</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-muted-foreground text-xs">Local</p>
-                            <p className="truncate">{event.location}</p>
-                          </div>
+                  events
+                    ?.filter(event =>
+                      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      event.location.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    ?.map((event) => (
+                      <Card key={event.id} className="overflow-hidden">
+                        <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
+                          <span className="font-semibold truncate max-w-[200px]">{event.title}</span>
+                          {event.isPrivate ? (
+                            <Badge variant="secondary" className="text-[10px]">Privado</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">Público</Badge>
+                          )}
                         </div>
+                        <CardContent className="p-4 space-y-2">
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-muted-foreground text-xs">Início</p>
+                              <p>{formatDate(event.startDate)}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs">Término</p>
+                              <p>{formatDate(event.endDate)}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-muted-foreground text-xs">Local</p>
+                              <p className="truncate">{event.location}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs">Inscritos</p>
+                              <p className="font-mono font-bold text-blue-600">{event.enrolledCount || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs">Capacidade</p>
+                              <p>{event.maxAttendees || "Ilimitado"}</p>
+                            </div>
+                          </div>
 
-                        <div className="flex justify-end gap-2 pt-2 mt-2 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleEdit(event)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-2 pt-2 mt-2 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEdit(event)}
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
 
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handlePrintBadges(event.id, event.title)}
-                            disabled={!event.badgeTemplateUrl}
-                            title={event.badgeTemplateUrl ? "Imprimir Crachás" : "Configure o modelo"}
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handlePrintBadges(event.id, event.title)}
+                              disabled={!event.badgeTemplateUrl}
+                              title={event.badgeTemplateUrl ? "Imprimir Crachás" : "Configure o modelo"}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
 
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleSendCertificates(event.id, event.title)}
-                            disabled={!event.certificateTemplateUrl || sendCertificatesMutation.isPending}
-                            title={event.certificateTemplateUrl ? "Enviar Certificados" : "Configure o modelo"}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleSendCertificates(event.id, event.title)}
+                              disabled={!event.certificateTemplateUrl || sendCertificatesMutation.isPending}
+                              title={event.certificateTemplateUrl ? "Enviar Certificados" : "Configure o modelo"}
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
 
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDelete(event.id)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDelete(event.id)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
                 )}
               </div>
 
@@ -1458,7 +1482,7 @@ const Admin = () => {
                       <TableHead>Local</TableHead>
                       <TableHead>Visibilidade</TableHead>
                       <TableHead>Início</TableHead>
-                      <TableHead>Término</TableHead>
+                      <TableHead>Inscritos</TableHead>
                       <TableHead>Capacidade</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
@@ -1477,91 +1501,100 @@ const Admin = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      events?.map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell className="font-medium">
-                            {event.title}
-                          </TableCell>
-                          <TableCell>{event.location}</TableCell>
-                          <TableCell>
-                            {event.isPrivate ? (
-                              <Badge variant="secondary">Privado</Badge>
-                            ) : (
-                              <Badge variant="outline">Público</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>{formatDate(event.startDate)}</TableCell>
-                          <TableCell>{formatDate(event.endDate)}</TableCell>
-                          <TableCell>
-                            {event.maxAttendees || "Ilimitado"}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex justify-between items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(event)}
-                                title="Editar Evento"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                      events
+                        ?.filter(event =>
+                          event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          event.location.toLowerCase().includes(searchTerm.toLowerCase())
+                        )
+                        .map((event) => (
+                          <TableRow key={event.id}>
+                            <TableCell className="font-medium">
+                              {event.title}
+                            </TableCell>
+                            <TableCell>{event.location}</TableCell>
+                            <TableCell>
+                              {event.isPrivate ? (
+                                <Badge variant="secondary">Privado</Badge>
+                              ) : (
+                                <Badge variant="outline">Público</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>{formatDate(event.startDate)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
+                                {event.enrolledCount || 0}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {event.maxAttendees || "Ilimitado"}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex justify-between items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEdit(event)}
+                                  title="Editar Evento"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handlePrintBadges(event.id, event.title)
-                                }
-                                disabled={!event.badgeTemplateUrl}
-                                title={
-                                  event.badgeTemplateUrl
-                                    ? "Imprimir Crachás em Lote"
-                                    : "Configure o modelo de crachá para habilitar a impressão"
-                                }
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handlePrintBadges(event.id, event.title)
+                                  }
+                                  disabled={!event.badgeTemplateUrl}
+                                  title={
+                                    event.badgeTemplateUrl
+                                      ? "Imprimir Crachás em Lote"
+                                      : "Configure o modelo de crachá para habilitar a impressão"
+                                  }
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleSendCertificates(event.id, event.title)
-                                }
-                                disabled={
-                                  !event.certificateTemplateUrl ||
-                                  sendCertificatesMutation.isPending
-                                }
-                                title={
-                                  event.certificateTemplateUrl
-                                    ? "Enviar Certificados por E-mail"
-                                    : "Configure o modelo de certificado para habilitar o envio"
-                                }
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleSendCertificates(event.id, event.title)
+                                  }
+                                  disabled={
+                                    !event.certificateTemplateUrl ||
+                                    sendCertificatesMutation.isPending
+                                  }
+                                  title={
+                                    event.certificateTemplateUrl
+                                      ? "Enviar Certificados por E-mail"
+                                      : "Configure o modelo de certificado para habilitar o envio"
+                                  }
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(event.id)}
-                                title="Excluir Evento"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-600" />
-                              </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(event.id)}
+                                  title="Excluir Evento"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/admin/events/${event.id}/enrollments`)}
-                                title="Gerenciar Inscrições"
-                              >
-                                <Users className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigate(`/admin/events/${event.id}/enrollments`)}
+                                  title="Gerenciar Inscrições"
+                                >
+                                  <Users className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
                     )}
                   </TableBody>
                 </Table>

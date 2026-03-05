@@ -13,7 +13,6 @@ const app = express();
 const dbUrl = process.env.DATABASE_URL || "";
 const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ":****@");
 console.log(`[v22-FIX-ASSETS] Database Host: ${dbUrl.split('@')[1] || 'não definido'}`);
-console.log(`[v22-FIX-ASSETS] DATABASE_URL (mascarada): ${maskedUrl}`);
 console.log(`[v22-FIX-ASSETS] NODE_ENV: ${process.env.NODE_ENV}`);
 
 // Confiar no proxy (Traefik) para o rate-limit e logs de IP

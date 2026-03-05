@@ -18,6 +18,7 @@ export const BrandingProvider = ({ children }) => {
     const [platformName, setPlatformName] = useState("SEDUC Eventos");
     const [logoUrl, setLogoUrl] = useState(null);
     const [faviconUrl, setFaviconUrl] = useState(null);
+    const [primaryColor, setPrimaryColor] = useState("#137fec");
 
     useEffect(() => {
         if (settings) {
@@ -25,6 +26,10 @@ export const BrandingProvider = ({ children }) => {
             setPlatformName(name);
             setLogoUrl(settings.logoUrl ? getAssetUrl(settings.logoUrl) : null);
             setFaviconUrl(settings.faviconUrl ? getAssetUrl(settings.faviconUrl) : null);
+            setPrimaryColor(settings.primaryColor || "#137fec");
+
+            // Update CSS Variable
+            document.documentElement.style.setProperty("--primary", settings.primaryColor || "#137fec");
 
             // Update document title
             document.title = name;
@@ -53,7 +58,7 @@ export const BrandingProvider = ({ children }) => {
     }, [refetch]);
 
     return (
-        <BrandingContext.Provider value={{ platformName, logoUrl, faviconUrl }}>
+        <BrandingContext.Provider value={{ platformName, logoUrl, faviconUrl, primaryColor }}>
             {children}
         </BrandingContext.Provider>
     );

@@ -22,6 +22,7 @@ const BrandingManagement = () => {
     const [faviconPreview, setFaviconPreview] = useState(null);
     const [logoFile, setLogoFile] = useState(null);
     const [faviconFile, setFaviconFile] = useState(null);
+    const [primaryColor, setPrimaryColor] = useState("#137fec");
 
     const { data: settings, isLoading } = useQuery({
         queryKey: ["system-settings"],
@@ -36,6 +37,7 @@ const BrandingManagement = () => {
             setPlatformName(settings.platformName || "");
             if (settings.logoUrl) setLogoPreview(getAssetUrl(settings.logoUrl));
             if (settings.faviconUrl) setFaviconPreview(getAssetUrl(settings.faviconUrl));
+            if (settings.primaryColor) setPrimaryColor(settings.primaryColor);
         }
     }, [settings]);
 
@@ -72,6 +74,7 @@ const BrandingManagement = () => {
         e.preventDefault();
         const formData = new FormData();
         formData.append("platformName", platformName);
+        formData.append("primaryColor", primaryColor);
         if (logoFile) formData.append("logo", logoFile);
         if (faviconFile) formData.append("favicon", faviconFile);
 
@@ -108,6 +111,44 @@ const BrandingManagement = () => {
                                 placeholder="Ex: SEDUC Eventos"
                                 required
                             />
+                        </div>
+                        <div className="space-y-4 md:space-y-0 md:flex flex-row gap-8 items-end mt-4">
+                            <div className="space-y-2 flex-grow">
+                                <Label htmlFor="primaryColor">Cor Primária (Tema)</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="primaryColor"
+                                        type="text"
+                                        value={primaryColor}
+                                        onChange={(e) => setPrimaryColor(e.target.value)}
+                                        placeholder="#137fec"
+                                        className="font-mono"
+                                    />
+                                    <div
+                                        className="w-10 h-10 rounded-md border border-input shadow-sm flex-shrink-0 cursor-pointer overflow-hidden relative"
+                                        style={{ backgroundColor: primaryColor }}
+                                    >
+                                        <input
+                                            type="color"
+                                            value={primaryColor}
+                                            onChange={(e) => setPrimaryColor(e.target.value)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Esta cor será aplicada em botões, links e destaques em todo o sistema.</p>
+                            </div>
+                            <div className="hidden md:block">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPrimaryColor("#137fec")}
+                                    className="text-xs"
+                                >
+                                    Restaurar Padrão
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

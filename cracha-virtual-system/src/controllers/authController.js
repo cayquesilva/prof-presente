@@ -54,6 +54,15 @@ const registerValidation = [
     .optional()
     .isIn(["INFANTIL", "FUNDAMENTAL1", "FUNDAMENTAL2", "EJA", "ADMINISTRATIVO", "SUPERIOR"])
     .withMessage("Segmento de ensino inválido."),
+  body("serie")
+    .optional()
+    .trim(),
+  body("subject")
+    .optional()
+    .trim(),
+  body("workload")
+    .optional()
+    .trim(),
 ];
 
 // Validações para login
@@ -88,6 +97,9 @@ const register = async (req, res) => {
       workShifts, // NOVO
       contractType, // NOVO
       teachingSegments, // NOVO
+      serie, // NOVO
+      subject, // NOVO (Componente Curricular)
+      workload, // NOVO (Carga Horária)
     } = req.body;
 
     // Verificar se o email já existe
@@ -164,6 +176,9 @@ const register = async (req, res) => {
           workShifts: Array.isArray(workShifts) ? workShifts.join(",") : workShifts,
           contractType: contractType || null,
           teachingSegments: Array.isArray(teachingSegments) ? teachingSegments.join(",") : teachingSegments,
+          serie: serie || null,
+          subject: subject || null,
+          workload: workload || null,
           photoUrl: null,
           profession: professionName
             ? { connectOrCreate: professionConnectOrCreate }

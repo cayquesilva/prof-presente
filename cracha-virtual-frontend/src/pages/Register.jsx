@@ -58,6 +58,43 @@ const teachingSegmentOptions = [
   { value: "EJA", label: "EJA" },
 ];
 
+const professionOptions = [
+  { value: "gestor", label: "Gestor" },
+  { value: "gestor adjunto", label: "Gestor Adjunto" },
+  { value: "secretário", label: "Secretário" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "educador social voluntário", label: "Educador Social Voluntário" },
+  { value: "professor", label: "Professor" },
+  { value: "merendeiro", label: "Merendeiro" },
+  { value: "apoio", label: "Apoio" },
+  { value: "organizador", label: "Organizador" },
+];
+
+const serieOptions = [
+  { value: "bercário I", label: "Bercário I" },
+  { value: "bercário II", label: "Bercário II" },
+  { value: "maternal I", label: "Maternal I" },
+  { value: "maternal II", label: "Maternal II" },
+  { value: "pré I", label: "Pré I" },
+  { value: "pré II", label: "Pré II" },
+  { value: "1º ao 9º", label: "1º ao 9º" },
+];
+
+const subjectOptions = [
+  { value: "Polivalente", label: "Polivalente" },
+  { value: "Português", label: "Português" },
+  { value: "Matemática", label: "Matemática" },
+  { value: "História", label: "História" },
+  { value: "Geografia", label: "Geografia" },
+  { value: "Ciências", label: "Ciências" },
+  { value: "Inglês", label: "Inglês" },
+  { value: "Artes", label: "Artes" },
+  { value: "Educação Física", label: "Educação Física" },
+  { value: "Ensino Religioso", label: "Ensino Religioso" },
+  { value: "Educação Especial", label: "Educação Especial" },
+  { value: "Outros", label: "Outros" },
+];
+
 /** Helper para renderizar wrapper de campo com label */
 const FieldWrapper = ({ label, children, required = true }) => (
   <div className="space-y-1.5">
@@ -85,6 +122,9 @@ const Register = () => {
     workShifts: [],
     contractType: "",
     teachingSegments: [],
+    serie: "",
+    subject: "",
+    workload: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -210,6 +250,12 @@ const Register = () => {
     if (!formData.address) return "Endereço é obrigatório";
     if (!formData.neighborhood) return "Bairro é obrigatório";
     if (!formData.professionName) return "Profissão é obrigatória";
+    if (!formData.workload) return "Carga Horária é obrigatória";
+
+    if (formData.professionName === "professor") {
+      if (!formData.serie) return "Série é obrigatória para professores";
+      if (!formData.subject) return "Componente Curricular é obrigatório para professores";
+    }
 
     // Validando campos de seleção múltipla/única
     if (!formData.contractType) return "Tipo de vínculo é obrigatório";
@@ -420,14 +466,68 @@ const Register = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FieldWrapper label="Profissão / Cargo">
-                    <Input
-                      name="professionName"
-                      placeholder="Ex: Professor, Coordenador"
+                    <Select
                       value={formData.professionName}
+                      onValueChange={(value) => handleSelectChange("professionName", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione sua profissão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {professionOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Carga Horária (Ex: 40h)">
+                    <Input
+                      name="workload"
+                      placeholder="Sua carga horária"
+                      value={formData.workload}
                       onChange={handleChange}
                     />
                   </FieldWrapper>
+                </div>
 
+                {formData.professionName === "professor" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <FieldWrapper label="Série">
+                      <Select
+                        value={formData.serie}
+                        onValueChange={(value) => handleSelectChange("serie", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a série" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {serieOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Componente Curricular">
+                      <Select
+                        value={formData.subject}
+                        onValueChange={(value) => handleSelectChange("subject", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a disciplina" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subjectOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FieldWrapper>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <FieldWrapper label="Vínculo Empregatício">
                     <Select
                       value={formData.contractType}
