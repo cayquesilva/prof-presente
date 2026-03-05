@@ -48,11 +48,14 @@ const EventEnrollments = () => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const limit = 20;
 
     // Debounce search term
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(searchTerm);
+            setPage(1); // Reset page on search
         }, 500);
         return () => clearTimeout(timer);
     }, [searchTerm]);
@@ -68,26 +71,44 @@ const EventEnrollments = () => {
 
     // Fetch Enrollments
     const { data: enrollmentsData, isLoading: isLoadingEnrollments } = useQuery({
-        queryKey: ["event-enrollments", id],
+        queryKey: ["event-enrollments", id, page, debouncedSearch],
         queryFn: async () => {
-            const res = await api.get(`/enrollments/events/${id}`);
-            // Normaliza a resposta (array ou objeto paginado)
-            const data = res.data;
-            if (Array.isArray(data)) return data;
-            if (data && Array.isArray(data.enrollments)) return data.enrollments;
-            return [];
+            const res = await api.get(`/enrollments/events/${id}`, {
+                params: {
+                    page,
+                    limit,
+                    search: debouncedSearch
+                }
+            });
+            return res.data;
         },
     });
 
-    // Filter Enrollments based on search
-    const filteredEnrollments = enrollmentsData?.filter((enrollment) => {
-        if (!debouncedSearch) return true;
-        const searchLower = debouncedSearch.toLowerCase();
-        return (
-            enrollment.user.name.toLowerCase().includes(searchLower) ||
-            enrollment.user.email.toLowerCase().includes(searchLower)
-        );
-    }) || [];
+    const enrollments = enrollmentsData?.enrollments || [];
+    const pagination = enrollmentsData?.pagination || { page: 1, pages: 1, total: 0 };
+
+    // CSV Export
+    const handleExportCSV = async () => {
+        try {
+            toast.loading("Gerando arquivo CSV...", { id: "export-csv" });
+            const response = await api.get(`/enrollments/events/${id}/export`, {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = `inscritos_evento_${id}.csv`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("CSV exportado com sucesso!", { id: "export-csv" });
+        } catch (error) {
+            console.error("Erro ao exportar CSV:", error);
+            toast.error("Erro ao exportar planilha.", { id: "export-csv" });
+        }
+    };
 
     // Resend Email Mutation
     const resendEmailMutation = useMutation({
@@ -191,7 +212,7 @@ const EventEnrollments = () => {
                 <CardHeader>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <CardTitle>Participantes ({filteredEnrollments.length})</CardTitle>
+                            <CardTitle>Participantes ({pagination.total})</CardTitle>
                             <CardDescription>
                                 Visualize e gerencie os inscritos neste evento.
                             </CardDescription>
@@ -206,7 +227,7 @@ const EventEnrollments = () => {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => toast.info("Exportação em breve!")}>
+                            <Button variant="outline" size="sm" onClick={handleExportCSV}>
                                 <Download className="h-4 w-4 mr-2" />
                                 Exportar CSV
                             </Button>
@@ -216,69 +237,97 @@ const EventEnrollments = () => {
                 <CardContent>
                     {isLoadingEnrollments ? (
                         <div className="p-8 text-center">Carregando inscrições...</div>
-                    ) : filteredEnrollments.length === 0 ? (
+                    ) : enrollments.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">Nenhuma inscrição encontrada{debouncedSearch && " para a busca atual"}.</div>
                     ) : (
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nome</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Data Inscrição</TableHead>
-                                        <TableHead className="text-right">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredEnrollments.map((enrollment) => (
-                                        <TableRow key={enrollment.id}>
-                                            <TableCell className="font-medium">{enrollment.user.name}</TableCell>
-                                            <TableCell>{enrollment.user.email}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={enrollment.status === 'APPROVED' ? 'default' : 'secondary'}>
-                                                    {enrollment.status === 'APPROVED' ? 'Confirmado' : enrollment.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>{new Date(enrollment.createdAt).toLocaleDateString()}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {enrollment.status === 'APPROVED' && (
+                        <div className="space-y-4">
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome</TableHead>
+                                            <TableHead>Email</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Data Inscrição</TableHead>
+                                            <TableHead className="text-right">Ações</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {enrollments.map((enrollment) => (
+                                            <TableRow key={enrollment.id}>
+                                                <TableCell className="font-medium">{enrollment.user.name}</TableCell>
+                                                <TableCell>{enrollment.user.email}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={enrollment.status === 'APPROVED' ? 'default' : 'secondary'}>
+                                                        {enrollment.status === 'APPROVED' ? 'Confirmado' : enrollment.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>{new Date(enrollment.createdAt).toLocaleDateString()}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        {enrollment.status === 'APPROVED' && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => handleResendEmail(enrollment.id)}
+                                                                disabled={resendEmailMutation.isPending}
+                                                                title="Reenviar E-mail de Confirmação"
+                                                            >
+                                                                <Mail className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            onClick={() => handleResendEmail(enrollment.id)}
-                                                            disabled={resendEmailMutation.isPending}
-                                                            title="Reenviar E-mail de Confirmação"
+                                                            className="text-blue-600 hover:text-blue-700"
+                                                            onClick={() => handleMoveParticipant(enrollment)}
+                                                            title="Mover Participante"
                                                         >
-                                                            <Mail className="h-4 w-4" />
+                                                            <ArrowRightLeft className="h-4 w-4" />
                                                         </Button>
-                                                    )}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="text-blue-600 hover:text-blue-700"
-                                                        onClick={() => handleMoveParticipant(enrollment)}
-                                                        title="Mover Participante"
-                                                    >
-                                                        <ArrowRightLeft className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="text-red-600 hover:text-red-700"
-                                                        onClick={() => handleDeleteParticipant(enrollment.id)}
-                                                        disabled={deleteParticipantMutation.isPending}
-                                                        title="Excluir Participante (Libera Vaga)"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-red-600 hover:text-red-700"
+                                                            onClick={() => handleDeleteParticipant(enrollment.id)}
+                                                            disabled={deleteParticipantMutation.isPending}
+                                                            title="Excluir Participante (Libera Vaga)"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {pagination.pages > 1 && (
+                                <div className="flex items-center justify-between py-4">
+                                    <div className="text-sm text-muted-foreground">
+                                        Página {pagination.page} de {pagination.pages}
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                            disabled={page === 1}
+                                        >
+                                            Anterior
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                                            disabled={page === pagination.pages}
+                                        >
+                                            Próxima
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </CardContent>

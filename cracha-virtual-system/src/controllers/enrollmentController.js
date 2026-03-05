@@ -590,6 +590,66 @@ const moveEnrollment = async (req, res) => {
   }
 };
 
+// Exportar inscrições de um evento para CSV (Admin)
+const exportEventEnrollmentsToCSV = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { title: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { eventId },
+      include: {
+        user: {
+          include: {
+            profession: true
+          }
+        }
+      },
+      orderBy: { enrollmentDate: "asc" }
+    });
+
+    // Cabeçalho do CSV
+    let csvContent = "\ufeff"; // BOM para Excel reconhecer UTF-8
+    csvContent += "Nome,Email,Telefone,CPF,Profissão,Série,Componente,Carga Horária,Data Inscrição,Status\n";
+
+    // Linhas do CSV
+    enrollments.forEach(enrollment => {
+      const u = enrollment.user;
+      const row = [
+        `"${u.name || ''}"`,
+        `"${u.email || ''}"`,
+        `"${u.phone || ''}"`,
+        `"${u.cpf || ''}"`,
+        `"${u.profession?.name || ''}"`,
+        `"${u.serie || ''}"`,
+        `"${u.subject || ''}"`,
+        `"${u.workload || ''}"`,
+        `"${new Date(enrollment.enrollmentDate).toLocaleString('pt-BR')}"`,
+        `"${enrollment.status}"`
+      ].join(",");
+      csvContent += row + "\n";
+    });
+
+    const filename = `inscritos_${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(csvContent);
+
+  } catch (error) {
+    console.error("Erro ao exportar inscritos:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 module.exports = {
   enrollInEvent,
   getUserEnrollments,
@@ -600,4 +660,5 @@ module.exports = {
   resendConfirmationEmail,
   deleteEnrollment,
   moveEnrollment,
+  exportEventEnrollmentsToCSV,
 };

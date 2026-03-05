@@ -11,6 +11,7 @@ const {
   resendConfirmationEmail,
   deleteEnrollment,
   moveEnrollment,
+  exportEventEnrollmentsToCSV,
 } = require("../controllers/enrollmentController");
 
 const {
@@ -38,6 +39,14 @@ router.get(
   authenticateToken,
   requireAdminOrOrganizer,
   getEventEnrollments
+);
+
+// Exportar inscrições de um evento para CSV (Admin)
+router.get(
+  "/events/:eventId/export",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  exportEventEnrollmentsToCSV
 );
 
 // Listar inscrições do usuário logado
