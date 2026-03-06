@@ -79,11 +79,11 @@ const getAllUsers = async (req, res) => {
 
     const where = search
       ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-          ],
-        }
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ],
+      }
       : {};
 
     const users = await prisma.user.findMany({
@@ -95,6 +95,15 @@ const getAllUsers = async (req, res) => {
         cpf: true,
         role: true,
         createdAt: true,
+        serie: true,
+        subject: true,
+        workload: true,
+        phone: true,
+        profession: {
+          select: {
+            name: true
+          }
+        },
         _count: {
           select: {
             enrollments: true,
@@ -108,8 +117,15 @@ const getAllUsers = async (req, res) => {
 
     const total = await prisma.user.count({ where });
 
+    // Transformar para incluir professionName na raiz (facilitar frontend)
+    const formattedUsers = users.map(user => ({
+      ...user,
+      professionName: user.profession?.name || null,
+      profession: undefined // Remover objeto aninhado se preferir
+    }));
+
     res.json({
-      users,
+      users: formattedUsers,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -182,7 +198,10 @@ const updateUser = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { name, email, cpf, birthDate, phone, address, password } = req.body;
+    const {
+      name, email, cpf, birthDate, phone, address, password,
+      professionName, serie, subject, workload
+    } = req.body;
 
     // Verificar se o usuário existe
     const existingUser = await prisma.user.findUnique({
@@ -229,6 +248,18 @@ const updateUser = async (req, res) => {
     if (birthDate) updateData.birthDate = new Date(birthDate);
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (serie !== undefined) updateData.serie = serie;
+    if (subject !== undefined) updateData.subject = subject;
+    if (workload !== undefined) updateData.workload = workload;
+
+    if (professionName) {
+      updateData.profession = {
+        connectOrCreate: {
+          where: { name: professionName.trim() },
+          create: { name: professionName.trim() },
+        }
+      };
+    }
 
     // Hash da nova senha se fornecida
     if (password) {
@@ -251,12 +282,25 @@ const updateUser = async (req, res) => {
         photoUrl: true,
         role: true,
         updatedAt: true,
+        serie: true,
+        subject: true,
+        workload: true,
+        profession: {
+          select: {
+            name: true
+          }
+        }
       },
     });
 
+    const responseUser = {
+      ...updatedUser,
+      professionName: updatedUser.profession?.name || null
+    };
+
     res.json({
       message: "Usuário atualizado com sucesso",
-      user: updatedUser,
+      user: responseUser,
     });
   } catch (error) {
     console.error("Erro ao atualizar usuário:", error);

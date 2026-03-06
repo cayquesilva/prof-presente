@@ -48,6 +48,43 @@ import { Shield, Key, Search, Plus, UserPlus, Calendar, MapPin, Clock, Trash2 } 
 import { toast } from "sonner";
 import AdminUserRegister from "./AdminUserRegister";
 
+const professionOptions = [
+  { value: "gestor", label: "Gestor" },
+  { value: "gestor adjunto", label: "Gestor Adjunto" },
+  { value: "secretário", label: "Secretário" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "educador social voluntário", label: "Educador Social Voluntário" },
+  { value: "professor", label: "Professor" },
+  { value: "merendeiro", label: "Merendeiro" },
+  { value: "apoio", label: "Apoio" },
+  { value: "organizador", label: "Organizador" },
+];
+
+const serieOptions = [
+  { value: "bercário I", label: "Bercário I" },
+  { value: "bercário II", label: "Bercário II" },
+  { value: "maternal I", label: "Maternal I" },
+  { value: "maternal II", label: "Maternal II" },
+  { value: "pré I", label: "Pré I" },
+  { value: "pré II", label: "Pré II" },
+  { value: "1º ao 9º", label: "1º ao 9º" },
+];
+
+const subjectOptions = [
+  { value: "Polivalente", label: "Polivalente" },
+  { value: "Português", label: "Português" },
+  { value: "Matemática", label: "Matemática" },
+  { value: "História", label: "História" },
+  { value: "Geografia", label: "Geografia" },
+  { value: "Ciências", label: "Ciências" },
+  { value: "Inglês", label: "Inglês" },
+  { value: "Artes", label: "Artes" },
+  { value: "Educação Física", label: "Educação Física" },
+  { value: "Ensino Religioso", label: "Ensino Religioso" },
+  { value: "Educação Especial", label: "Educação Especial" },
+  { value: "Outros", label: "Outros" },
+];
+
 const UserManagement = () => {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
@@ -70,6 +107,12 @@ const UserManagement = () => {
   const [userToEdit, setUserToEdit] = useState(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [editProfession, setEditProfession] = useState("");
+  const [editSerie, setEditSerie] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editWorkload, setEditWorkload] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCpf, setEditCpf] = useState("");
 
   // QUERY: Histórico de inscrições do usuário
   const { data: userEnrollments, isLoading: isLoadingEnrollments } = useQuery({
@@ -179,8 +222,14 @@ const UserManagement = () => {
 
   const handleEditClick = (user) => {
     setUserToEdit(user);
-    setEditName(user.name);
-    setEditEmail(user.email);
+    setEditName(user.name || "");
+    setEditEmail(user.email || "");
+    setEditProfession(user.professionName || "");
+    setEditSerie(user.serie || "");
+    setEditSubject(user.subject || "");
+    setEditWorkload(user.workload || "");
+    setEditPhone(user.phone || "");
+    setEditCpf(user.cpf || "");
     setIsEditDialogOpen(true);
   };
 
@@ -191,7 +240,16 @@ const UserManagement = () => {
     }
     updateUserMutation.mutate({
       userId: userToEdit.id,
-      data: { name: editName, email: editEmail }
+      data: {
+        name: editName,
+        email: editEmail,
+        professionName: editProfession,
+        serie: editSerie,
+        subject: editSubject,
+        workload: editWorkload,
+        phone: editPhone,
+        cpf: editCpf
+      }
     });
   };
 
@@ -549,15 +607,15 @@ const UserManagement = () => {
 
       {/* DIALOG DE EDIÇÃO DE USUÁRIO */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
-              Atualize o nome ou email do usuário.
+              Atualize os dados cadastrais do usuário.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div className="space-y-2 md:col-span-2">
               <Label>Nome Completo</Label>
               <Input
                 value={editName}
@@ -565,7 +623,7 @@ const UserManagement = () => {
                 placeholder="Nome do usuário"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label>Email</Label>
               <Input
                 value={editEmail}
@@ -574,6 +632,94 @@ const UserManagement = () => {
                 type="email"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>CPF</Label>
+              <Input
+                value={editCpf}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "");
+                  if (v.length > 11) v = v.slice(0, 11);
+                  v = v.replace(/(\d{3})(\d)/, "$1.$2")
+                    .replace(/(\d{3})(\d)/, "$1.$2")
+                    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+                  setEditCpf(v);
+                }}
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input
+                value={editPhone}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "");
+                  if (v.length > 11) v = v.slice(0, 11);
+                  v = v.replace(/(\d{2})(\d)/, "($1) $2")
+                    .replace(/(\d{5})(\d)/, "$1-$2");
+                  setEditPhone(v);
+                }}
+                placeholder="(00) 00000-0000"
+                maxLength={15}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Profissão / Cargo</Label>
+              <Select value={editProfession} onValueChange={setEditProfession}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {professionOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Carga Horária</Label>
+              <Input
+                value={editWorkload}
+                onChange={(e) => setEditWorkload(e.target.value)}
+                placeholder="Ex: 40h"
+              />
+            </div>
+
+            {editProfession === "professor" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Série</Label>
+                  <Select value={editSerie} onValueChange={setEditSerie}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {serieOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Componente Curricular</Label>
+                  <Select value={editSubject} onValueChange={setEditSubject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # 1. Backend API
   backend:
-    image: vydhal/eduagenda-backend:1.0.2
+    image: vydhal/eduagenda-backend:latest
     environment:
       # Conecta ao Postgres usando o nome do serviço na rede interna
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@eduagenda_db:5432/${POSTGRES_DB}?schema=public
@@ -61,7 +61,7 @@ services:
 
   # 2. Frontend
   frontend:
-    image: vydhal/eduagenda-frontend:1.0.2
+    image: vydhal/eduagenda-frontend:latest
     environment:
       - VITE_API_URL=https://eduagenda.simplisoft.com.br/api
       - TZ=America/Sao_Paulo
