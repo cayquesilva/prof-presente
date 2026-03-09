@@ -233,9 +233,20 @@ const getEventEnrollments = async (req, res) => {
       where,
       include: {
         user: {
-          select: { id: true, name: true, email: true, photoUrl: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photoUrl: true,
+            userBadge: {
+              include: {
+                userCheckins: {
+                  where: { eventId }
+                }
+              }
+            }
+          },
         },
-        // ALTERAÇÃO: A inclusão do Badge foi removida daqui também.
       },
       skip: parseInt(skip),
       take: parseInt(limit),
@@ -244,8 +255,20 @@ const getEventEnrollments = async (req, res) => {
 
     const total = await prisma.enrollment.count({ where });
 
+    // Mapear checkinTime para a resposta
+    const formattedEnrollments = enrollments.map(enrollment => {
+      let checkInTime = null;
+      if (enrollment.user && enrollment.user.userBadge && enrollment.user.userBadge.userCheckins && enrollment.user.userBadge.userCheckins.length > 0) {
+        checkInTime = enrollment.user.userBadge.userCheckins[0].checkinTime;
+      }
+      return {
+        ...enrollment,
+        checkInTime
+      };
+    });
+
     res.json({
-      enrollments,
+      enrollments: formattedEnrollments,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -609,7 +632,14 @@ const exportEventEnrollmentsToCSV = async (req, res) => {
       include: {
         user: {
           include: {
-            profession: true
+            profession: true,
+            userBadge: {
+              include: {
+                userCheckins: {
+                  where: { eventId }
+                }
+              }
+            }
           }
         }
       },
@@ -618,11 +648,18 @@ const exportEventEnrollmentsToCSV = async (req, res) => {
 
     // Cabeçalho do CSV
     let csvContent = "\ufeff"; // BOM para Excel reconhecer UTF-8
-    csvContent += "Nome,Email,Telefone,CPF,Profissão,Série,Componente,Carga Horária,Data Inscrição,Status\n";
+    csvContent += "Nome,Email,Telefone,CPF,Profissão,Série,Componente,Carga Horária,Data Inscrição,Status,Fez Check-in,Horário Check-in\n";
 
     // Linhas do CSV
     enrollments.forEach(enrollment => {
       const u = enrollment.user;
+      let checkInTime = null;
+      if (u && u.userBadge && u.userBadge.userCheckins && u.userBadge.userCheckins.length > 0) {
+        checkInTime = u.userBadge.userCheckins[0].checkinTime;
+      }
+      const checkinStatus = checkInTime ? "Sim" : "Não";
+      const checkinTimeFormatted = checkInTime ? new Date(checkInTime).toLocaleString('pt-BR') : "-";
+
       const row = [
         `"${u.name || ''}"`,
         `"${u.email || ''}"`,
@@ -633,7 +670,9 @@ const exportEventEnrollmentsToCSV = async (req, res) => {
         `"${u.subject || ''}"`,
         `"${u.workload || ''}"`,
         `"${new Date(enrollment.enrollmentDate).toLocaleString('pt-BR')}"`,
-        `"${enrollment.status}"`
+        `"${enrollment.status}"`,
+        `"${checkinStatus}"`,
+        `"${checkinTimeFormatted}"`
       ].join(",");
       csvContent += row + "\n";
     });

@@ -313,8 +313,8 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
                         <div className="grid grid-cols-2 gap-4">
                             <FieldWrapper label="Data de Nascimento">
                                 <DatePicker
-                                    value={formData.birthDate ? toZonedTime(formData.birthDate, "UTC") : null}
-                                    onSelect={(date) => handleSelectChange("birthDate", date ? fromZonedTime(date, "UTC") : "")}
+                                    value={formData.birthDate ? toZonedTime(formData.birthDate, "America/Sao_Paulo") : null}
+                                    onSelect={(date) => handleSelectChange("birthDate", date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
                                     disabled={false}
                                 />
                             </FieldWrapper>

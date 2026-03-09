@@ -96,12 +96,13 @@ const subjectOptions = [
 ];
 
 /** Helper para renderizar wrapper de campo com label */
-const FieldWrapper = ({ label, children, required = true }) => (
-  <div className="space-y-1.5">
+const FieldWrapper = ({ label, children, required = true, error, id }) => (
+  <div className="space-y-1.5 flex flex-col" id={id}>
     <Label className="text-sm font-medium text-foreground">
       {label} {required && <span className="text-red-500">*</span>}
     </Label>
     {children}
+    {error && <span className="text-sm text-red-500 mt-1">{error}</span>}
   </div>
 );
 
@@ -129,7 +130,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
   const [workplaces, setWorkplaces] = useState([]);
 
   const [selectedWorkplaces, setSelectedWorkplaces] = useState([]);
@@ -238,46 +239,53 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) return "Nome completo é obrigatório";
-    if (!formData.email.trim()) return "Email é obrigatório";
-    if (formData.password.length < 6) return "A senha deve ter pelo menos 6 caracteres";
-    if (formData.password !== formData.confirmPassword) return "As senhas não coincidem";
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = "Nome completo é obrigatório";
+    if (!formData.email.trim()) newErrors.email = "Email é obrigatório";
+    if (formData.password?.length < 6) newErrors.password = "A senha deve ter pelo menos 6 caracteres";
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "As senhas não coincidem";
 
-    // Validando campos que agora são obrigatórios
-    if (!formData.cpf || formData.cpf.replace(/\D/g, "").length !== 11) return "CPF inválido (11 dígitos obrigatórios)";
-    if (!formData.birthDate) return "Data de Nascimento é obrigatória";
-    if (!formData.phone) return "Telefone é obrigatório";
-    if (!formData.address) return "Endereço é obrigatório";
-    if (!formData.neighborhood) return "Bairro é obrigatório";
-    if (!formData.professionName) return "Profissão é obrigatória";
-    if (!formData.workload) return "Carga Horária é obrigatória";
+    if (!formData.cpf || formData.cpf.replace(/\D/g, "").length !== 11) newErrors.cpf = "CPF inválido (11 dígitos obrigatórios)";
+    if (!formData.birthDate) newErrors.birthDate = "Data de Nascimento é obrigatória";
+    if (!formData.phone) newErrors.phone = "Telefone é obrigatório";
+    if (!formData.address) newErrors.address = "Endereço é obrigatório";
+    if (!formData.neighborhood) newErrors.neighborhood = "Bairro é obrigatório";
+    if (!formData.professionName) newErrors.professionName = "Profissão é obrigatória";
+    if (!formData.workload) newErrors.workload = "Carga Horária é obrigatória";
 
-    if (formData.professionName === "professor") {
-      if (!formData.serie) return "Série é obrigatória para professores";
-      if (!formData.subject) return "Componente Curricular é obrigatório para professores";
+    if (formData.professionName === "professor" || formData.professionName?.toLowerCase() === "professor") {
+      if (!formData.serie) newErrors.serie = "Série é obrigatória para professores";
+      if (!formData.subject) newErrors.subject = "Componente Curricular é obrigatório para professores";
     }
 
-    // Validando campos de seleção múltipla/única
-    if (!formData.contractType) return "Tipo de vínculo é obrigatório";
-    if (formData.workShifts.length === 0) return "Selecione pelo menos um turno de trabalho";
-    if (formData.teachingSegments.length === 0) return "Selecione pelo menos um segmento de ensino";
-    // Unidade educacional não era estritamente obrigatória no backend original, mas vamos pedir
-    if (formData.workplaceIds.length === 0) return "Selecione pelo menos uma unidade educacional";
+    if (!formData.contractType) newErrors.contractType = "Tipo de vínculo é obrigatório";
+    if (formData.workShifts.length === 0) newErrors.workShifts = "Selecione pelo menos um turno de trabalho";
+    if (formData.teachingSegments.length === 0) newErrors.teachingSegments = "Selecione pelo menos um segmento de ensino";
+    if (formData.workplaceIds.length === 0) newErrors.workplaceIds = "Selecione pelo menos uma unidade educacional";
 
-    return null;
+    return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setErrors({});
 
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       setLoading(false);
-      // Rola para o topo para ver o erro
-      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      const firstErrorKey = Object.keys(validationErrors)[0];
+      const errorElement = document.getElementById(`field-wrapper-${firstErrorKey}`) ||
+        document.querySelector(`[name="${firstErrorKey}"]`) ||
+        document.getElementById(firstErrorKey);
+
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
 
@@ -287,10 +295,9 @@ const Register = () => {
     const result = await register(submissionData);
 
     if (result.success) {
-      // Auto-login successful in hook, navigate directly
       navigate("/dashboard");
     } else {
-      setError(result.error);
+      setErrors({ form: result.error });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
     setLoading(false);
@@ -316,9 +323,9 @@ const Register = () => {
         <Card className="bg-card/80 backdrop-blur-sm border-border shadow-xl rounded-lg">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
-              {error && (
+              {errors.form && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{errors.form}</AlertDescription>
                 </Alert>
               )}
 
@@ -331,7 +338,7 @@ const Register = () => {
                 <Separator className="mb-6" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FieldWrapper label="Nome Completo">
+                  <FieldWrapper id="field-wrapper-name" error={errors.name} label="Nome Completo">
                     <Input
                       id="name"
                       name="name"
@@ -341,14 +348,14 @@ const Register = () => {
                     />
                   </FieldWrapper>
 
-                  <FieldWrapper label="Data de Nascimento">
+                  <FieldWrapper id="field-wrapper-birthDate" error={errors.birthDate} label="Data de Nascimento">
                     <DatePicker
-                      value={formData.birthDate ? toZonedTime(formData.birthDate, "UTC") : null}
-                      onSelect={(date) => handleSelectChange("birthDate", date ? fromZonedTime(date, "UTC") : "")}
+                      value={formData.birthDate ? toZonedTime(formData.birthDate, "America/Sao_Paulo") : null}
+                      onSelect={(date) => handleSelectChange("birthDate", date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
                     />
                   </FieldWrapper>
 
-                  <FieldWrapper label="CPF">
+                  <FieldWrapper id="field-wrapper-cpf" error={errors.cpf} label="CPF">
                     <Input
                       name="cpf"
                       placeholder="000.000.000-00"
@@ -358,7 +365,7 @@ const Register = () => {
                     />
                   </FieldWrapper>
 
-                  <FieldWrapper label="Telefone / WhatsApp">
+                  <FieldWrapper id="field-wrapper-phone" error={errors.phone} label="Telefone / WhatsApp">
                     <Input
                       name="phone"
                       placeholder="(00) 00000-0000"
@@ -370,7 +377,7 @@ const Register = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <FieldWrapper label="Endereço (Rua e Nº)">
+                  <FieldWrapper id="field-wrapper-address" error={errors.address} label="Endereço (Rua e Nº)">
                     <Input
                       name="address"
                       placeholder="Rua Exemplo, 123"
@@ -379,7 +386,7 @@ const Register = () => {
                     />
                   </FieldWrapper>
 
-                  <FieldWrapper label="Bairro">
+                  <FieldWrapper id="field-wrapper-neighborhood" error={errors.neighborhood} label="Bairro">
                     <Input
                       name="neighborhood"
                       placeholder="Seu bairro"
@@ -399,7 +406,7 @@ const Register = () => {
                 <Separator className="mb-6" />
 
                 <div className="space-y-6">
-                  <FieldWrapper label="Email">
+                  <FieldWrapper id="field-wrapper-email" error={errors.email} label="Email">
                     <Input
                       name="email"
                       type="email"
@@ -410,7 +417,7 @@ const Register = () => {
                   </FieldWrapper>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FieldWrapper label="Senha">
+                    <FieldWrapper id="field-wrapper-password" error={errors.password} label="Senha">
                       <div className="relative">
                         <Input
                           type={showPassword ? "text" : "password"}
@@ -431,7 +438,7 @@ const Register = () => {
                       </div>
                     </FieldWrapper>
 
-                    <FieldWrapper label="Confirmar Senha">
+                    <FieldWrapper id="field-wrapper-confirmPassword" error={errors.confirmPassword} label="Confirmar Senha">
                       <div className="relative">
                         <Input
                           type={showConfirmPassword ? "text" : "password"}
@@ -465,7 +472,7 @@ const Register = () => {
                 <Separator className="mb-6" />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FieldWrapper label="Profissão / Cargo">
+                  <FieldWrapper id="field-wrapper-professionName" error={errors.professionName} label="Profissão / Cargo">
                     <Select
                       value={formData.professionName}
                       onValueChange={(value) => handleSelectChange("professionName", value)}
@@ -481,7 +488,7 @@ const Register = () => {
                     </Select>
                   </FieldWrapper>
 
-                  <FieldWrapper label="Carga Horária (Ex: 40h)">
+                  <FieldWrapper id="field-wrapper-workload" error={errors.workload} label="Carga Horária (Ex: 40h)">
                     <Input
                       name="workload"
                       placeholder="Sua carga horária"
@@ -493,7 +500,7 @@ const Register = () => {
 
                 {formData.professionName === "professor" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <FieldWrapper label="Série">
+                    <FieldWrapper id="field-wrapper-serie" error={errors.serie} label="Série">
                       <Select
                         value={formData.serie}
                         onValueChange={(value) => handleSelectChange("serie", value)}
@@ -509,7 +516,7 @@ const Register = () => {
                       </Select>
                     </FieldWrapper>
 
-                    <FieldWrapper label="Componente Curricular">
+                    <FieldWrapper id="field-wrapper-subject" error={errors.subject} label="Componente Curricular">
                       <Select
                         value={formData.subject}
                         onValueChange={(value) => handleSelectChange("subject", value)}
@@ -528,7 +535,7 @@ const Register = () => {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <FieldWrapper label="Vínculo Empregatício">
+                  <FieldWrapper id="field-wrapper-contractType" error={errors.contractType} label="Vínculo Empregatício">
                     <Select
                       value={formData.contractType}
                       onValueChange={(value) => handleSelectChange("contractType", value)}
@@ -546,7 +553,7 @@ const Register = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <FieldWrapper label="Turno(s) de Trabalho" required>
+                  <FieldWrapper id="field-wrapper-workShifts" error={errors.workShifts} label="Turno(s) de Trabalho" required>
                     <Popover open={openShiftPopover} onOpenChange={setOpenShiftPopover}>
                       <PopoverTrigger asChild>
                         <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
@@ -579,7 +586,7 @@ const Register = () => {
                     </Popover>
                   </FieldWrapper>
 
-                  <FieldWrapper label="Segmento(s) de Atuação" required>
+                  <FieldWrapper id="field-wrapper-teachingSegments" error={errors.teachingSegments} label="Segmento(s) de Atuação" required>
                     <Popover open={openSegmentPopover} onOpenChange={setOpenSegmentPopover}>
                       <PopoverTrigger asChild>
                         <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
@@ -614,7 +621,7 @@ const Register = () => {
                 </div>
 
                 <div className="mt-6">
-                  <FieldWrapper label="Unidade(s) Educacional(is)" required>
+                  <FieldWrapper id="field-wrapper-workplaceIds" error={errors.workplaceIds} label="Unidade(s) Educacional(is)" required>
                     <Popover open={openWorkplacePopover} onOpenChange={setOpenWorkplacePopover}>
                       <PopoverTrigger asChild>
                         <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">

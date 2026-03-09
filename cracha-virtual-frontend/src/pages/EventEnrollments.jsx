@@ -248,6 +248,7 @@ const EventEnrollments = () => {
                                             <TableHead>Nome</TableHead>
                                             <TableHead>Email</TableHead>
                                             <TableHead>Status</TableHead>
+                                            <TableHead>Check-in</TableHead>
                                             <TableHead>Data Inscrição</TableHead>
                                             <TableHead className="text-right">Ações</TableHead>
                                         </TableRow>
@@ -261,6 +262,15 @@ const EventEnrollments = () => {
                                                     <Badge variant={enrollment.status === 'APPROVED' ? 'default' : 'secondary'}>
                                                         {enrollment.status === 'APPROVED' ? 'Confirmado' : enrollment.status}
                                                     </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {enrollment.checkInTime ? (
+                                                        <span className="text-green-600 font-medium whitespace-nowrap text-sm">
+                                                            Presente ({new Date(enrollment.checkInTime).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })})
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>{new Date(enrollment.createdAt).toLocaleDateString()}</TableCell>
                                                 <TableCell className="text-right">
