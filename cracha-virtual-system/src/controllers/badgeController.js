@@ -356,8 +356,14 @@ const downloadMyUserBadge = async (req, res) => {
         .json({ error: "Dados do usuário ou crachá não encontrados." });
     }
 
+    // Buscar as configurações do sistema para a logo
+    const systemSettings = await prisma.systemSettings.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
+    const logoUrl = systemSettings?.logoUrl || null;
+
     // 2. Gerar o HTML (a "fonte da verdade" do seu e-mail)
-    const badgeHtml = await generateBadgeHtml(user, userBadge, userAwardsData);
+    const badgeHtml = await generateBadgeHtml(user, userBadge, userAwardsData, { logoUrl });
 
     // 3. Converter o HTML em um Buffer de imagem PNG
     const imageBuffer = await nodeHtmlToImage({

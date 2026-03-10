@@ -688,6 +688,43 @@ const getUserEnrollments = async (req, res) => {
   }
 };
 
+// Alterar senha do próprio usuário
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: "Senha atual incorreta" });
+    }
+
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    res.json({ message: "Senha alterada com sucesso." });
+  } catch (error) {
+    console.error("Erro ao alterar senha:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -700,4 +737,5 @@ module.exports = {
   completeOnboarding,
   updateFacialConsent,
   getUserEnrollments, // Exportar nova função
+  changePassword,
 };

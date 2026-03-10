@@ -1,15 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersAPI } from "../lib/api"; // Import usersAPI
+import { usersAPI } from "../lib/api";
 import api from "../lib/api";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, UserPlus } from "lucide-react";
-import { Combobox } from "./ui/combobox"; // Import Combobox
+import { Loader2, Plus, Trash2, UserPlus, Search, CheckCircle2 } from "lucide-react";
+import { Input } from "./ui/input";
 
 export default function EventStaffManager({ eventId }) {
     const queryClient = useQueryClient();
-    const [selectedUserId, setSelectedUserId] = useState("");
+    const [selectedUser, setSelectedUser] = useState(null);
     const [role, setRole] = useState("CHECKIN_COORDINATOR");
+
+    const [userSearch, setUserSearch] = useState("");
+    const [debouncedUserSearch, setDebouncedUserSearch] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedUserSearch(userSearch);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [userSearch]);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [dropdownRef]);
 
     // Busca a equipe atual
     const { data: staff, isLoading } = useQuery({
@@ -20,21 +42,17 @@ export default function EventStaffManager({ eventId }) {
         },
     });
 
-    // Busca lista de usuários para o Combobox
-    const { data: usersData } = useQuery({
-        queryKey: ["users-list-simple"],
+    // Busca lista de usuários para busca
+    const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+        queryKey: ["users-list-simple", debouncedUserSearch],
         queryFn: async () => {
-            // Limitando a 200 usuários para não pesar tanto, já que o Combobox filtra localmente
-            const response = await usersAPI.getAll({ limit: 200 });
+            const response = await usersAPI.getAll({ search: debouncedUserSearch, limit: 15 });
             return response.data;
         },
+        enabled: isDropdownOpen // Otimização: Só busca se estiver aberto
     });
 
-    const userOptions = usersData?.users?.map((user) => ({
-        label: `${user.name} (${user.email})`,
-        value: user.id,
-        email: user.email // Guardamos o email aqui fácil acesso
-    })) || [];
+    const userOptions = usersData?.users || [];
 
     // Mutação para adicionar membro
     const addStaffMutation = useMutation({
@@ -43,7 +61,8 @@ export default function EventStaffManager({ eventId }) {
         },
         onSuccess: () => {
             toast.success("Membro adicionado com sucesso!");
-            setSelectedUserId("");
+            setSelectedUser(null);
+            setUserSearch("");
             queryClient.invalidateQueries(["event-staff", eventId]);
         },
         onError: (error) => {
@@ -68,7 +87,6 @@ export default function EventStaffManager({ eventId }) {
     const handleAddStaff = (e) => {
         e.preventDefault();
 
-        const selectedUser = userOptions.find(u => u.value === selectedUserId);
         if (!selectedUser) {
             toast.error("Selecione um usuário.");
             return;
@@ -103,18 +121,53 @@ export default function EventStaffManager({ eventId }) {
                     <UserPlus className="h-5 w-5" /> Adicionar Membro
                 </h3>
                 <form onSubmit={handleAddStaff} className="flex gap-4 items-end flex-wrap sm:flex-nowrap">
-                    <div className="flex-1 min-w-[200px]">
+                    <div className="flex-1 min-w-[200px] relative" ref={dropdownRef}>
                         <label className="block text-sm font-medium mb-1 text-muted-foreground">
                             Pesquisar Usuário
                         </label>
-                        <Combobox
-                            options={userOptions}
-                            value={selectedUserId}
-                            onSelect={setSelectedUserId}
-                            placeholder="Selecione um usuário..."
-                            searchPlaceholder="Nome ou e-mail..."
-                            className="w-full"
-                        />
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Nome ou e-mail..."
+                                className="pl-8"
+                                value={selectedUser ? `${selectedUser.name} (${selectedUser.email})` : userSearch}
+                                onChange={(e) => {
+                                    setSelectedUser(null);
+                                    setUserSearch(e.target.value);
+                                    setIsDropdownOpen(true);
+                                }}
+                                onClick={() => setIsDropdownOpen(true)}
+                            />
+                        </div>
+
+                        {/* Dropdown customizado estilo Combobox */}
+                        {isDropdownOpen && (
+                            <div className="absolute z-10 top-[calc(100%+4px)] left-0 w-full bg-popover text-popover-foreground border rounded-md shadow-md max-h-[250px] overflow-y-auto">
+                                {isLoadingUsers ? (
+                                    <div className="p-3 text-center text-sm text-muted-foreground">Buscando...</div>
+                                ) : userOptions.length === 0 ? (
+                                    <div className="p-3 text-center text-sm text-muted-foreground">Nenhum usuário encontrado.</div>
+                                ) : (
+                                    userOptions.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className={`flex items-center justify-between p-2 cursor-pointer hover:bg-muted text-sm ${selectedUser?.id === user.id ? 'bg-muted' : ''}`}
+                                            onClick={() => {
+                                                setSelectedUser(user);
+                                                setIsDropdownOpen(false);
+                                                setUserSearch("");
+                                            }}
+                                        >
+                                            <div className="truncate pr-4">
+                                                <span className="font-medium mr-1">{user.name}</span>
+                                                <span className="text-muted-foreground text-xs">({user.email})</span>
+                                            </div>
+                                            {selectedUser?.id === user.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
                     <div className="w-full sm:w-1/3">
                         <label className="block text-sm font-medium mb-1 text-muted-foreground">

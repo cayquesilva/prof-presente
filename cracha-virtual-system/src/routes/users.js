@@ -13,6 +13,7 @@ const {
   completeOnboarding,
   updateFacialConsent,
   getUserEnrollments,
+  changePassword,
 } = require("../controllers/userController");
 
 const {
@@ -42,6 +43,9 @@ router.put(
   updateUserValidation,
   updateUser
 );
+
+// Rota para alterar a própria senha
+router.put("/me/password", authenticateToken, changePassword);
 
 // Rota para marcar o tour como concluído
 router.put("/me/complete-onboarding", authenticateToken, completeOnboarding);

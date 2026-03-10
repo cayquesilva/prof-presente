@@ -221,12 +221,42 @@ const getUserEnrollments = async (req, res) => {
 const getEventEnrollments = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status, search, checkinStatus } = req.query;
     const skip = (page - 1) * limit;
 
     const where = { eventId };
+
     if (status) {
       where.status = status.toUpperCase();
+    }
+
+    if (search) {
+      where.user = {
+        ...where.user,
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ]
+      };
+    }
+
+    if (checkinStatus === "WITH_CHECKIN") {
+      where.user = {
+        ...where.user,
+        userBadge: {
+          userCheckins: {
+            some: { eventId }
+          }
+        }
+      };
+    } else if (checkinStatus === "WITHOUT_CHECKIN") {
+      where.user = {
+        ...where.user,
+        OR: [
+          { userBadge: null }, // não tem crachá
+          { userBadge: { userCheckins: { none: { eventId } } } } // tem crachá mas não tem checkin no evento
+        ]
+      };
     }
 
     const enrollments = await prisma.enrollment.findMany({
@@ -617,6 +647,7 @@ const moveEnrollment = async (req, res) => {
 const exportEventEnrollmentsToCSV = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { search, checkinStatus } = req.query;
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
@@ -627,8 +658,39 @@ const exportEventEnrollmentsToCSV = async (req, res) => {
       return res.status(404).json({ error: "Evento não encontrado" });
     }
 
+    const where = { eventId };
+
+    if (search) {
+      where.user = {
+        ...where.user,
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ]
+      };
+    }
+
+    if (checkinStatus === "WITH_CHECKIN") {
+      where.user = {
+        ...where.user,
+        userBadge: {
+          userCheckins: {
+            some: { eventId }
+          }
+        }
+      };
+    } else if (checkinStatus === "WITHOUT_CHECKIN") {
+      where.user = {
+        ...where.user,
+        OR: [
+          { userBadge: null },
+          { userBadge: { userCheckins: { none: { eventId } } } }
+        ]
+      };
+    }
+
     const enrollments = await prisma.enrollment.findMany({
-      where: { eventId },
+      where,
       include: {
         user: {
           include: {

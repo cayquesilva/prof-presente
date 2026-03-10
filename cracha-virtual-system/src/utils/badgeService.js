@@ -73,6 +73,9 @@ const generateBadgeHtml = (user, badge, awards = [], options = {}) => {
 
   // Lógica do Logo (Fallback para Wireframe/SVG se não houver URL)
   let logoSource = logoUrl;
+  if (options && options.logoUrl) {
+    logoSource = getAbsoluteUrl(baseUrl, options.logoUrl);
+  }
   if (options && options.logoCid) {
     logoSource = `cid:${options.logoCid}`;
   }

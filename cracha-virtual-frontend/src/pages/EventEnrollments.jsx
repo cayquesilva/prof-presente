@@ -41,6 +41,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from "../components/ui/dialog";
+import { Checkbox } from "../components/ui/checkbox";
 
 const EventEnrollments = () => {
     const { id } = useParams();
@@ -50,6 +51,13 @@ const EventEnrollments = () => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [page, setPage] = useState(1);
     const limit = 20;
+
+    const [checkinFilter, setCheckinFilter] = useState("ALL");
+    const [selectedEnrollments, setSelectedEnrollments] = useState([]);
+
+    useEffect(() => {
+        setSelectedEnrollments([]);
+    }, [page, debouncedSearch, checkinFilter]);
 
     // Debounce search term
     useEffect(() => {
@@ -77,7 +85,8 @@ const EventEnrollments = () => {
                 params: {
                     page,
                     limit,
-                    search: debouncedSearch
+                    search: debouncedSearch,
+                    checkinStatus: checkinFilter !== "ALL" ? checkinFilter : undefined
                 }
             });
             return res.data;
@@ -92,6 +101,10 @@ const EventEnrollments = () => {
         try {
             toast.loading("Gerando arquivo CSV...", { id: "export-csv" });
             const response = await api.get(`/enrollments/events/${id}/export`, {
+                params: {
+                    search: debouncedSearch,
+                    checkinStatus: checkinFilter !== "ALL" ? checkinFilter : undefined
+                },
                 responseType: 'blob'
             });
 
@@ -150,6 +163,28 @@ const EventEnrollments = () => {
         }
     };
 
+    const handleSelectAll = (checked) => {
+        if (checked) {
+            setSelectedEnrollments(enrollments.map(e => e.id));
+        } else {
+            setSelectedEnrollments([]);
+        }
+    };
+
+    const handleSelectOne = (checked, enrollmentId) => {
+        if (checked) {
+            setSelectedEnrollments(prev => [...prev, enrollmentId]);
+        } else {
+            setSelectedEnrollments(prev => prev.filter(id => id !== enrollmentId));
+        }
+    };
+
+    const handleBulkMove = () => {
+        if (selectedEnrollments.length === 0) return;
+        setIsMoveModalOpen(true);
+        setSelectedEnrollment(null); // indica que é em massa
+    };
+
     // Move Participant Logic
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [selectedEnrollment, setSelectedEnrollment] = useState(null);
@@ -169,12 +204,21 @@ const EventEnrollments = () => {
 
     const moveParticipantMutation = useMutation({
         mutationFn: async ({ enrollmentId, targetEventId }) => {
-            await api.patch(`/enrollments/${enrollmentId}/move`, { targetEventId });
+            if (enrollmentId === "BULK") {
+                await Promise.all(
+                    selectedEnrollments.map((paramId) =>
+                        api.patch(`/enrollments/${paramId}/move`, { targetEventId })
+                    )
+                );
+            } else {
+                await api.patch(`/enrollments/${enrollmentId}/move`, { targetEventId });
+            }
         },
         onSuccess: () => {
-            toast.success("Participante movido com sucesso!");
+            toast.success(selectedEnrollment ? "Participante movido com sucesso!" : "Participantes movidos com sucesso!");
             setIsMoveModalOpen(false);
             setTargetEventId("");
+            setSelectedEnrollments([]);
             queryClient.invalidateQueries(["event-enrollments", id]);
             queryClient.invalidateQueries(["event", id]);
         },
@@ -217,7 +261,22 @@ const EventEnrollments = () => {
                                 Visualize e gerencie os inscritos neste evento.
                             </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            {selectedEnrollments.length > 0 && (
+                                <Button variant="secondary" size="sm" onClick={handleBulkMove} className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200">
+                                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                                    Mover ({selectedEnrollments.length})
+                                </Button>
+                            )}
+                            <select
+                                value={checkinFilter}
+                                onChange={(e) => setCheckinFilter(e.target.value)}
+                                className="px-3 py-2 border rounded-md bg-background text-sm text-muted-foreground outline-none"
+                            >
+                                <option value="ALL">Todos os Status</option>
+                                <option value="WITH_CHECKIN">Com Check-in</option>
+                                <option value="WITHOUT_CHECKIN">Sem Check-in</option>
+                            </select>
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
@@ -245,6 +304,13 @@ const EventEnrollments = () => {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead className="w-12">
+                                                <Checkbox
+                                                    checked={enrollments.length > 0 && selectedEnrollments.length === enrollments.length}
+                                                    onCheckedChange={handleSelectAll}
+                                                    aria-label="Selecionar tudo"
+                                                />
+                                            </TableHead>
                                             <TableHead>Nome</TableHead>
                                             <TableHead>Email</TableHead>
                                             <TableHead>Status</TableHead>
@@ -256,6 +322,13 @@ const EventEnrollments = () => {
                                     <TableBody>
                                         {enrollments.map((enrollment) => (
                                             <TableRow key={enrollment.id}>
+                                                <TableCell>
+                                                    <Checkbox
+                                                        checked={selectedEnrollments.includes(enrollment.id)}
+                                                        onCheckedChange={(checked) => handleSelectOne(checked, enrollment.id)}
+                                                        aria-label={`Selecionar ${enrollment.user.name}`}
+                                                    />
+                                                </TableCell>
                                                 <TableCell className="font-medium">{enrollment.user.name}</TableCell>
                                                 <TableCell>{enrollment.user.email}</TableCell>
                                                 <TableCell>
@@ -349,7 +422,11 @@ const EventEnrollments = () => {
                     <DialogHeader>
                         <DialogTitle>Mover Participante</DialogTitle>
                         <CardDescription>
-                            Selecione o evento de destino para <strong>{selectedEnrollment?.user.name}</strong>.
+                            {selectedEnrollment ? (
+                                <>Selecione o evento de destino para <strong>{selectedEnrollment?.user.name}</strong>.</>
+                            ) : (
+                                <>Selecione o evento de destino para os <strong>{selectedEnrollments.length} participantes selecionados</strong>.</>
+                            )}
                         </CardDescription>
                     </DialogHeader>
 
@@ -395,7 +472,7 @@ const EventEnrollments = () => {
                         <Button
                             disabled={!targetEventId || moveParticipantMutation.isPending}
                             onClick={() => moveParticipantMutation.mutate({
-                                enrollmentId: selectedEnrollment.id,
+                                enrollmentId: selectedEnrollment ? selectedEnrollment.id : "BULK",
                                 targetEventId
                             })}
                         >
