@@ -22,6 +22,7 @@ const spaceRoutes = require("./spaces");
 const equipmentRoutes = require("./equipments");
 const proposalRoutes = require("./proposals");
 const categoryRoutes = require("./categories");
+const liveStreamRoutes = require("./liveStreams");
 
 // Configurar rotas
 router.use("/auth", authRoutes);
@@ -44,6 +45,7 @@ router.use("/settings", settingsRoutes);
 router.use("/spaces", spaceRoutes);
 router.use("/equipments", equipmentRoutes);
 router.use("/categories", categoryRoutes);
+router.use("/live-streams", liveStreamRoutes);
 
 // Rota de status da API
 router.get("/status", (req, res) => {

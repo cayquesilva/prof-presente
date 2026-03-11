@@ -119,6 +119,8 @@ model User {
   staffEvents       EventStaff[]
   trackEnrollments  TrackEnrollment[]
   spaceReservations SpaceReservation[]
+  liveChatMessages  LiveChatMessage[]
+  liveAttendances   LiveAttendance[]
 
   @@index([email])
   @@index([role])
@@ -185,6 +187,7 @@ model Event {
   staff        EventStaff[]
   trackEvents  TrackEvent[]
   userCheckins UserCheckin[]
+  liveStream   LiveStream?
   category     Category?     @relation(fields: [categoryId], references: [id])
   categoryId   String?       @map("category_id")
 
@@ -446,14 +449,16 @@ model Banner {
 }
 
 model SystemSettings {
-  id                String   @id @default(uuid())
-  platformName      String   @default("SEDUC Eventos")
-  logoUrl           String?  @map("logo_url")
-  faviconUrl        String?  @map("favicon_url")
-  primaryColor      String   @default("#137fec") @map("primary_color")
-  reservationConfig Json?    @map("reservation_config") // Configurações dinâmicas de equipamentos e setores
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(uuid())
+  platformName        String   @default("SEDUC Eventos")
+  logoUrl             String?  @map("logo_url")
+  faviconUrl          String?  @map("favicon_url")
+  primaryColor        String   @default("#137fec") @map("primary_color")
+  reservationConfig   Json?    @map("reservation_config") // Configurações dinâmicas de equipamentos e setores
+  youtubeAccessToken  String?  @map("youtube_access_token")
+  youtubeRefreshToken String?  @map("youtube_refresh_token")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
 }
@@ -515,4 +520,54 @@ model SpaceReservation {
   requester User  @relation(fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@map("space_reservations")
+}
+
+// ==========================================
+// ONLINE EVENTS & LIVE STREAMING
+// ==========================================
+
+model LiveStream {
+  id          String   @id @default(uuid())
+  eventId     String   @unique @map("event_id")
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  provider    String   @default("YOUTUBE") // Preparado para escalabilidade (Vimeo, LiveKit, etc)
+  streamId    String?  @map("stream_id")   // ID do Vídeo (ex: dQw4w9WgXcQ)
+  status      String   @default("SCHEDULED") // SCHEDULED, LIVE, ENDED
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  chatMessages LiveChatMessage[]
+  attendances  LiveAttendance[]
+  
+  @@map("live_streams")
+}
+
+model LiveChatMessage {
+  id           String     @id @default(uuid())
+  liveStreamId String     @map("live_stream_id")
+  liveStream   LiveStream @relation(fields: [liveStreamId], references: [id], onDelete: Cascade)
+  userId       String     @map("user_id")
+  user         User       @relation(fields: [userId], references: [id])
+  message      String
+  isBlocked    Boolean    @default(false) @map("is_blocked") // Para moderação
+  createdAt    DateTime   @default(now()) @map("created_at")
+  
+  @@index([liveStreamId])
+  @@index([userId])
+  @@map("live_chat_messages")
+}
+
+model LiveAttendance {
+  id               String     @id @default(uuid())
+  liveStreamId     String     @map("live_stream_id")
+  liveStream       LiveStream @relation(fields: [liveStreamId], references: [id], onDelete: Cascade)
+  userId           String     @map("user_id")
+  user             User       @relation(fields: [userId], references: [id])
+  watchTimeSeconds Int        @default(0) @map("watch_time_seconds") // Acumula tempo assistido
+  lastPingAt       DateTime   @default(now()) @map("last_ping_at")
+  
+  @@unique([liveStreamId, userId])
+  @@map("live_attendances")
 }

@@ -3,7 +3,17 @@ const { prisma } = require("../config/database");
 // Listar todas as trilhas
 const getAllTracks = async (req, res) => {
     try {
+        const { search } = req.query;
+
+        const where = search ? {
+            OR: [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } }
+            ]
+        } : {};
+
         const tracks = await prisma.learningTrack.findMany({
+            where,
             include: {
                 events: {
                     include: {

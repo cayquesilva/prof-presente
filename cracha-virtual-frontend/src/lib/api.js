@@ -182,7 +182,7 @@ export const reportsAPI = {
 
 // Funções de trilhas de formação
 export const tracksAPI = {
-  getAll: () => api.get("/tracks"),
+  getAll: (params) => api.get("/tracks", { params }),
   getById: (id) => api.get(`/tracks/${id}`),
   create: (data) => api.post("/tracks", data),
   update: (id, data) => api.put(`/tracks/${id}`, data),

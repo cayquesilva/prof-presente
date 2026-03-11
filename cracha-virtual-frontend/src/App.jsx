@@ -25,6 +25,7 @@ const CheckIn = lazy(() => import("./pages/CheckIn"));
 const Admin = lazy(() => import("./pages/Admin"));
 const EventEnrollments = lazy(() => import("./pages/EventEnrollments")); // NOVA ROTA
 const SpaceManagement = lazy(() => import("./pages/SpaceManagement")); // NOVA ROTA
+const LiveStreamRoom = lazy(() => import("./pages/LiveStreamRoom")); // NOVA ROTA
 
 const Evaluations = lazy(() => import("./pages/Evaluations"));
 const EvaluateEnrollment = lazy(() => import("./pages/EvaluateEnrollment"));
@@ -38,6 +39,8 @@ const InteractionsSelection = lazy(() => import("./pages/InteractionsSelection")
 const InteractionsRoom = lazy(() => import("./pages/InteractionsRoom"));
 const MyTracks = lazy(() => import("./pages/MyTracks"));
 const AdminTracks = lazy(() => import("./pages/AdminTracks"));
+const Tracks = lazy(() => import("./pages/Tracks"));
+const TrackDetails = lazy(() => import("./pages/TrackDetails"));
 
 import "./App.css";
 
@@ -105,6 +108,37 @@ function App() {
                         <LazyWrapper>
                           <EventDetails />
                         </LazyWrapper>
+                      }
+                    />
+
+                    <Route
+                      path="/tracks"
+                      element={
+                        <LazyWrapper>
+                          <Tracks />
+                        </LazyWrapper>
+                      }
+                    />
+
+                    <Route
+                      path="/tracks/:id"
+                      element={
+                        <LazyWrapper>
+                          <TrackDetails />
+                        </LazyWrapper>
+                      }
+                    />
+
+                    <Route
+                      path="/events/:id/live"
+                      element={
+                        <ProtectedRoute>
+                          <Layout>
+                            <LazyWrapper>
+                              <LiveStreamRoom />
+                            </LazyWrapper>
+                          </Layout>
+                        </ProtectedRoute>
                       }
                     />
 

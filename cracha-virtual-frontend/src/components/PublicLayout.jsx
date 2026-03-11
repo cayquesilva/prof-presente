@@ -47,6 +47,7 @@ const PublicLayout = ({ children }) => {
                     <nav className="hidden lg:flex items-center gap-8 font-bold text-sm text-slate-500 dark:text-slate-400">
                         <Link to="/" className={`hover:text-[#137fec] transition-colors ${location.pathname === '/' ? 'text-[#137fec]' : ''}`}>Início</Link>
                         <Link to="/events" className={`hover:text-[#137fec] transition-colors ${location.pathname === '/events' ? 'text-[#137fec]' : ''}`}>Eventos</Link>
+                        <Link to="/tracks" className={`hover:text-[#137fec] transition-colors ${location.pathname === '/tracks' ? 'text-[#137fec]' : ''}`}>Trilhas</Link>
                         <a href="#" className="hover:text-[#137fec] transition-colors">Sobre</a>
                     </nav>
 
@@ -91,6 +92,7 @@ const PublicLayout = ({ children }) => {
                         <nav className="flex flex-col gap-2 font-medium text-slate-600 dark:text-slate-300">
                             <Link to="/" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Início</Link>
                             <Link to="/events" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Eventos</Link>
+                            <Link to="/tracks" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Trilhas</Link>
                             <a href="#" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Sobre</a>
                         </nav>
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">

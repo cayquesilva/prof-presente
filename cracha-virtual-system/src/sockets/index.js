@@ -55,6 +55,48 @@ const setupSockets = (server) => {
       io.to(eventId).emit("room_update", { onlineCount: roomSize });
     });
 
+    // --- LIVE STREAMS ---
+    socket.on("join_live", async ({ liveStreamId, user }) => {
+      // Entra em uma room especifica da live para o chat e contador separado
+      const roomName = `live_${liveStreamId}`;
+      socket.join(roomName);
+      console.log(`[SOCKET] Usuário ${user?.name || socket.id} entrou na LIVE ${liveStreamId}`);
+
+      const count = io.sockets.adapter.rooms.get(roomName)?.size || 0;
+      io.to(roomName).emit("live_online_count", count);
+    });
+
+    socket.on("leave_live", ({ liveStreamId }) => {
+      const roomName = `live_${liveStreamId}`;
+      socket.leave(roomName);
+
+      const count = io.sockets.adapter.rooms.get(roomName)?.size || 0;
+      io.to(roomName).emit("live_online_count", count);
+    });
+
+    socket.on("send_live_message", async ({ liveStreamId, userId, message }) => {
+      try {
+        const roomName = `live_${liveStreamId}`;
+
+        // 1. Salvar no Banco
+        const chatMessage = await prisma.liveChatMessage.create({
+          data: {
+            liveStreamId,
+            userId,
+            message
+          },
+          include: {
+            user: { select: { id: true, name: true, photoUrl: true } }
+          }
+        });
+
+        // 2. Emitir para a sala realtime
+        io.to(roomName).emit("new_live_message", chatMessage);
+      } catch (err) {
+        console.error("[SOCKET] Erro ao salvar/enviar mensagem da Live:", err);
+      }
+    });
+
     // --- PERGUNTAS (Q&A) ---
     socket.on("new_question", async ({ eventId, userId, text }) => {
       try {

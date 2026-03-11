@@ -8,8 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY package-lock.json ./
 
-# Instalar pnpm e dependências
-RUN npm ci --legacy-peer-deps
+# Instalar dependências
+RUN npm install --legacy-peer-deps
 
 # Copiar código fonte
 COPY . .

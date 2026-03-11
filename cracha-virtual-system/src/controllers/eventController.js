@@ -12,7 +12,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // Função auxiliar para invalidar cache de eventos
 const invalidateEventCache = async () => {
   try {
-    const keys = await redis.keys("express_cache:/api/events*");
+    // Agora as chaves têm prefixos: express_cache:ROLE_ID:/api/events...
+    // Usamos um segundo curinga para pegar todos os perfis
+    const keys = await redis.keys("express_cache:*:/api/events*");
     if (keys.length > 0) {
       await redis.del(...keys);
       console.log(`[Cache] Invalidando ${keys.length} chaves de eventos.`);

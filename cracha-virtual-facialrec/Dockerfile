@@ -34,6 +34,4 @@ COPY . .
 EXPOSE 3002
 
 # Comando para rodar a aplicação (usando Gunicorn para produção)
-# CMD ["gunicorn", "--bind", "0.0.0.0:3002", "app:app"]
-# Ou para desenvolvimento/teste simples:
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:3002", "--workers", "2", "--timeout", "120", "app:app"]

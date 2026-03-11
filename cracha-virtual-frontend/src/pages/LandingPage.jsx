@@ -399,9 +399,9 @@ const LandingPage = () => {
                             <h3 className="text-3xl font-black tracking-tight drop-shadow-sm">Trilhas de Aprendizado</h3>
                             <p className="text-slate-500 max-w-xl">Sequências completas de eventos desenhadas para sua especialização profissional.</p>
                         </div>
-                        <a href="#events" className="text-[#137fec] text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all">
-                            Explorar Eventos Avulsos <ArrowRight className="h-4 w-4" />
-                        </a>
+                        <Link to="/tracks" className="text-[#137fec] text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all">
+                            Ver Todas as Trilhas <ArrowRight className="h-4 w-4" />
+                        </Link>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -477,9 +477,9 @@ const LandingPage = () => {
                                         </div>
 
                                         <div className="mt-auto">
-                                            <Link to={user ? "/dashboard" : "/login"} className="block w-full">
+                                            <Link to={`/tracks/${track.id}`} className="block w-full">
                                                 <Button className="w-full h-14 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white rounded-2xl font-black text-base shadow-xl shadow-slate-200 dark:shadow-none transition-all flex items-center justify-center gap-2 group-hover:scale-[1.02]">
-                                                    Começar Trilha
+                                                    Ver Detalhes
                                                     <ArrowRight className="w-5 h-5" />
                                                 </Button>
                                             </Link>

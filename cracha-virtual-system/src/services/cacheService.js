@@ -78,20 +78,29 @@ module.exports = {
         return next();
       }
 
-      // Cria uma chave baseada na URL original (incluindo query params)
-      const key = `express_cache:${req.originalUrl || req.url}`;
+      // Evita vazamento de dados entre perfis: a chave do cache deve identificar quem pede
+      let cacheKeyPart = 'anon';
+      if (req.user) {
+        if (req.user.role === 'ADMIN') cacheKeyPart = 'admin';
+        else cacheKeyPart = `${req.user.role}_${req.user.id}`;
+      }
+
+      // Cria uma chave baseada na URL original e no perfil do usuário
+      const key = `express_cache:${cacheKeyPart}:${req.originalUrl || req.url}`;
 
       try {
         const cachedBody = await redis.get(key);
         if (cachedBody) {
+          console.log(`[Cache] HIT - Key: ${key}`);
           // Se achou, retorna direto e adiciona header indicando Cache HIT
           res.setHeader('X-Cache', 'HIT');
-          res.setHeader('Content-Type', 'application/json'); 
+          res.setHeader('Content-Type', 'application/json');
           return res.send(cachedBody);
         } else {
+          console.log(`[Cache] MISS - Key: ${key}`);
           // Se não achou, intercepta o res.send para salvar no cache depois
           res.setHeader('X-Cache', 'MISS');
-          
+
           // Guarda a referência original do res.send e res.json
           const originalSend = res.send;
           const originalJson = res.json;
@@ -110,7 +119,7 @@ module.exports = {
              Nota: Express internamente chama res.send dentro de res.json, 
              então muitas vezes só interceptar send é suficiente, mas depende da versão.
           */
-          
+
           next();
         }
       } catch (err) {

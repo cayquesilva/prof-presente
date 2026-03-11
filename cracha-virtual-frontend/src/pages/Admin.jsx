@@ -80,6 +80,7 @@ import CertificatePreview from "../components/CertificatePreview";
 import EventStaffManager from "../components/EventStaffManager";
 import BannerManagement from "../components/BannerManagement";
 import BrandingManagement from "../components/BrandingManagement";
+import LiveStreamConfig from "../components/LiveStreamConfig";
 import { Badge } from "../components/ui/badge";
 import { Combobox } from "../components/ui/combobox";
 import { getAssetUrl } from "../lib/utils";
@@ -910,6 +911,7 @@ const Admin = () => {
                         <TabsTrigger value="details">Detalhes</TabsTrigger>
                         <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
                         <TabsTrigger value="certificate" disabled={!editingEvent}>Certificado</TabsTrigger>
+                        <TabsTrigger value="streaming" disabled={!editingEvent}>Transmissão</TabsTrigger>
                         <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
                       </TabsList>
 
@@ -1370,6 +1372,12 @@ const Admin = () => {
                       <TabsContent value="staff" className="space-y-4 py-4">
                         {editingEvent && (
                           <EventStaffManager eventId={editingEvent.id} />
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="streaming" className="space-y-4 py-4">
+                        {editingEvent && (
+                          <LiveStreamConfig eventId={editingEvent.id} />
                         )}
                       </TabsContent>
                     </Tabs>
