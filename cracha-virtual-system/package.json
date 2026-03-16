@@ -1,6 +1,6 @@
 {
   "name": "cracha-virtual-system",
-  "version": "1.0.5",
+  "version": "2.4.1",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

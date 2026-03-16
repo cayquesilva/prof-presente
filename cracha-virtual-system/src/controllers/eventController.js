@@ -6,6 +6,7 @@ const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const fs = require("fs/promises");
 const path = require("path");
 const { publishToQueue } = require("../services/queueService");
+const certificateService = require("../services/certificateService");
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,10 +27,7 @@ const invalidateEventCache = async () => {
 // exports.invalidateEventCache = invalidateEventCache; // Redundant, exported at bottom
 const getCorrectedDate = (storedDate) => {
   if (!storedDate) return null;
-  const isoString = storedDate.toISOString();
-  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
-  const correctDateString = `${naiveDateTimeString}-03:00`;
-  return new Date(correctDateString);
+  return new Date(storedDate);
 };
 
 // Validações para evento
@@ -691,17 +689,11 @@ const uploadCertificateTemplate = async (req, res) => {
       });
     }
 
-    // CORREÇÃO: Adicionada a validação que exige o envio do arquivo, igual à função do crachá.
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ error: "Nenhuma imagem de modelo de certificado foi enviada" });
+    // CORREÇÃO: O upload do arquivo agora é opcional se já existir um modelo ou se desejar usar fundo branco.
+    const updateData = {};
+    if (req.file) {
+      updateData.certificateTemplateUrl = `/${req.file.path.replace(/\\/g, "/")}`;
     }
-
-    // CORREÇÃO: 'updateData' agora é inicializado com a URL, garantindo que ela sempre seja salva.
-    const updateData = {
-      certificateTemplateUrl: `/${req.file.path.replace(/\\/g, "/")}`,
-    };
 
     if (certificateTemplateConfig) {
       try {
@@ -763,22 +755,13 @@ const sendEventCertificates = async (req, res) => {
       });
     }
 
-    // Publica na fila para processamento assíncrono
-    const queueResult = await publishToQueue('email_queue', {
-      type: 'SEND_CERTIFICATES',
-      payload: {
-        eventId: parentEventId,
-        adminEmail: adminEmail // Opcional: para notificar quando terminar
-      }
-    });
-
-    if (!queueResult) {
-      return res.status(500).json({ error: "Falha ao conectar com serviço de filas. Tente novamente." });
-    }
+    // Chamada direta em background (sem await para não travar o request)
+    certificateService.processCertificateBatch(parentEventId, adminEmail)
+      .catch(err => console.error("[EventController] Background certificate processing error:", err));
 
     // Retorna a resposta para o admin imediatamente
     res.status(202).json({
-      message: `O processo de envio de certificados foi iniciado em segundo plano. Você será notificado ao final.`,
+      message: `O processo de envio de certificados foi iniciado. Você poderá acompanhar o progresso na lista abaixo.`,
     });
 
   } catch (error) {
@@ -832,6 +815,7 @@ const getCertificateLogsForEvent = async (req, res) => {
       select: {
         userId: true,
         status: true,
+        details: true,
         createdAt: true,
       },
     });
@@ -846,7 +830,8 @@ const getCertificateLogsForEvent = async (req, res) => {
         userId: enrollment.user.id,
         userName: enrollment.user.name,
         userEmail: enrollment.user.email,
-        status: log ? log.status : "PENDING", // Se não há log, o status é "Pendente"
+        status: log ? log.status : "PENDING", 
+        details: log ? log.details : null,
         createdAt: log ? log.createdAt : null,
       };
     });

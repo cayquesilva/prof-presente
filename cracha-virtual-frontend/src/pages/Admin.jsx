@@ -26,6 +26,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import { Progress } from "../components/ui/progress";
 
 import {
   Table,
@@ -68,6 +79,7 @@ import {
   Palette,
   Tags,
 } from "lucide-react";
+import CertificateEditor from "../components/CertificateEditor"; // Adjusted path to match existing imports
 import { toast } from "sonner";
 import UserManagement from "../components/UserManagement";
 import AdminCategories from "../components/AdminCategories";
@@ -94,6 +106,13 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  
+  // States para progresso de envio
+  const [isSendConfirmOpen, setIsSendConfirmOpen] = useState(false);
+  const [isSendingProgressOpen, setIsSendingProgressOpen] = useState(false);
+  const [sendingEventId, setSendingEventId] = useState(null);
+  const [sendingEventTitle, setSendingEventTitle] = useState(null);
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, status: 'starting' });
 
 
 
@@ -123,6 +142,19 @@ const Admin = () => {
     hoursY: "",
     hoursFontSize: "",
     hoursColor: "#333333",
+    dateX: "",
+    dateY: "",
+    dateFontSize: "",
+    dateColor: "#333333",
+    logoX: "",
+    logoY: "",
+    logoSize: "",
+    phraseX: "",
+    phraseY: "",
+    phraseFontSize: "",
+    phraseColor: "#000000",
+    phraseMaxWidth: "",
+    phraseText: "Certificamos que {nome} participou do evento {evento} na data {data} com carga horária de {horas} horas.",
   });
 
   const [eventForm, setEventForm] = useState({
@@ -191,18 +223,35 @@ const Admin = () => {
     enabled: activeTab === "dashboard",
   });
 
-  // NOVO: Query para buscar os logs de certificado do evento em edição
+  // NOVO: Query para buscar os logs de certificado do evento selecionado
   const { data: certificateLogs, isLoading: logsLoading } = useQuery({
-    queryKey: ["certificate-logs", editingEvent?.id],
+    queryKey: ["certificate-logs", isSendingProgressOpen ? sendingEventId : editingEvent?.id],
     queryFn: async () => {
+      const eventId = isSendingProgressOpen ? sendingEventId : editingEvent?.id;
       const response = await api.get(
-        `/events/${editingEvent.id}/certificate-logs`
+        `/events/${eventId}/certificate-logs`
       );
       return response.data;
     },
-    // A query só será executada quando 'editingEvent' existir
-    enabled: !!editingEvent?.id,
+    // A query será executada se estivermos enviando OU editando um evento
+    enabled: !!(isSendingProgressOpen ? sendingEventId : editingEvent?.id),
+    refetchInterval: isSendingProgressOpen ? 3000 : false,
   });
+
+  useEffect(() => {
+    if (isSendingProgressOpen && certificateLogs) {
+      const sentCount = certificateLogs.filter(log => log.status === 'SUCCESS').length;
+      const failedCount = certificateLogs.filter(log => log.status === 'FAILED').length;
+      const totalCount = certificateLogs.length;
+      
+      setSendProgress(prev => ({
+        ...prev,
+        current: sentCount + failedCount,
+        total: totalCount || prev.total,
+        status: (sentCount + failedCount >= totalCount && totalCount > 0) ? 'completed' : 'sending'
+      }));
+    }
+  }, [certificateLogs, isSendingProgressOpen]);
 
   // --- INÍCIO: NOVA QUERY PARA BUSCAR A CONTAGEM ---
   const { data: missingBadgesData, isLoading: isLoadingMissingBadges } =
@@ -315,14 +364,14 @@ const Admin = () => {
   });
 
   // NOVA MUTATION: para enviar os certificados
-  const sendCertificatesMutation = useMutation({
+   const sendCertificatesMutation = useMutation({
     mutationFn: (eventId) => api.post(`/events/${eventId}/send-certificates`),
     onSuccess: (data) => {
-      toast.info(
-        data.data.message || "Processo de envio de certificados iniciado."
-      );
+      setIsSendingProgressOpen(true);
+      setSendProgress({ current: 0, total: 0, status: 'sending' });
     },
     onError: (error) => {
+      setIsSendingProgressOpen(false);
       toast.error(
         error.response?.data?.error || "Falha ao iniciar envio de certificados."
       );
@@ -436,6 +485,13 @@ const Admin = () => {
       hoursY: "",
       hoursFontSize: "",
       hoursColor: "#333333",
+      dateX: "",
+      dateY: "",
+      dateFontSize: "",
+      dateColor: "#333333",
+      logoX: "",
+      logoY: "",
+      logoSize: "",
     });
     setEventThumbnailFile(null);
     setEventThumbnailPreviewUrl(null);
@@ -517,6 +573,13 @@ const Admin = () => {
       hoursY: "",
       hoursFontSize: "",
       hoursColor: "#333333",
+      dateX: "",
+      dateY: "",
+      dateFontSize: "",
+      dateColor: "#333333",
+      logoX: "",
+      logoY: "",
+      logoSize: "",
     });
 
     // Preenche com a configuração salva, se existir
@@ -531,6 +594,19 @@ const Admin = () => {
         hoursY: config.hours?.y || "",
         hoursFontSize: config.hours?.fontSize || "",
         hoursColor: config.hours?.color || "#333333",
+        dateX: config.date?.x || "",
+        dateY: config.date?.y || "",
+        dateFontSize: config.date?.fontSize || "",
+        dateColor: config.date?.color || "#333333",
+        logoX: config.logo?.x || "",
+        logoY: config.logo?.y || "",
+        logoSize: config.logo?.size || "",
+        phraseX: config.phrase?.x || "",
+        phraseY: config.phrase?.y || "",
+        phraseFontSize: config.phrase?.fontSize || "",
+        phraseColor: config.phrase?.color || "#000000",
+        phraseMaxWidth: config.phrase?.maxWidth || "",
+        phraseText: config.phrase?.text || "",
       });
     }
 
@@ -615,14 +691,33 @@ const Admin = () => {
       name: {
         x: parseInt(certificateConfig.nameX) || 0,
         y: parseInt(certificateConfig.nameY) || 0,
-        fontSize: parseInt(certificateConfig.nameFontSize) || 24,
+        fontSize: parseInt(certificateConfig.nameFontSize) || 32,
         color: certificateConfig.nameColor,
       },
       hours: {
         x: parseInt(certificateConfig.hoursX) || 0,
         y: parseInt(certificateConfig.hoursY) || 0,
-        fontSize: parseInt(certificateConfig.hoursFontSize) || 18,
+        fontSize: parseInt(certificateConfig.hoursFontSize) || 20,
         color: certificateConfig.hoursColor,
+      },
+      date: {
+        x: parseInt(certificateConfig.dateX) || 0,
+        y: parseInt(certificateConfig.dateY) || 0,
+        fontSize: parseInt(certificateConfig.dateFontSize) || 18,
+        color: certificateConfig.dateColor,
+      },
+      logo: {
+        x: parseInt(certificateConfig.logoX) || 0,
+        y: parseInt(certificateConfig.logoY) || 0,
+        size: parseInt(certificateConfig.logoSize) || 100,
+      },
+      phrase: {
+        x: parseInt(certificateConfig.phraseX) || 0,
+        y: parseInt(certificateConfig.phraseY) || 0,
+        fontSize: parseInt(certificateConfig.phraseFontSize) || 16,
+        color: certificateConfig.phraseColor,
+        maxWidth: parseInt(certificateConfig.phraseMaxWidth) || 600,
+        text: certificateConfig.phraseText,
       },
     };
 
@@ -631,6 +726,7 @@ const Admin = () => {
       formData.append("certificateTemplate", certificateTemplateFile);
     }
     formData.append("certificateTemplateConfig", JSON.stringify(config));
+
     uploadCertificateMutation.mutate({ id: editingEvent.id, formData });
   };
 
@@ -664,13 +760,9 @@ const Admin = () => {
 
   // NOVA FUNÇÃO: para chamar a mutation de envio de certificados
   const handleSendCertificates = (eventId, eventTitle) => {
-    if (
-      window.confirm(
-        `Tem certeza que deseja enviar os certificados para todos os participantes elegíveis do evento "${eventTitle}"?`
-      )
-    ) {
-      sendCertificatesMutation.mutate(eventId);
-    }
+    setSendingEventId(eventId);
+    setSendingEventTitle(eventTitle);
+    setIsSendConfirmOpen(true);
   };
 
   const handleThumbnailFileChange = (e) => {
@@ -894,8 +986,8 @@ const Admin = () => {
                     Novo Evento
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-[95vw] sm:max-w-4xl lg:max-w-[1200px] max-h-[90vh] overflow-y-auto p-0">
-                  <div className="p-4 sm:p-6 space-y-4">
+                <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[98vw] h-[98vh] max-h-[98vh] p-0 overflow-hidden flex flex-col">
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-hidden">
 
                     <DialogHeader>
                       <DialogTitle>
@@ -906,7 +998,7 @@ const Admin = () => {
                       </DialogDescription>
                     </DialogHeader>
 
-                    <Tabs defaultValue="details" className="w-full">
+                    <Tabs defaultValue="details" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
                       <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
                         <TabsTrigger value="details">Detalhes</TabsTrigger>
                         <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
@@ -915,7 +1007,7 @@ const Admin = () => {
                         <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="details" className="space-y-4 py-4">
+                      <TabsContent value="details" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
                         <form onSubmit={handleSubmit} className="space-y-4">
                           {/* ... Campos do formulário Principal ... */}
                           <div className="space-y-2">
@@ -1208,7 +1300,7 @@ const Admin = () => {
                         )}
                       </TabsContent>
 
-                      <TabsContent value="badge" className="space-y-4 py-4">
+                      <TabsContent value="badge" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
                         {editingEvent && (
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
@@ -1275,7 +1367,7 @@ const Admin = () => {
                         )}
                       </TabsContent>
 
-                      <TabsContent value="certificate" className="space-y-4 py-4">
+                      <TabsContent value="certificate" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
                         {editingEvent && (
                           <div className="space-y-4">
                             <div className="flex justify-between items-center">
@@ -1288,57 +1380,76 @@ const Admin = () => {
                               </Button>
                             </div>
 
-                            <form onSubmit={handleCertificateTemplateSubmit} className="space-y-4 border p-4 rounded-lg">
-                              <div className="space-y-2">
-                                <Label>Imagem de Fundo</Label>
-                                <Input type="file" onChange={handleCertificateFileChange} accept="image/*" />
-                              </div>
+                            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                               <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
+                                  <div className="space-y-1">
+                                    <Label className="text-primary font-bold text-xs uppercase tracking-wider">Imagem de Fundo (Opcional)</Label>
+                                    <Input type="file" onChange={handleCertificateFileChange} accept="image/*" className="bg-white h-8 text-xs w-64" />
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground w-48 text-right">Dica: Use templates 1920x1080 ou similares (A4 Landscape).</p>
+                               </div>
+                               
+                               <CertificateEditor 
+                                 initialConfig={{
+                                   name: { 
+                                     x: parseInt(certificateConfig.nameX), 
+                                     y: parseInt(certificateConfig.nameY), 
+                                     fontSize: parseInt(certificateConfig.nameFontSize), 
+                                     color: certificateConfig.nameColor 
+                                   },
+                                   hours: { 
+                                     x: parseInt(certificateConfig.hoursX), 
+                                     y: parseInt(certificateConfig.hoursY), 
+                                     fontSize: parseInt(certificateConfig.hoursFontSize), 
+                                     color: certificateConfig.hoursColor 
+                                   },
+                                   date: { 
+                                     x: parseInt(certificateConfig.dateX), 
+                                     y: parseInt(certificateConfig.dateY), 
+                                     fontSize: parseInt(certificateConfig.dateFontSize), 
+                                     color: certificateConfig.dateColor 
+                                   },
+                                   logo: { 
+                                     x: parseInt(certificateConfig.logoX), 
+                                     y: parseInt(certificateConfig.logoY), 
+                                     size: parseInt(certificateConfig.logoSize) 
+                                   },
+                                   phrase: { 
+                                     x: parseInt(certificateConfig.phraseX), 
+                                     y: parseInt(certificateConfig.phraseY), 
+                                     fontSize: parseInt(certificateConfig.phraseFontSize), 
+                                     color: certificateConfig.phraseColor,
+                                     maxWidth: parseInt(certificateConfig.phraseMaxWidth),
+                                     text: certificateConfig.phraseText 
+                                   },
+                                 }}
+                                 templateImage={certificateTemplatePreviewUrl || (editingEvent.certificateTemplateUrl ? getAssetUrl(editingEvent.certificateTemplateUrl) : null)}
+                                 eventData={editingEvent}
+                                 onSave={(newEditorConfig) => {
+                                   const configToSubmit = {
+                                      name: newEditorConfig.name,
+                                      hours: newEditorConfig.hours,
+                                      date: newEditorConfig.date,
+                                      logo: newEditorConfig.logo,
+                                   };
+                                   
+                                   if (newEditorConfig.phrase) {
+                                     configToSubmit.phrase = {
+                                       ...newEditorConfig.phrase,
+                                       text: newEditorConfig.phrase.text
+                                     };
+                                   }
+                                   
+                                   const formData = new FormData();
+                                   if (certificateTemplateFile) {
+                                     formData.append("certificateTemplate", certificateTemplateFile);
+                                   }
+                                   formData.append("certificateTemplateConfig", JSON.stringify(configToSubmit));
 
-                              <div className="grid grid-cols-2 gap-4">
-                                {/* Config Nome */}
-                                <div>
-                                  <Label>Posição Nome</Label>
-                                  <div className="flex gap-2">
-                                    <Input placeholder="X" value={certificateConfig.nameX} onChange={e => setCertificateConfig({ ...certificateConfig, nameX: e.target.value })} />
-                                    <Input placeholder="Y" value={certificateConfig.nameY} onChange={e => setCertificateConfig({ ...certificateConfig, nameY: e.target.value })} />
-                                  </div>
-                                </div>
-                                <div>
-                                  <Label>Estilo Nome</Label>
-                                  <div className="flex gap-2">
-                                    <Input placeholder="Font" value={certificateConfig.nameFontSize} onChange={e => setCertificateConfig({ ...certificateConfig, nameFontSize: e.target.value })} />
-                                    <Input type="color" value={certificateConfig.nameColor} onChange={e => setCertificateConfig({ ...certificateConfig, nameColor: e.target.value })} />
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                {/* Config Horas */}
-                                <div>
-                                  <Label>Posição Carga Horária</Label>
-                                  <div className="flex gap-2">
-                                    <Input placeholder="X" value={certificateConfig.hoursX} onChange={e => setCertificateConfig({ ...certificateConfig, hoursX: e.target.value })} />
-                                    <Input placeholder="Y" value={certificateConfig.hoursY} onChange={e => setCertificateConfig({ ...certificateConfig, hoursY: e.target.value })} />
-                                  </div>
-                                </div>
-                                <div>
-                                  <Label>Estilo Carga Horária</Label>
-                                  <div className="flex gap-2">
-                                    <Input placeholder="Font" value={certificateConfig.hoursFontSize} onChange={e => setCertificateConfig({ ...certificateConfig, hoursFontSize: e.target.value })} />
-                                    <Input type="color" value={certificateConfig.hoursColor} onChange={e => setCertificateConfig({ ...certificateConfig, hoursColor: e.target.value })} />
-                                  </div>
-                                </div>
-                              </div>
-
-                              <CertificatePreview
-                                templateImage={certificateTemplatePreviewUrl || getAssetUrl(editingEvent.certificateTemplateUrl)}
-                                config={certificateConfig}
-                                onConfigChange={setCertificateConfig}
-                              />
-
-                              <Button type="submit" disabled={uploadCertificateMutation.isPending} className="w-full">
-                                <Upload className="h-4 w-4 mr-2" /> Salvar Certificado
-                              </Button>
-                            </form>
+                                   uploadCertificateMutation.mutate({ id: editingEvent.id, formData });
+                                 }}
+                               />
+                            </div>
 
                             <div className="mt-6">
                               <h4 className="font-semibold mb-2">Histórico de Envios</h4>
@@ -1358,7 +1469,8 @@ const Admin = () => {
                                       <TableRow key={log.userId}>
                                         <TableCell>{log.userName}</TableCell>
                                         <TableCell>{log.status}</TableCell>
-                                        <TableCell>{log.sentAt ? new Date(log.sentAt).toLocaleDateString() : '-'}</TableCell>
+                                        <TableCell>{log.createdAt ? new Date(log.createdAt).toLocaleDateString() : '-'}</TableCell>
+                                        <TableCell className="text-xs text-red-500">{log.details}</TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -1687,7 +1799,68 @@ const Admin = () => {
           <ReportsDashboard />
         </TabsContent>
       </Tabs>
-    </div >
+      {/* Diálogos de Envio de Certificado */}
+      <AlertDialog open={isSendConfirmOpen} onOpenChange={setIsSendConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar Certificados?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja enviar os certificados para todos os participantes elegíveis do evento <strong>"{sendingEventTitle}"</strong>?
+              Esta ação iniciará o processamento em segundo plano.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => {
+                sendCertificatesMutation.mutate(sendingEventId);
+                setIsSendConfirmOpen(false);
+              }}
+            >
+              Sim, Enviar Agora
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={isSendingProgressOpen} onOpenChange={setIsSendingProgressOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviando Certificados</DialogTitle>
+            <DialogDescription>
+              Processando envio para o evento <strong>"{sendingEventTitle}"</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6 space-y-4">
+            <div className="flex justify-between text-sm font-medium">
+              <span>Status: {sendProgress.status === 'completed' ? 'Concluído' : 'Processando...'}</span>
+              <span>{sendProgress.current} de {sendProgress.total}</span>
+            </div>
+            <Progress value={sendProgress.total > 0 ? (sendProgress.current / sendProgress.total) * 100 : 0} className="h-2" />
+            
+            <div className="max-h-40 overflow-y-auto border rounded p-2 text-[10px] bg-slate-50 font-mono space-y-1">
+              {certificateLogs?.slice(0, 10).map((log, i) => (
+                <div key={i} className={log.status === 'SUCCESS' ? 'text-green-600' : log.status === 'FAILED' ? 'text-red-600' : 'text-slate-500'}>
+                  [{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : 'Pendente'}] {log.userName}: {log.status} 
+                  {log.details && <span className="block text-[8px] opacity-70 ml-4 font-sans">{log.details}</span>}
+                </div>
+              ))}
+              {(!certificateLogs || certificateLogs.length === 0) && (
+                <div className="text-slate-400 italic">Aguardando início do processamento...</div>
+              )}
+            </div>
+          </div>
+
+          {sendProgress.status === 'completed' && (
+            <div className="flex justify-end pt-4">
+              <Button onClick={() => setIsSendingProgressOpen(false)}>Fechar</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

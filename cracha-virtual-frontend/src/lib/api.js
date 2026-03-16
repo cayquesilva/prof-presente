@@ -189,6 +189,8 @@ export const tracksAPI = {
   delete: (id) => api.delete(`/tracks/${id}`),
   enroll: (trackId) => api.post(`/tracks/${trackId}/enroll`),
   getMy: () => api.get("/tracks/my"),
+  getEnrollments: (id, params) => api.get(`/tracks/${id}/enrollments`, { params }),
+  exportEnrollments: (id, params) => api.get(`/tracks/${id}/enrollments/export`, { params, responseType: 'blob' }),
 };
 
 // Funções de banners

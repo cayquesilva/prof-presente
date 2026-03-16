@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const {
   generateCertificate,
-  generateTrackCertificate
+  generateTrackCertificate,
+  getMyCertificates
 } = require("../controllers/certificateController");
 const { authenticateToken } = require("../middleware/auth");
 
@@ -19,5 +20,7 @@ router.get(
   authenticateToken,
   generateTrackCertificate
 );
+// Rota para o usuário listar seus próprios certificados
+router.get("/my", authenticateToken, getMyCertificates);
 
 module.exports = router;

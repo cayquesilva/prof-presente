@@ -16,10 +16,15 @@ import {
     CheckCircle2,
     Clock,
     ChevronRight,
-    AlertCircle
+    AlertCircle,
+    Facebook,
+    Twitter,
+    Linkedin,
+    Link as LinkIcon
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "sonner";
 import { getAssetUrl } from "../lib/utils";
@@ -79,6 +84,29 @@ const TrackDetails = () => {
             return;
         }
         enrollMutation.mutate();
+    };
+
+    const copyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast.success("Link copiado para a área de transferência!");
+        } catch (err) {
+            toast.error("Não foi possível copiar o link.");
+        }
+    };
+
+    const handleNativeShare = async () => {
+        const url = window.location.href;
+        const title = track?.title || "Trilha EduAgenda";
+        const text = `Confira esta trilha de aprendizado: ${title}`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title, text, url });
+            } catch (err) {
+                console.log("Erro ao compartilhar", err);
+            }
+        }
     };
 
     if (isLoading) {
@@ -273,13 +301,43 @@ const TrackDetails = () => {
                                 </div>
                             )}
 
-                            <Button variant="outline" className="w-full gap-2 rounded-xl py-6 border-slate-200" onClick={() => {
-                                navigator.clipboard.writeText(window.location.href);
-                                toast.success("Link da trilha copiado!");
-                            }}>
-                                <Share2 className="w-4 h-4" />
-                                Compartilhar Trilha
-                            </Button>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full gap-2 rounded-xl py-6 border-slate-200">
+                                        <Share2 className="w-4 h-4" />
+                                        Compartilhar Trilha
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                    <DialogHeader>
+                                        <DialogTitle className="text-slate-900 dark:text-white">Compartilhar Trilha</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="flex items-center justify-center gap-4 py-6">
+                                        <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://api.whatsapp.com/send?text=Confira esta trilha de aprendizado: ${track?.title} ${window.location.href}`, '_blank')}>
+                                            <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12c0 2.17.69 4.18 1.86 5.82L3 22l4.24-.85C8.82 22.31 10.36 23 12 23c6.07 0 11-4.93 11-11S18.07 2 12 2zm5.72 15.34c-.26.74-1.51 1.4-2.09 1.46-.53.06-1.22.18-3.41-.73-2.63-1.08-4.32-3.8-4.46-3.98-.13-.18-1.07-1.42-1.07-2.71s.67-1.92.9-2.16c.23-.24.5-.3.67-.3h.34c.17 0 .4.06.63.63.24.6.82 2.01.9 2.19.07.18.12.39 0 .63-.12.24-.18.39-.37.6-.18.21-.39.46-.55.63-.18.2-.38.42-.16.8 1.13 1.95 2.5 2.66 3.61 3.23.4.21.64.18.88-.06.24-.24 1.05-1.22 1.33-1.64.28-.42.56-.35.94-.21.38.14 2.41 1.14 2.82 1.34.41.2.68.31.78.48.1.17.1.98-.16 1.72z" clipRule="evenodd" /></svg>
+                                        </Button>
+                                        <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                                            <Facebook className="w-6 h-6 text-blue-600" />
+                                        </Button>
+                                        <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(track?.title)}`, '_blank')}>
+                                            <Twitter className="w-6 h-6 text-sky-500" />
+                                        </Button>
+                                        <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                                            <Linkedin className="w-6 h-6 text-blue-700" />
+                                        </Button>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button onClick={copyToClipboard} variant="secondary" className="w-full gap-2">
+                                            <LinkIcon className="w-4 h-4" />
+                                            Copiar Link
+                                        </Button>
+                                        <Button onClick={handleNativeShare} variant="secondary" className="w-full gap-2 lg:hidden">
+                                            <Share2 className="w-4 h-4" />
+                                            Compartilhar via Celular
+                                        </Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
                         </div>
 
                         {/* Support box */}

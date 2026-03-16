@@ -7,7 +7,8 @@ import { Textarea } from '../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
-import { Plus, Pencil, Trash2, Loader2, Search, Link as LinkIcon, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Search, Link as LinkIcon, X, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -157,7 +158,8 @@ const AdminTracks = () => {
                     <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
                         <TableRow>
                             <TableHead className="font-bold">Trilha</TableHead>
-                            <TableHead className="font-bold">Eventos</TableHead>
+                            <TableHead className="font-bold text-center">Eventos</TableHead>
+                            <TableHead className="font-bold text-center">Inscritos</TableHead>
                             <TableHead className="font-bold">Criada em</TableHead>
                             <TableHead className="text-right font-bold">Ações</TableHead>
                         </TableRow>
@@ -195,9 +197,14 @@ const AdminTracks = () => {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary" className="font-bold">
+                                    <TableCell className="text-center">
+                                        <Badge variant="secondary" className="font-bold bg-slate-100 text-slate-700">
                                             {track._count.events} Etapas
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge variant="outline" className="font-bold border-blue-200 text-blue-700 bg-blue-50/50">
+                                            {track._count.enrollments} Alunos
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-slate-500 text-sm">
@@ -205,6 +212,11 @@ const AdminTracks = () => {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
+                                            <Link to={`/admin/tracks/${track.id}/enrollments`}>
+                                                <Button variant="ghost" size="icon" title="Ver Inscritos e Progresso" className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20">
+                                                    <Users className="w-4 h-4" />
+                                                </Button>
+                                            </Link>
                                             <Button variant="ghost" size="icon" onClick={() => openDialog(track)} className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20">
                                                 <Pencil className="w-4 h-4" />
                                             </Button>

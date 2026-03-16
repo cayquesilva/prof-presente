@@ -260,11 +260,11 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
                     {/* LOGO */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <Link to="/" className="flex items-center gap-2 shrink-0 group">
                         {logoUrl ? (
                             <img src={logoUrl} alt={platformName} className="h-10 w-auto object-contain" />
                         ) : (
-                            <div className="bg-[#137fec] p-1.5 rounded-lg text-white">
+                            <div className="bg-[#137fec] p-1.5 rounded-lg text-white group-hover:scale-110 transition-transform">
                                 <svg className="w-6 h-6" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                                     <path clipRule="evenodd" d="M47.2426 24L24 47.2426L0.757355 24L24 0.757355L47.2426 24ZM12.2426 21H35.7574L24 9.24264L12.2426 21Z" fill="currentColor" fillRule="evenodd"></path>
                                 </svg>
@@ -273,7 +273,7 @@ const LandingPage = () => {
                         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                             {platformName}
                         </h1>
-                    </div>
+                    </Link>
 
                     {/* SEARCH BAR (Desktop Trigger) */}
                     <div className="flex-1 max-w-xl hidden lg:block">
@@ -290,9 +290,10 @@ const LandingPage = () => {
 
                     {/* DESKTOP ACTIONS */}
                     <div className="hidden lg:flex items-center gap-3">
-                        <nav className="flex items-center gap-4 text-sm font-semibold mr-4">
-                            <a href="#" className="hover:text-[#137fec] transition-colors">Início</a>
-                            <a href="#events" className="hover:text-[#137fec] transition-colors">Eventos</a>
+                        <nav className="flex items-center gap-4 text-sm font-semibold mr-4 text-slate-600 dark:text-slate-400">
+                            <Link to="/" className="hover:text-[#137fec] transition-colors">Início</Link>
+                            <Link to="/events" className="hover:text-[#137fec] transition-colors">Eventos</Link>
+                            <Link to="/tracks" className="hover:text-[#137fec] transition-colors">Trilhas</Link>
                             <a href="#" className="hover:text-[#137fec] transition-colors">Sobre</a>
                         </nav>
 
@@ -341,13 +342,13 @@ const LandingPage = () => {
                 {mobileMenuOpen && (
                     <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#101922] p-4 space-y-4 absolute w-full shadow-xl animate-in slide-in-from-top-5">
                         <nav className="flex flex-col gap-2 font-medium text-slate-600 dark:text-slate-300">
-
-                            <a href="#" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Início</a>
-                            <a href="#events" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Eventos</a>
-                            <a href="#" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">Sobre</a>
+                            <Link to="/" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Início</Link>
+                            <Link to="/events" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Eventos</Link>
+                            <Link to="/tracks" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Trilhas</Link>
+                            <a href="#" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Sobre</a>
                         </nav>
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                            <Link to={user ? "/dashboard" : "/login"} className="w-full block">
+                            <Link to={user ? "/dashboard" : "/login"} className="w-full block" onClick={() => setMobileMenuOpen(false)}>
                                 <Button className="w-full bg-[#137fec] hover:bg-[#137fec]/90 text-white font-bold">
                                     {user ? "Acessar Painel" : "Entrar / Cadastrar-se"}
                                 </Button>

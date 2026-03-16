@@ -1,9 +1,8 @@
-version: '3.8'
 
 services:
   # 1. Backend API
   backend:
-    image: vydhal/eduagenda-backend:1.0.4
+    image: vydhal/eduagenda-backend:2.4.1
     environment:
       # Conecta ao Postgres usando o nome do serviço na rede interna
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@eduagenda_db:5432/${POSTGRES_DB}?schema=public
@@ -29,8 +28,17 @@ services:
       - eduagenda_facialrec
     volumes:
       - eduagenda_uploads:/app/uploads
+    command: >
+      sh -c "
+        echo '--- DEBUG STARTUP ---' &&
+        echo 'Tentando conectar ao banco: eduagenda_db:5432' &&
+        sleep 10 &&
+        echo 'Sincronizando schema (prisma db push)...' &&
+        npx prisma db push --accept-data-loss --skip-generate &&
+        echo 'Iniciando servidor...' &&
+        npm start
+      "
     networks:
-      - SimpliSoft # Para falar com o Traefik
       - interna_network_docs # Para falar com o Postgres e serviços internos
     labels:
       - "traefik.enable=true"
@@ -61,12 +69,12 @@ services:
 
   # 2. Frontend
   frontend:
-    image: vydhal/eduagenda-frontend:1.0.4
+    image: vydhal/eduagenda-frontend:2.4.1
     environment:
       - VITE_API_URL=https://eduagenda.simplisoft.com.br/api
       - TZ=America/Sao_Paulo
     networks:
-      - SimpliSoft
+      - interna_network_docs
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=SimpliSoft"
@@ -142,7 +150,7 @@ services:
 
   # 6. Reconhecimento Facial (Python)
   eduagenda_facialrec:
-    image: vydhal/eduagenda-facialrec:latest
+    image: vydhal/eduagenda-facialrec:2.4.1
     environment:
       - PORT=3002
       - PUBLIC_API_URL=https://eduagenda.simplisoft.com.br/api
@@ -162,8 +170,6 @@ volumes:
 
 
 networks:
-  SimpliSoft:
-    external: true
   interna_network_docs:
-    driver: overlay
+    driver: bridge
     attachable: true

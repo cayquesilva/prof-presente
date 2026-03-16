@@ -2,7 +2,7 @@
 # Usage: .\build-images.ps1 [version]
 # Example: .\build-images.ps1 1.0.2
 
-$VERSION = if ($args[0]) { $args[0] } else { "1.0.4" }
+$VERSION = if ($args[0]) { $args[0] } else { "2.4.0" }
 $DOCKER_USERNAME = "vydhal"
 $BACKEND_IMAGE = "eduagenda-backend"
 $FRONTEND_IMAGE = "eduagenda-frontend"

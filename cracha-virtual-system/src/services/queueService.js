@@ -43,10 +43,11 @@ const publishToQueue = async (queue, message) => {
     if (!channel) await connectRabbitMQ();
     if (!channel) throw new Error('RabbitMQ channel not available');
 
+    console.log(`[Queue] Sending message to queue ${queue}:`, JSON.stringify(message, null, 2));
     channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
       persistent: true
     });
-    console.log(`Message sent to queue ${queue}`);
+    console.log(`[Queue] Message successfully pushed to ${queue}`);
     return true;
   } catch (error) {
     console.error(`Error publishing to queue ${queue}:`, error);

@@ -22,7 +22,10 @@ const getAllTracks = async (req, res) => {
                     orderBy: { order: "asc" }
                 },
                 _count: {
-                    select: { events: true }
+                    select: {
+                        events: true,
+                        enrollments: true
+                    }
                 }
             },
             orderBy: { createdAt: "desc" }
@@ -48,7 +51,10 @@ const getTrackById = async (req, res) => {
                     orderBy: { order: "asc" }
                 },
                 _count: {
-                    select: { enrollments: true }
+                    select: {
+                        enrollments: true,
+                        events: true
+                    }
                 }
             }
         });
@@ -377,6 +383,193 @@ const calculateAndSaveProgress = async (userId, trackId) => {
     }
 };
 
+// Obter inscritos em uma trilha (Admin)
+const getTrackEnrollments = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { page = 1, limit = 20, search = "" } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // 1. Buscar a trilha e seus eventos primeiro para ter a base de calculo
+        const track = await prisma.learningTrack.findUnique({
+            where: { id },
+            include: {
+                events: {
+                    select: { eventId: true, event: { select: { title: true } } },
+                    orderBy: { order: 'asc' }
+                }
+            }
+        });
+
+        if (!track) {
+            return res.status(404).json({ error: "Trilha não encontrada" });
+        }
+
+        const trackEventIds = track.events.map(te => te.eventId);
+
+        const where = {
+            trackId: id,
+            ...(search && {
+                user: {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } }
+                    ]
+                }
+            })
+        };
+
+        const [enrollments, total] = await Promise.all([
+            prisma.trackEnrollment.findMany({
+                where,
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            profession: { select: { name: true } },
+                            userBadge: { select: { id: true } }
+                        }
+                    }
+                },
+                orderBy: { createdAt: "desc" },
+                skip: parseInt(skip),
+                take: parseInt(limit)
+            }),
+            prisma.trackEnrollment.count({ where })
+        ]);
+
+        // 2. Para cada inscrito, calcular o status detalhado dos eventos
+        const enrichedEnrollments = await Promise.all(enrollments.map(async (enrollment) => {
+            const userBadgeId = enrollment.user.userBadge?.id;
+
+            let checkins = [];
+            if (userBadgeId && trackEventIds.length > 0) {
+                checkins = await prisma.userCheckin.findMany({
+                    where: {
+                        userBadgeId,
+                        eventId: { in: trackEventIds }
+                    },
+                    select: { eventId: true }
+                });
+            }
+
+            const checkedInEventIds = new Set(checkins.map(c => c.eventId));
+
+            const eventStatuses = track.events.map(te => ({
+                eventId: te.eventId,
+                title: te.event.title,
+                checkedIn: checkedInEventIds.has(te.eventId)
+            }));
+
+            const checkinCount = checkins.length;
+            const progress = trackEventIds.length > 0 ? (checkinCount / trackEventIds.length) * 100 : 0;
+
+            return {
+                ...enrollment,
+                progress,
+                eventStatuses,
+                checkinCount,
+                totalEvents: trackEventIds.length
+            };
+        }));
+
+        res.json({
+            enrollments: enrichedEnrollments,
+            pagination: {
+                total,
+                page: parseInt(page),
+                pages: Math.ceil(total / parseInt(limit))
+            },
+            trackInfo: {
+                title: track.title,
+                totalEvents: trackEventIds.length
+            }
+        });
+    } catch (error) {
+        console.error("Erro ao listar inscritos na trilha:", error);
+        res.status(500).json({ error: "Erro interno do servidor" });
+    }
+};
+
+// Exportar inscritos na trilha para CSV (Admin)
+const exportTrackEnrollmentsToCSV = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { search = "" } = req.query;
+
+        const track = await prisma.learningTrack.findUnique({
+            where: { id },
+            include: {
+                events: { select: { eventId: true } }
+            }
+        });
+
+        if (!track) {
+            return res.status(404).json({ error: "Trilha não encontrada" });
+        }
+
+        const trackEventIds = track.events.map(te => te.eventId);
+
+        const where = {
+            trackId: id,
+            ...(search && {
+                user: {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } }
+                    ]
+                }
+            })
+        };
+
+        const enrollments = await prisma.trackEnrollment.findMany({
+            where,
+            include: {
+                user: {
+                    include: {
+                        userBadge: { select: { id: true } }
+                    }
+                }
+            },
+            orderBy: { user: { name: "asc" } }
+        });
+
+        let csv = "\uFEFF"; // BOM para Excel
+        csv += "Nome;Email;Instituicao;Check-ins;Total Eventos;Progresso;Concluido;Data de Inscricao\n";
+
+        for (const e of enrollments) {
+            const userBadgeId = e.user.userBadge?.id;
+            let checkinCount = 0;
+
+            if (userBadgeId && trackEventIds.length > 0) {
+                checkinCount = await prisma.userCheckin.count({
+                    where: {
+                        userBadgeId,
+                        eventId: { in: trackEventIds }
+                    }
+                });
+            }
+
+            const totalEvents = trackEventIds.length;
+            const progressValue = totalEvents > 0 ? (checkinCount / totalEvents) * 100 : 0;
+            const progress = Math.round(progressValue) + "%";
+            const completed = progressValue >= 100 ? "Sim" : "Não";
+            const date = new Date(e.createdAt).toLocaleDateString("pt-BR");
+
+            csv += `${e.user.name};${e.user.email};${e.user.workplace || ""};${checkinCount};${totalEvents};${progress};${completed};${date}\n`;
+        }
+
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename=inscritos_trilha_${id}.csv`);
+        res.send(csv);
+    } catch (error) {
+        console.error("Erro ao exportar inscritos na trilha:", error);
+        res.status(500).json({ error: "Erro interno do servidor" });
+    }
+};
+
 // Exportar funções
 module.exports = {
     getAllTracks,
@@ -386,5 +579,7 @@ module.exports = {
     deleteTrack,
     enrollInTrack,
     getMyTracks,
-    calculateAndSaveProgress
+    calculateAndSaveProgress,
+    getTrackEnrollments,
+    exportTrackEnrollmentsToCSV
 };

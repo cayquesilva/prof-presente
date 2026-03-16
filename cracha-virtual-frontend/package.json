@@ -1,7 +1,7 @@
 {
   "name": "cracha-virtual-frontend",
   "private": true,
-  "version": "1.0.5",
+  "version": "2.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

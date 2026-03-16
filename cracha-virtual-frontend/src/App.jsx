@@ -41,6 +41,7 @@ const MyTracks = lazy(() => import("./pages/MyTracks"));
 const AdminTracks = lazy(() => import("./pages/AdminTracks"));
 const Tracks = lazy(() => import("./pages/Tracks"));
 const TrackDetails = lazy(() => import("./pages/TrackDetails"));
+const TrackEnrollments = lazy(() => import("./pages/TrackEnrollments"));
 
 import "./App.css";
 
@@ -272,6 +273,19 @@ function App() {
                           <Layout>
                             <LazyWrapper>
                               <EventEnrollments />
+                            </LazyWrapper>
+                          </Layout>
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/admin/tracks/:id/enrollments"
+                      element={
+                        <ProtectedRoute>
+                          <Layout>
+                            <LazyWrapper>
+                              <TrackEnrollments />
                             </LazyWrapper>
                           </Layout>
                         </ProtectedRoute>

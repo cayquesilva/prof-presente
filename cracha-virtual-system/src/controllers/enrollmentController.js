@@ -14,10 +14,7 @@ const { findOrCreateUserBadge } = require("../services/badgeService");
  */
 const getCorrectedDate = (storedDate) => {
   if (!storedDate) return null;
-  const isoString = storedDate.toISOString();
-  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
-  const correctDateString = `${naiveDateTimeString}-03:00`;
-  return new Date(correctDateString);
+  return new Date(storedDate);
 };
 
 // Inscrever usuário em evento
@@ -333,24 +330,7 @@ const cancelEnrollment = async (req, res) => {
         .json({ error: "Você não tem permissão para cancelar esta inscrição" });
     }
 
-    // 1. Pega a data/hora do banco (que é um objeto Date interpretado como UTC).
-    const storedDate = enrollment.event.startDate;
-
-    // 2. Converte para uma string no formato ISO ('YYYY-MM-DDTHH:mm:ss.sssZ').
-    const isoString = storedDate.toISOString();
-
-    // 3. Remove o 'Z' final para obter uma string de data/hora "ingênua",
-    //    tratando-a como se fosse a hora local correta.
-    const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e segundos/millis para simplicidade
-
-    // 4. Anexa o fuso horário correto de Brasília (-03:00) à string.
-    //    Isso diz ao JavaScript: "interprete esta data/hora como se estivesse no fuso -03:00".
-    const correctDateString = `${naiveDateTimeString}-03:00`;
-
-    // 5. Cria o objeto Date correto a partir da string com o fuso ajustado.
-    const correctStartDate = new Date(correctDateString);
-
-    if (new Date() > correctStartDate) {
+    if (new Date() > getCorrectedDate(enrollment.event.startDate)) {
       return res.status(400).json({
         error: "Não é possível cancelar inscrição de evento que já começou",
       });

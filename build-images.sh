@@ -10,7 +10,7 @@ DOCKER_USERNAME="vydhal"
 BACKEND_IMAGE="eduagenda-backend"
 FRONTEND_IMAGE="eduagenda-frontend"
 FACIALREC_IMAGE="eduagenda-facialrec"
-VERSION=${1:-"1.0.1"}
+VERSION=${1:-"2.2.0"}
 
 echo "🐳 Iniciando build das imagens Docker..."
 
