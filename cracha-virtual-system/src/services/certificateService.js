@@ -107,10 +107,12 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
   // 6. Texto Customizado (Frase) com Placeholders e Wrapping
   if (config.phrase && config.phrase.text) {
       let text = config.phrase.text;
-      text = text.replace(/{nome}/g, user.name);
-      text = text.replace(/{horas}/g, totalHours);
-      text = text.replace(/{data}/g, eventDate ? new Date(eventDate).toLocaleDateString("pt-BR") : "");
-      text = text.replace(/{evento}/g, eventTitle || "");
+      // Substituições insensíveis a maiúsculas/minúsculas
+      text = text.replace(/{nome}/gi, user.name);
+      text = text.replace(/{horas}/gi, totalHours);
+      text = text.replace(/{data}/gi, eventDate ? new Date(eventDate).toLocaleDateString("pt-BR") : "");
+      text = text.replace(/{evento}/gi, eventTitle || "");
+      text = text.replace(/{curso}/gi, eventTitle || ""); // Alias comum
       
       // Sanitizar: pdf-lib com fontes padrões não aceita quebras de linha (0x000a) dentro do drawText
       text = text.replace(/\r?\n/g, " ");
