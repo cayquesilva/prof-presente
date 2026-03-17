@@ -14,6 +14,16 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
   // Registrar fontes
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSerif = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontMono = await pdfDoc.embedFont(StandardFonts.Courier);
+
+  const getFont = (family) => {
+    if (!family) return fontRegular;
+    const f = family.toLowerCase();
+    if (f.includes('serif') && !f.includes('sans')) return fontSerif;
+    if (f.includes('mono')) return fontMono;
+    return fontRegular;
+  };
 
   const page = pdfDoc.addPage([842, 595]); // A4 Landscape
   const { width, height } = page.getSize();
@@ -74,7 +84,7 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
       x: parseInt(config.name.x) || 50,
       y: height - (parseInt(config.name.y) || 120) - fontSize,
       size: fontSize,
-      font: fontBold,
+      font: getFont(config.name.fontFamily),
       color: hexToRgb(config.name.color),
     });
   }
@@ -86,7 +96,7 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
       x: parseInt(config.hours.x) || 50,
       y: height - (parseInt(config.hours.y) || 180) - fontSize,
       size: fontSize,
-      font: fontRegular,
+      font: getFont(config.hours.fontFamily),
       color: hexToRgb(config.hours.color),
     });
   }
@@ -99,7 +109,7 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
         x: parseInt(config.date.x) || 50,
         y: height - (parseInt(config.date.y) || 220) - fontSize,
         size: fontSize,
-        font: fontRegular,
+        font: getFont(config.date.fontFamily),
         color: hexToRgb(config.date.color),
     });
   }
@@ -122,6 +132,7 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
       const maxWidth = parseInt(config.phrase.maxWidth) || (width - 100);
       const startX = parseInt(config.phrase.x) || 50;
       const startY = height - (parseInt(config.phrase.y) || 280);
+      const selectedFont = getFont(config.phrase.fontFamily);
 
       const words = text.split(/\s+/);
       let currentLine = '';
@@ -129,10 +140,10 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
 
       for (const word of words) {
           const testLine = currentLine ? `${currentLine} ${word}` : word;
-          const testLineWidth = fontRegular.widthOfTextAtSize(testLine, fontSize);
+          const testLineWidth = selectedFont.widthOfTextAtSize(testLine, fontSize);
 
           if (testLineWidth > maxWidth && currentLine) {
-              page.drawText(currentLine, { x: startX, y: startY - yOffset - fontSize, size: fontSize, font: fontRegular, color });
+              page.drawText(currentLine, { x: startX, y: startY - yOffset - fontSize, size: fontSize, font: selectedFont, color });
               currentLine = word;
               yOffset += (fontSize * 1.3);
           } else {
@@ -140,7 +151,7 @@ const generateCertificatePdf = async (user, config, templateImageBuffer, totalHo
           }
       }
       if (currentLine) {
-          page.drawText(currentLine, { x: startX, y: startY - yOffset - fontSize, size: fontSize, font: fontRegular, color });
+          page.drawText(currentLine, { x: startX, y: startY - yOffset - fontSize, size: fontSize, font: selectedFont, color });
       }
   }
 
