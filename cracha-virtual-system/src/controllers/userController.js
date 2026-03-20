@@ -16,11 +16,11 @@ const updateUserValidation = [
     .normalizeEmail()
     .withMessage("Email inválido"),
   body("cpf")
-    .optional()
-    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
-    .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
+    .optional({ checkFalsy: true })
+    .matches(/^(\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
+    .withMessage("CPF inválido (use 11 dígitos ou formato XXX.XXX.XXX-XX)"),
   body("birthDate")
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage("Data de nascimento inválida"),
 ];
@@ -99,6 +99,9 @@ const getAllUsers = async (req, res) => {
         subject: true,
         workload: true,
         phone: true,
+        birthDate: true,
+        address: true,
+        neighborhood: true,
         profession: {
           select: {
             name: true
@@ -191,6 +194,10 @@ const updateUser = async (req, res) => {
     // Verificar erros de validação
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.warn("--- FALHA DE VALIDAÇÃO (UPDATE USUÁRIO) ---");
+      console.warn("User ID:", req.params.id);
+      console.warn("Dados recebidos:", req.body);
+      console.warn("Erros:", errors.array());
       return res.status(400).json({
         error: "Dados inválidos",
         details: errors.array(),
@@ -199,7 +206,7 @@ const updateUser = async (req, res) => {
 
     const { id } = req.params;
     const {
-      name, email, cpf, birthDate, phone, address, password,
+      name, email, cpf, birthDate, phone, address, neighborhood, password,
       professionName, serie, subject, workload
     } = req.body;
 
@@ -248,6 +255,7 @@ const updateUser = async (req, res) => {
     if (birthDate) updateData.birthDate = new Date(birthDate);
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (neighborhood) updateData.neighborhood = neighborhood;
     if (serie !== undefined) updateData.serie = serie;
     if (subject !== undefined) updateData.subject = subject;
     if (workload !== undefined) updateData.workload = workload;

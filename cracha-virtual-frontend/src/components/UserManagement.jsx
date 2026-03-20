@@ -47,6 +47,9 @@ import { Badge } from "./ui/badge";
 import { Shield, Key, Search, Plus, UserPlus, Calendar, MapPin, Clock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AdminUserRegister from "./AdminUserRegister";
+import { DatePicker } from "./ui/date-picker";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { Separator } from "./ui/separator";
 
 const professionOptions = [
   { value: "gestor", label: "Gestor" },
@@ -85,6 +88,15 @@ const subjectOptions = [
   { value: "Outros", label: "Outros" },
 ];
 
+const formatCPF = (v) => {
+  if (!v) return "";
+  v = v.replace(/\D/g, "");
+  if (v.length > 11) v = v.slice(0, 11);
+  return v.replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+};
+
 const UserManagement = () => {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
@@ -113,6 +125,9 @@ const UserManagement = () => {
   const [editWorkload, setEditWorkload] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editCpf, setEditCpf] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editNeighborhood, setEditNeighborhood] = useState("");
 
   // QUERY: Histórico de inscrições do usuário
   const { data: userEnrollments, isLoading: isLoadingEnrollments } = useQuery({
@@ -224,12 +239,15 @@ const UserManagement = () => {
     setUserToEdit(user);
     setEditName(user.name || "");
     setEditEmail(user.email || "");
-    setEditProfession(user.professionName || "");
+    setEditProfession(user.professionName?.toLowerCase() || "");
     setEditSerie(user.serie || "");
     setEditSubject(user.subject || "");
     setEditWorkload(user.workload || "");
     setEditPhone(user.phone || "");
-    setEditCpf(user.cpf || "");
+    setEditCpf(formatCPF(user.cpf));
+    setEditBirthDate(user.birthDate || "");
+    setEditAddress(user.address || "");
+    setEditNeighborhood(user.neighborhood || "");
     setIsEditDialogOpen(true);
   };
 
@@ -248,7 +266,10 @@ const UserManagement = () => {
         subject: editSubject,
         workload: editWorkload,
         phone: editPhone,
-        cpf: editCpf
+        cpf: editCpf,
+        birthDate: editBirthDate,
+        address: editAddress,
+        neighborhood: editNeighborhood
       }
     });
   };
@@ -634,6 +655,14 @@ const UserManagement = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>Data de Nascimento</Label>
+              <DatePicker
+                value={editBirthDate ? toZonedTime(editBirthDate, "America/Sao_Paulo") : null}
+                onSelect={(date) => setEditBirthDate(date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>CPF</Label>
               <Input
                 value={editCpf}
@@ -667,6 +696,24 @@ const UserManagement = () => {
             </div>
 
             <div className="space-y-2">
+              <Label>Endereço</Label>
+              <Input
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                placeholder="Rua, número"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bairro</Label>
+              <Input
+                value={editNeighborhood}
+                onChange={(e) => setEditNeighborhood(e.target.value)}
+                placeholder="Bairro"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Profissão / Cargo</Label>
               <Select value={editProfession} onValueChange={setEditProfession}>
                 <SelectTrigger>
@@ -675,22 +722,22 @@ const UserManagement = () => {
                 <SelectContent>
                   {professionOptions.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-            <div className="space-y-2">
-              <Label>Carga Horária</Label>
-              <Input
-                value={editWorkload}
-                onChange={(e) => setEditWorkload(e.target.value)}
-                placeholder="Ex: 40h"
-              />
-            </div>
+        <div className="space-y-2">
+          <Label>Carga Horária</Label>
+          <Input
+            value={editWorkload}
+            onChange={(e) => setEditWorkload(e.target.value)}
+            placeholder="Ex: 40h"
+          />
+        </div>
 
-            {editProfession === "professor" && (
-              <>
+        {editProfession?.toLowerCase() === "professor" && (
+          <>
                 <div className="space-y-2">
                   <Label>Série</Label>
                   <Select value={editSerie} onValueChange={setEditSerie}>
