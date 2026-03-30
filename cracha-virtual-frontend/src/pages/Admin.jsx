@@ -838,8 +838,8 @@ const Admin = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6 lg:mb-0">
-        <div className="w-full overflow-x-auto pb-2 block">
-          <TabsList className="inline-flex w-auto space-x-2 lg:grid lg:w-full lg:grid-cols-9">
+        <div className="w-full overflow-x-auto pb-2 block scrollbar-hide">
+          <TabsList className="inline-flex w-max min-w-full justify-start space-x-2 h-auto p-1">
             <TabsTrigger value="dashboard">
               <BarChart className="h-4 w-4 mr-2" />
               Dashboard
@@ -856,7 +856,7 @@ const Admin = () => {
                 </TabsTrigger>
               </>
             )}
-            {(isAdmin || isOrg) && (
+            {isAdmin && (
               <TabsTrigger value="users">
                 <Users className="h-4 w-4 mr-2" />
                 Usuários
@@ -999,13 +999,15 @@ const Admin = () => {
                     </DialogHeader>
 
                     <Tabs defaultValue="details" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-                      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
-                        <TabsTrigger value="details">Detalhes</TabsTrigger>
-                        <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
-                        <TabsTrigger value="certificate" disabled={!editingEvent}>Certificado</TabsTrigger>
-                        <TabsTrigger value="streaming" disabled={!editingEvent}>Transmissão</TabsTrigger>
-                        <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
-                      </TabsList>
+                      <div className="w-full overflow-x-auto pb-2 block scrollbar-hide">
+                        <TabsList className="inline-flex w-max min-w-full justify-start space-x-2 h-auto p-1">
+                          <TabsTrigger value="details">Detalhes</TabsTrigger>
+                          <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
+                          <TabsTrigger value="certificate" disabled={!editingEvent}>Certificado</TabsTrigger>
+                          <TabsTrigger value="streaming" disabled={!editingEvent}>Transmissão</TabsTrigger>
+                          <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
+                        </TabsList>
+                      </div>
 
                       <TabsContent value="details" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -1728,7 +1730,7 @@ const Admin = () => {
 
 
         </TabsContent>
-        {(isAdmin || isOrg) && (
+        {isAdmin && (
           <TabsContent value="users" className="space-y-4">
             {!isLoadingMissingBadges && missingBadgesData && isAdmin && (
               <>

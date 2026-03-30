@@ -2,13 +2,53 @@
 # Usage: .\build-images.ps1 [version]
 # Example: .\build-images.ps1 1.0.2
 
-$VERSION = if ($args[0]) { $args[0] } else { "2.4.0" }
+$VERSION_FILE = "version.txt"
 $DOCKER_USERNAME = "cayquesilva"
 $BACKEND_IMAGE = "simplicorre-backend"
 $FRONTEND_IMAGE = "simplicorre-frontend"
 $FACIALREC_IMAGE = "simplicorre-facialrec"
 
+# Setup / Auto-increment version
+if ($args[0]) {
+    $VERSION = $args[0]
+} else {
+    if (Test-Path $VERSION_FILE) {
+        $lastVersion = (Get-Content $VERSION_FILE).Trim()
+        $parts = $lastVersion.Split('.')
+        if ($parts.Length -ge 3) {
+            $major = [int]$parts[0]
+            $minor = [int]$parts[1]
+            $patch = [int]$parts[2]
+            $patch++
+            $VERSION = "$major.$minor.$patch"
+        } else {
+            $VERSION = "2.4.0"
+        }
+    } else {
+        $VERSION = "2.4.0"
+    }
+}
+
+# Save new version to cache
+[System.IO.File]::WriteAllText((Join-Path (Get-Location) $VERSION_FILE), $VERSION)
+
 Write-Host "--- Iniciando build das imagens Docker (Versao: $VERSION) ---" -ForegroundColor Cyan
+
+# Update docker-compose.yml tags automatically if it exists
+$COMPOSE_FILE = "docker-compose.yml"
+if (Test-Path $COMPOSE_FILE) {
+    Write-Host "Atualizando a tag de imagem no docker-compose.yml para $VERSION ..." -ForegroundColor Cyan
+    $composeContent = [System.IO.File]::ReadAllText((Join-Path (Get-Location) $COMPOSE_FILE))
+    
+    $composeContent = $composeContent -replace "(image:\s*cayquesilva/$BACKEND_IMAGE):[^\s]+", "`$1:$VERSION"
+    $composeContent = $composeContent -replace "(image:\s*cayquesilva/$FRONTEND_IMAGE):[^\s]+", "`$1:$VERSION"
+    $composeContent = $composeContent -replace "(image:\s*cayquesilva/$FACIALREC_IMAGE):[^\s]+", "`$1:$VERSION"
+    $composeContent = $composeContent -replace "(image:\s*vydhal/eduagenda-backend):[^\s]+", "`$1:$VERSION"
+    $composeContent = $composeContent -replace "(image:\s*vydhal/eduagenda-frontend):[^\s]+", "`$1:$VERSION"
+    $composeContent = $composeContent -replace "(image:\s*vydhal/eduagenda-facialrec):[^\s]+", "`$1:$VERSION"
+
+    [System.IO.File]::WriteAllText((Join-Path (Get-Location) $COMPOSE_FILE), $composeContent)
+}
 
 # Backend Build
 Write-Host "[1/3] Fazendo build da imagem do Backend..." -ForegroundColor Yellow

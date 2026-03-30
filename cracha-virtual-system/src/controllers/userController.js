@@ -86,6 +86,13 @@ const getAllUsers = async (req, res) => {
       }
       : {};
 
+    // Se o usuário for Organizador, oculta os Administradores
+    if (req.user && req.user.role === "ORGANIZER") {
+      where.role = {
+        not: "ADMIN",
+      };
+    }
+
     const users = await prisma.user.findMany({
       where,
       select: {
@@ -499,6 +506,13 @@ const resetUserPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         error: "Usuário não encontrado",
+      });
+    }
+
+    // Se o usuário logado for organizador, ele não pode alterar a senha de um admin
+    if (req.user && req.user.role === "ORGANIZER" && user.role === "ADMIN") {
+      return res.status(403).json({
+        error: "Acesso negado. Apenas administradores podem modificar outros administradores.",
       });
     }
 
