@@ -23,7 +23,7 @@ cd ..
 # Build da imagem do frontend
 echo "📦 Fazendo build da imagem do frontend..."
 cd cracha-virtual-frontend
-docker build -t ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION} --build-arg VITE_API_URL=https://eduagenda.simplisoft.com.br/api .
+docker build -t ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION} --build-arg VITE_API_URL=https://corre.simplisoft.com.br/api .
 cd ..
 
 # Build da imagem de reconhecimento facial

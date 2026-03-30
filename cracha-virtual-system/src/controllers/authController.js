@@ -32,8 +32,8 @@ const registerValidation = [
     .withMessage("Senha deve ter pelo menos 6 caracteres"),
   body("birthDate").isISO8601().withMessage("Data de nascimento inválida"),
   body("cpf")
-    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
-    .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
+    .matches(/^(\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
+    .withMessage("CPF inválido (use 11 dígitos ou formato XXX.XXX.XXX-XX)"),
   body("contractType")
     .optional()
     .isIn(["EFETIVO", "PRESTADOR", "ESTUDANTE", "EXTERNO"])
@@ -77,6 +77,9 @@ const register = async (req, res) => {
     // Verificar erros de validação
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.warn("--- FALHA DE VALIDAÇÃO (REGISTRO) ---");
+      console.warn("Dados recebidos:", req.body);
+      console.warn("Erros:", errors.array());
       return res.status(400).json({
         error: "Dados inválidos",
         details: errors.array(),
@@ -366,11 +369,11 @@ const forgotPassword = async (req, res) => {
     // Utilizar a URL do frontend em produção, ou localhost se não for definido.
     // Em produção, a porta não é necessária se estiver usando o domínio principal (porta 443/80)
     const frontendUrl = process.env.NODE_ENV === 'production'
-      ? "https://eduagenda.com.br" // Atualize com o domínio correto de produção se necessário. "https://eduagenda.simplisoft.com.br" estava dando localhost no email? A lógica anterior usava FRONTEND_URL. Se estava falhando, vou forçar a de prod.
+      ? "https://eduagenda.com.br" // Atualize com o domínio correto de produção se necessário. "https://corre.simplisoft.com.br" estava dando localhost no email? A lógica anterior usava FRONTEND_URL. Se estava falhando, vou forçar a de prod.
       : "http://localhost:5173";
 
     // Simplificando e forçando a rota correta:
-    const baseUrl = process.env.FRONTEND_URL || "https://eduagenda.simplisoft.com.br";
+    const baseUrl = process.env.FRONTEND_URL || "https://corre.simplisoft.com.br";
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     const subject = "Redefinição de Senha - Prof Presente";

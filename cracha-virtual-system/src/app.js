@@ -30,7 +30,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       const allowedOrigins = [
-        "https://eduagenda.simplisoft.com.br",
+        "https://corre.simplisoft.com.br",
         "http://localhost:5173",
         "http://localhost:3001"
       ];

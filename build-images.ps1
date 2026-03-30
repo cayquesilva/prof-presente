@@ -19,7 +19,7 @@ Set-Location ..
 # Frontend Build
 Write-Host "[2/3] Fazendo build da imagem do Frontend..." -ForegroundColor Yellow
 Set-Location cracha-virtual-frontend
-docker build -t "${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION}" --build-arg VITE_API_URL=https://eduagenda.simplisoft.com.br/api .
+docker build -t "${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION}" --build-arg VITE_API_URL=https://corre.simplisoft.com.br/api .
 Set-Location ..
 
 # Facial Recognition Build

@@ -288,6 +288,13 @@ const Register = () => {
     const submissionData = { ...formData };
     delete submissionData.confirmPassword;
 
+    // Remover campos vazios da requisição para não falhar na validação opcional do backend
+    Object.keys(submissionData).forEach(key => {
+      if (submissionData[key] === "" || (Array.isArray(submissionData[key]) && submissionData[key].length === 0)) {
+        delete submissionData[key];
+      }
+    });
+
     const result = await register(submissionData);
 
     if (result.success) {
