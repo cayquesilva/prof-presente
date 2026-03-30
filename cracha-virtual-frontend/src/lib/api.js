@@ -184,8 +184,12 @@ export const reportsAPI = {
 export const tracksAPI = {
   getAll: (params) => api.get("/tracks", { params }),
   getById: (id) => api.get(`/tracks/${id}`),
-  create: (data) => api.post("/tracks", data),
-  update: (id, data) => api.put(`/tracks/${id}`, data),
+  create: (data) => api.post("/tracks", data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
+  update: (id, data) => api.put(`/tracks/${id}`, data, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
   delete: (id) => api.delete(`/tracks/${id}`),
   enroll: (trackId) => api.post(`/tracks/${trackId}/enroll`),
   getMy: () => api.get("/tracks/my"),

@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAssetUrl } from '../lib/utils';
 
 const AdminTracks = () => {
     const queryClient = useQueryClient();
@@ -184,7 +185,7 @@ const AdminTracks = () => {
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
                                                 {track.imageUrl ? (
-                                                    <img src={track.imageUrl} className="w-full h-full object-cover" alt="" />
+                                                    <img src={getAssetUrl(track.imageUrl)} className="w-full h-full object-cover" alt="" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-slate-400">
                                                         <LinkIcon className="w-5 h-5" />
@@ -277,7 +278,7 @@ const AdminTracks = () => {
                                 <div className="flex items-center gap-4">
                                     {(imagePreview || formData.imageUrl) && (
                                         <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-100 flex-shrink-0">
-                                            <img src={imagePreview || formData.imageUrl} className="w-full h-full object-cover" alt="Preview" />
+                                            <img src={imagePreview ? imagePreview : getAssetUrl(formData.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
                                         </div>
                                     )}
                                     <div className="flex-1">

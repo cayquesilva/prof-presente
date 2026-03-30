@@ -443,7 +443,7 @@ const LandingPage = () => {
                                     {/* Image Container */}
                                     <div className={`relative overflow-hidden ${trackIdx === 0 ? 'h-64 md:h-80' : 'h-48'}`}>
                                         <img
-                                            src={track.imageUrl || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop"}
+                                            src={track.imageUrl ? getAssetUrl(track.imageUrl) : "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop"}
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                             alt={track.title}
                                         />

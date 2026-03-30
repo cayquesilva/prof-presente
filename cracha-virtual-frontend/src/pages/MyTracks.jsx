@@ -17,6 +17,7 @@ import {
     DialogFooter
 } from '../components/ui/dialog';
 import { Link } from 'react-router-dom';
+import { getAssetUrl } from '../lib/utils';
 
 const MyTracks = () => {
     const queryClient = useQueryClient();
@@ -134,7 +135,7 @@ const MyTracks = () => {
                                         <div className="h-40 bg-slate-100 dark:bg-slate-900 relative">
                                             {enrollment.track.imageUrl ? (
                                                 <img
-                                                    src={enrollment.track.imageUrl}
+                                                    src={getAssetUrl(enrollment.track.imageUrl)}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                     alt={enrollment.track.title}
                                                 />
@@ -221,7 +222,7 @@ const MyTracks = () => {
                                 <Card className="h-full flex flex-col border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden group">
                                     <div className="h-32 bg-slate-200 dark:bg-slate-900 overflow-hidden">
                                         {track.imageUrl ? (
-                                            <img src={track.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
+                                            <img src={getAssetUrl(track.imageUrl)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
                                                 <BookOpen className="w-10 h-10 text-slate-300 dark:text-slate-700" />

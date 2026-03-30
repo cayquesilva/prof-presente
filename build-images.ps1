@@ -3,10 +3,10 @@
 # Example: .\build-images.ps1 1.0.2
 
 $VERSION = if ($args[0]) { $args[0] } else { "2.4.0" }
-$DOCKER_USERNAME = "vydhal"
-$BACKEND_IMAGE = "eduagenda-backend"
-$FRONTEND_IMAGE = "eduagenda-frontend"
-$FACIALREC_IMAGE = "eduagenda-facialrec"
+$DOCKER_USERNAME = "cayquesilva"
+$BACKEND_IMAGE = "simplicorre-backend"
+$FRONTEND_IMAGE = "simplicorre-frontend"
+$FACIALREC_IMAGE = "simplicorre-facialrec"
 
 Write-Host "--- Iniciando build das imagens Docker (Versao: $VERSION) ---" -ForegroundColor Cyan
 
