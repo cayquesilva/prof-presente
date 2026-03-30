@@ -25,6 +25,24 @@ const invalidateEventCache = async () => {
   }
 };
 // exports.invalidateEventCache = invalidateEventCache; // Redundant, exported at bottom
+
+// Função auxiliar para verificar acesso de organizador
+const checkOrganizerAccess = async (event, user) => {
+  if (user.role !== "ORGANIZER") return true; 
+  if (event.creatorId === user.id) return true;
+  
+  // Verifica se o usuário é um ORGANIZER no staff do evento
+  const staff = await prisma.eventStaff.findUnique({
+    where: {
+      userId_eventId: {
+        userId: user.id,
+        eventId: event.id
+      }
+    }
+  });
+  return staff && staff.role === "ORGANIZER";
+};
+
 const getCorrectedDate = (storedDate) => {
   if (!storedDate) return null;
   return new Date(storedDate);
@@ -111,9 +129,13 @@ const getAllEvents = async (req, res) => {
     if (user) {
       if (user.role === "ADMIN") {
         // ADMIN vê tudo
-      } else if (["GESTOR_ESCOLA", "ORGANIZER"].includes(user.role)) {
-        // CORREÇÃO: Gestor e Organizador veem APENAS os eventos que eles mesmos criaram
+      } else if (user.role === "GESTOR_ESCOLA") {
         finalWhere.creatorId = user.id;
+      } else if (user.role === "ORGANIZER") {
+        finalWhere.OR = [
+          { creatorId: user.id },
+          { staff: { some: { userId: user.id, role: "ORGANIZER" } } }
+        ];
       } else if (["CHECKIN_COORDINATOR", "SPEAKER"].includes(user.role)) {
         // --- ALTERAÇÃO PRINCIPAL ---
         // Coordenadores e Palestrantes veem APENAS eventos onde estão na equipe (staff)
@@ -397,8 +419,8 @@ const updateEvent = async (req, res) => {
       });
     }
 
-    // CHECK DE PROPRIEDADE: Organizador só edita o que criou
-    if (req.user.role === "ORGANIZER" && existingEvent.creatorId !== req.user.id) {
+    // CHECK DE PROPRIEDADE: Organizador só edita o que criou ou onde a equipe permite
+    if (!(await checkOrganizerAccess(existingEvent, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode editar eventos que você criou.",
       });
@@ -470,8 +492,8 @@ const deleteEvent = async (req, res) => {
       });
     }
 
-    // CHECK DE PROPRIEDADE: Organizador só deleta o que criou
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    // CHECK DE PROPRIEDADE: Organizador só deleta o que criou ou onde a equipe permite
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode deletar eventos que você criou.",
       });
@@ -516,7 +538,7 @@ const uploadEventBadgeTemplate = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode gerenciar crachás de eventos que você criou.",
       });
@@ -572,7 +594,7 @@ const generatePrintableBadges = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode gerar crachás de eventos que você criou.",
       });
@@ -683,7 +705,7 @@ const uploadCertificateTemplate = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE PARA ORGANIZADOR
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode gerenciar certificados de eventos que você criou.",
       });
@@ -738,7 +760,7 @@ const sendEventCertificates = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE
-    if (req.user.role === "ORGANIZER" && parentEvent.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(parentEvent, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode enviar certificados de eventos que você criou.",
       });
@@ -781,7 +803,7 @@ const getCertificateLogsForEvent = async (req, res) => {
       return res.status(404).json({ error: "Evento não encontrado" });
     }
 
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode ver logs de eventos que você criou.",
       });
@@ -863,7 +885,7 @@ const uploadEventThumbnailController = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode alterar a capa de eventos que você criou.",
       });
@@ -902,7 +924,7 @@ const uploadSpeakerPhotoController = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE PARA ORGANIZADOR
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode alterar o palestrante de eventos que você criou.",
       });
@@ -937,7 +959,7 @@ const getEventEnrollments = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode ver inscritos de eventos que você criou.",
       });
@@ -990,7 +1012,7 @@ const getEventQuestions = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
         error: "Acesso negado. Você só pode ver perguntas de eventos que você criou.",
       });

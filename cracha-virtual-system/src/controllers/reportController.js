@@ -1,5 +1,21 @@
 const { prisma } = require("../config/database");
 
+// Função auxiliar para verificar acesso de organizador
+const checkOrganizerAccess = async (event, user) => {
+  if (user.role !== "ORGANIZER") return true; 
+  if (event.creatorId === user.id) return true;
+  
+  const staff = await prisma.eventStaff.findUnique({
+    where: {
+      userId_eventId: {
+        userId: user.id,
+        eventId: event.id
+      }
+    }
+  });
+  return staff && staff.role === "ORGANIZER";
+};
+
 // Relatório de check-ins de um evento
 const getCheckinReport = async (req, res) => {
   try {
@@ -18,9 +34,9 @@ const getCheckinReport = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE PARA ORGANIZADOR
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
-        error: "Acesso negado. Você só pode acessar relatórios de eventos que você criou.",
+        error: "Acesso negado. Você só pode acessar relatórios de eventos que você organiza.",
       });
     }
 
@@ -140,9 +156,9 @@ const getFrequencyReport = async (req, res) => {
     }
 
     // CHECK DE PROPRIEDADE PARA ORGANIZADOR
-    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+    if (!(await checkOrganizerAccess(event, req.user))) {
       return res.status(403).json({
-        error: "Acesso negado. Você só pode acessar relatórios de eventos que você criou.",
+        error: "Acesso negado. Você só pode acessar relatórios de eventos que você organiza.",
       });
     }
 
@@ -303,7 +319,7 @@ const getFrequencyRanking = async (req, res) => {
       by: ["userBadgeId", "eventId"],
       where: {
         ...dateFilter,
-        ...(userRole === "ORGANIZER" ? { event: { creatorId: userId } } : {}),
+        ...(userRole === "ORGANIZER" ? { event: { OR: [{ creatorId: userId }, { staff: { some: { userId: userId, role: "ORGANIZER" } } }] } } : {}),
       },
     });
 
@@ -376,7 +392,7 @@ const getSystemReport = async (req, res) => {
     const userRole = req.user.role;
     const userId = req.user.id;
 
-    const baseWhere = userRole === "ORGANIZER" ? { creatorId: userId } : {};
+    const baseWhere = userRole === "ORGANIZER" ? { OR: [{ creatorId: userId }, { staff: { some: { userId: userId, role: "ORGANIZER" } } }] } : {};
 
     const totalUsers = userRole === "ORGANIZER"
       ? await prisma.user.count({
@@ -392,7 +408,7 @@ const getSystemReport = async (req, res) => {
 
     const totalEvents = await prisma.event.count({ where: baseWhere });
     const totalEnrollments = await prisma.enrollment.count({
-      where: userRole === "ORGANIZER" ? { event: { creatorId: userId } } : {},
+      where: userRole === "ORGANIZER" ? { event: { OR: [{ creatorId: userId }, { staff: { some: { userId: userId, role: "ORGANIZER" } } }] } } : {},
     });
     const totalAwards = await prisma.award.count();
     const totalUserAwards = await prisma.userAward.count();
@@ -400,7 +416,7 @@ const getSystemReport = async (req, res) => {
     // MUDANÇA: Conta o total de participações únicas (usuário + evento) em vez de todos os check-ins.
     const uniqueParticipations = await prisma.userCheckin.groupBy({
       by: ["userBadgeId", "eventId"],
-      where: userRole === "ORGANIZER" ? { event: { creatorId: userId } } : {},
+      where: userRole === "ORGANIZER" ? { event: { OR: [{ creatorId: userId }, { staff: { some: { userId: userId, role: "ORGANIZER" } } }] } } : {},
     });
     const totalUniqueCheckins = uniqueParticipations.length;
 
@@ -714,8 +730,8 @@ const getFilteredFrequencyReport = async (req, res) => {
           Object.keys(checkinDateFilter).length > 0
             ? checkinDateFilter
             : undefined,
-        // Filtra por eventos do criador se for ORGANIZER
-        ...(userRole === "ORGANIZER" ? { event: { creatorId: userId } } : {}),
+        // Filtra por eventos do organizador
+        ...(userRole === "ORGANIZER" ? { event: { OR: [{ creatorId: userId }, { staff: { some: { userId: userId, role: "ORGANIZER" } } }] } } : {}),
       },
       distinct: ["eventId", "userBadgeId"], // A chave da mudança está aqui!
       select: {
@@ -794,7 +810,7 @@ const getAwardsReport = async (req, res) => {
         user: {
           enrollments: {
             some: {
-              event: { creatorId: userId },
+              event: { OR: [{ creatorId: userId }, { staff: { some: { userId: userId, role: "ORGANIZER" } } }] },
               status: "APPROVED"
             }
           }

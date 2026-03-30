@@ -101,6 +101,8 @@ export default function EventStaffManager({ eventId }) {
                 return "Coordenador de Check-in";
             case "SPEAKER":
                 return "Palestrante";
+            case "ORGANIZER":
+                return "Organizador";
             default:
                 return r;
         }
@@ -180,6 +182,7 @@ export default function EventStaffManager({ eventId }) {
                         >
                             <option value="CHECKIN_COORDINATOR">Coordenador de Check-in</option>
                             <option value="SPEAKER">Palestrante</option>
+                            <option value="ORGANIZER">Organizador</option>
                         </select>
                     </div>
                     <button
@@ -234,7 +237,9 @@ export default function EventStaffManager({ eventId }) {
                                 <div className="flex items-center gap-6">
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${member.role === 'CHECKIN_COORDINATOR'
                                         ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                                        : 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                                        : member.role === 'SPEAKER'
+                                        ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                                        : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                         }`}>
                                         {getRoleLabel(member.role)}
                                     </span>

@@ -16,8 +16,8 @@ const addStaffToEvent = async (req, res) => {
             return res.status(400).json({ error: "Email e função (role) são obrigatórios." });
         }
 
-        if (!["CHECKIN_COORDINATOR", "SPEAKER"].includes(role)) {
-            return res.status(400).json({ error: "Função inválida. Use CHECKIN_COORDINATOR ou SPEAKER." });
+        if (!["CHECKIN_COORDINATOR", "SPEAKER", "ORGANIZER"].includes(role)) {
+            return res.status(400).json({ error: "Função inválida. Use CHECKIN_COORDINATOR, SPEAKER ou ORGANIZER." });
         }
 
         // 1. Verifica se o evento existe
@@ -120,10 +120,12 @@ const getEventStaff = async (req, res) => {
         // Agrupa por função para facilitar no frontend
         const coordinators = staff.filter((s) => s.role === "CHECKIN_COORDINATOR");
         const speakers = staff.filter((s) => s.role === "SPEAKER");
+        const organizers = staff.filter((s) => s.role === "ORGANIZER");
 
         res.json({
             coordinators,
             speakers,
+            organizers,
             all: staff
         });
     } catch (error) {
