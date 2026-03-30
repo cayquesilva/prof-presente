@@ -16,11 +16,11 @@ const updateUserValidation = [
     .normalizeEmail()
     .withMessage("Email inválido"),
   body("cpf")
-    .optional()
-    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
-    .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
+    .optional({ checkFalsy: true })
+    .matches(/^(\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
+    .withMessage("CPF inválido (use 11 dígitos ou formato XXX.XXX.XXX-XX)"),
   body("birthDate")
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage("Data de nascimento inválida"),
 ];
@@ -79,11 +79,11 @@ const getAllUsers = async (req, res) => {
 
     const where = search
       ? {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-          ],
-        }
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ],
+      }
       : {};
 
     const users = await prisma.user.findMany({
@@ -95,6 +95,18 @@ const getAllUsers = async (req, res) => {
         cpf: true,
         role: true,
         createdAt: true,
+        serie: true,
+        subject: true,
+        workload: true,
+        phone: true,
+        birthDate: true,
+        address: true,
+        neighborhood: true,
+        profession: {
+          select: {
+            name: true
+          }
+        },
         _count: {
           select: {
             enrollments: true,
@@ -108,8 +120,15 @@ const getAllUsers = async (req, res) => {
 
     const total = await prisma.user.count({ where });
 
+    // Transformar para incluir professionName na raiz (facilitar frontend)
+    const formattedUsers = users.map(user => ({
+      ...user,
+      professionName: user.profession?.name || null,
+      profession: undefined // Remover objeto aninhado se preferir
+    }));
+
     res.json({
-      users,
+      users: formattedUsers,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -175,6 +194,10 @@ const updateUser = async (req, res) => {
     // Verificar erros de validação
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.warn("--- FALHA DE VALIDAÇÃO (UPDATE USUÁRIO) ---");
+      console.warn("User ID:", req.params.id);
+      console.warn("Dados recebidos:", req.body);
+      console.warn("Erros:", errors.array());
       return res.status(400).json({
         error: "Dados inválidos",
         details: errors.array(),
@@ -182,7 +205,10 @@ const updateUser = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { name, email, cpf, birthDate, phone, address, password } = req.body;
+    const {
+      name, email, cpf, birthDate, phone, address, neighborhood, password,
+      professionName, serie, subject, workload
+    } = req.body;
 
     // Verificar se o usuário existe
     const existingUser = await prisma.user.findUnique({
@@ -229,6 +255,19 @@ const updateUser = async (req, res) => {
     if (birthDate) updateData.birthDate = new Date(birthDate);
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (neighborhood) updateData.neighborhood = neighborhood;
+    if (serie !== undefined) updateData.serie = serie;
+    if (subject !== undefined) updateData.subject = subject;
+    if (workload !== undefined) updateData.workload = workload;
+
+    if (professionName) {
+      updateData.profession = {
+        connectOrCreate: {
+          where: { name: professionName.trim() },
+          create: { name: professionName.trim() },
+        }
+      };
+    }
 
     // Hash da nova senha se fornecida
     if (password) {
@@ -251,12 +290,25 @@ const updateUser = async (req, res) => {
         photoUrl: true,
         role: true,
         updatedAt: true,
+        serie: true,
+        subject: true,
+        workload: true,
+        profession: {
+          select: {
+            name: true
+          }
+        }
       },
     });
 
+    const responseUser = {
+      ...updatedUser,
+      professionName: updatedUser.profession?.name || null
+    };
+
     res.json({
       message: "Usuário atualizado com sucesso",
-      user: updatedUser,
+      user: responseUser,
     });
   } catch (error) {
     console.error("Erro ao atualizar usuário:", error);
@@ -384,6 +436,7 @@ const updateUserRole = async (req, res) => {
       "CHECKIN_COORDINATOR",
       "TEACHER",
       "USER",
+      "SPEAKER",
     ];
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({
@@ -604,6 +657,82 @@ const updateFacialConsent = async (req, res) => {
   }
 };
 
+// --- NOVA FUNÇÃO: LISTAR HISTÓRICO DE EVENTOS DO USUÁRIO ---
+const getUserEnrollments = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { userId: id },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            endDate: true,
+            location: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formattedHistory = enrollments.map(enrollment => ({
+      eventId: enrollment.event.id,
+      eventTitle: enrollment.event.title,
+      eventDate: enrollment.event.startDate,
+      location: enrollment.event.location,
+      status: enrollment.status,
+      enrolledAt: enrollment.createdAt,
+      checkInTime: enrollment.checkInTime,
+      certificateUrl: enrollment.certificateUrl // Se tiver certificado gerado
+    }));
+
+    res.json(formattedHistory);
+  } catch (error) {
+    console.error("Erro ao buscar histórico do usuário:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
+// Alterar senha do próprio usuário
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "A nova senha deve ter pelo menos 6 caracteres" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: "Senha atual incorreta" });
+    }
+
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    res.json({ message: "Senha alterada com sucesso." });
+  } catch (error) {
+    console.error("Erro ao alterar senha:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -615,4 +744,6 @@ module.exports = {
   resetUserPassword,
   completeOnboarding,
   updateFacialConsent,
+  getUserEnrollments, // Exportar nova função
+  changePassword,
 };

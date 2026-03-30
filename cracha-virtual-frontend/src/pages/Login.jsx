@@ -12,10 +12,12 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import Logo from "../assets/logo-prof-presente-white.svg"; // Importe o seu logo
+import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
+import LogoDefault from "../assets/logo-prof-presente-white.svg"; // Importe o seu logo
+import { useBranding } from "../contexts/BrandingContext";
 
 const Login = () => {
+  const { platformName, logoUrl } = useBranding();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,16 +48,17 @@ const Login = () => {
       <div className="auth-card-container max-w-md">
         <div className="text-center mb-8">
           <img
-            src={Logo}
-            alt="Prof Presente Logo"
+            src={logoUrl || LogoDefault}
+            alt={platformName}
             className="w-48 mx-auto mb-4"
           />
-          <p className="text-gray-400">
-            Gestão de presença para formações de professores.
+          <h2 className="text-2xl font-bold text-foreground mb-2">{platformName}</h2>
+          <p className="text-muted-foreground">
+            Plataforma de eventos da Seduc - Campina Grande
           </p>
         </div>
 
-        <Card className="bg-card/80 backdrop-blur-sm border-white/10">
+        <Card className="bg-card/80 backdrop-blur-sm border-border">
           <CardHeader>
             <CardTitle>Acesse sua conta</CardTitle>
             <CardDescription>
@@ -136,12 +139,22 @@ const Login = () => {
                 </Link>
               </p>
             </div>
+
+            <div className="mt-6 text-center">
+              <Link
+                to="/"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Voltar ao site
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
         <div className="mt-8 text-center">
-          <p className="text-xs text-gray-500">
-            © 2025 Prof Presente | Todos os direitos reservados.
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            © 2026 {platformName} | Todos os direitos reservados.
           </p>
         </div>
       </div>

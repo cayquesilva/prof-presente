@@ -156,6 +156,153 @@ const uploadEventThumbnail = multer({
   },
 }).single("eventThumbnail"); // 'eventThumbnail' é o nome do campo no FormData
 
+// --- CONFIGURAÇÃO PARA FOTOS DE PALESTRANTE ---
+const speakerPhotoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/speakers/";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + req.params.id;
+    const extension = path.extname(file.originalname);
+    cb(null, uniqueSuffix + extension);
+  },
+});
+
+const uploadSpeakerPhoto = multer({
+  storage: speakerPhotoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Erro: Apenas arquivos de imagem são permitidos!"));
+  },
+}).single("speakerPhoto"); // Campo 'speakerPhoto'
+
+// --- NOVO STORAGE PARA APRESENTAÇÕES (PDF/PPT) ---
+const presentationStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/presentations/";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const extension = path.extname(file.originalname);
+    cb(null, `presentation-${uniqueSuffix}${extension}`);
+  },
+});
+
+const uploadPresentation = multer({
+  storage: presentationStorage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /pdf|ppt|pptx/;
+    const mimetype = file.mimetype.includes("pdf") ||
+      file.mimetype.includes("powerpoint") ||
+      file.mimetype.includes("presentationml");
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (mimetype || extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Erro: Apenas arquivos PDF ou PPT são permitidos!"));
+  },
+}).single("presentation");
+
+// --- NOVO STORAGE PARA IMAGENS DE TRILHAS ---
+const trackThumbnailStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/tracks/";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const extension = path.extname(file.originalname);
+    cb(null, `track-${uniqueSuffix}${extension}`);
+  },
+});
+
+const uploadTrackThumbnail = multer({
+  storage: trackThumbnailStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Erro: Apenas arquivos de imagem são permitidos!"));
+  },
+}).single("trackThumbnail");
+
+const bannerThumbnailStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/banners/";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const extension = path.extname(file.originalname);
+    cb(null, `banner-${uniqueSuffix}${extension}`);
+  },
+});
+
+const uploadBannerThumbnail = multer({
+  storage: bannerThumbnailStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Erro: Apenas arquivos de imagem são permitidos!"));
+  },
+}).single("bannerThumbnail");
+
+// --- NOVO STORAGE PARA LOGO E FAVICON ---
+const brandingStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/branding/";
+    ensureDirectoryExists(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const type = file.fieldname === "logo" ? "logo" : "favicon";
+    const extension = path.extname(file.originalname);
+    cb(null, `${type}-${Date.now()}${extension}`);
+  },
+});
+
+const uploadBranding = multer({
+  storage: brandingStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif|webp|ico|svg/;
+    const mimetype = filetypes.test(file.mimetype) || file.mimetype === "image/x-icon" || file.mimetype === "image/vnd.microsoft.icon";
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Erro: Apenas arquivos de imagem (incluindo .ico e .svg) são permitidos!"));
+  },
+}).fields([
+  { name: "logo", maxCount: 1 },
+  { name: "favicon", maxCount: 1 },
+]);
+
 module.exports = {
   uploadProfilePhoto,
   uploadBadgeTemplate,
@@ -163,4 +310,9 @@ module.exports = {
   handleUploadError,
   uploadCertificate,
   uploadEventThumbnail,
+  uploadSpeakerPhoto,
+  uploadPresentation,
+  uploadTrackThumbnail,
+  uploadBannerThumbnail,
+  uploadBranding,
 };

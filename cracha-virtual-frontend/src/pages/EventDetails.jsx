@@ -1,313 +1,454 @@
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "../lib/api";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { eventsAPI, enrollmentsAPI } from "../lib/api";
+import { Loader2, Calendar, MapPin, Mail, ArrowRight, Share2, AlertCircle, LayoutDashboard, CheckCircle, Users, Facebook, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
-import { Alert, AlertDescription } from "../components/ui/alert";
-import {
-  Calendar,
-  MapPin,
-  Users,
-  Clock,
-  ArrowLeft,
-  CircleCheck as CheckCircle,
-  Circle as XCircle,
-  CircleAlert as AlertCircle,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { useAuth } from "../hooks/useAuth";
+import { toast } from "sonner"; // Assuming sonner is used for notifications based on context, or use standard alert if not
+import { getAssetUrl } from "../lib/utils";
+import { useBranding } from "../contexts/BrandingContext";
+
+import PublicLayout from "../components/PublicLayout";
 
 const EventDetails = () => {
   const { id } = useParams();
+  const { user } = useAuth();
+  const { platformName, logoUrl } = useBranding();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("about");
 
-  const [enrollmentStatus, setEnrollmentStatus] = useState(null);
-
-  const {
-    data: event,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: event, isLoading, isError } = useQuery({
     queryKey: ["event", id],
     queryFn: async () => {
-      const response = await api.get(`/events/${id}`);
+      const response = await eventsAPI.getById(id);
       return response.data;
     },
+    retry: 1
   });
 
-  const { data: enrollmentData } = useQuery({
-    queryKey: ["enrollment-status", id],
+  // Verifica inscrição se usuário estiver logado
+  const { data: enrollmentData, isLoading: isLoadingEnrollment } = useQuery({
+    queryKey: ["enrollment-status", id, user?.id],
     queryFn: async () => {
-      const response = await api.get(`/enrollments/event/${id}/status`);
-      return response.data;
+      const response = await enrollmentsAPI.getUserEnrollments(user.id);
+      const enrollments = response.data?.enrollments || response.data || [];
+      return enrollments.find(e => e.eventId === id);
     },
-    enabled: !!event,
+    enabled: !!user && !!id,
   });
+
+  const isEnrolled = !!enrollmentData;
+  const isCreator = user && event && (user.id === event.creatorId || user.role === 'ADMIN' || user.role === 'SPEAKER');
 
   const enrollMutation = useMutation({
-    mutationFn: async () => {
-      const response = await api.post("/enrollments", { eventId: id });
-      return response.data;
-    },
+    mutationFn: () => enrollmentsAPI.enroll(id),
     onSuccess: () => {
-      setEnrollmentStatus("enrolled");
-      queryClient.invalidateQueries(["enrollment-status", id]);
-      queryClient.invalidateQueries(["enrollments"]);
       toast.success("Inscrição realizada com sucesso!");
+      queryClient.invalidateQueries(["event", id]);
+      queryClient.invalidateQueries(["enrollment-status", id, user?.id]);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.error || "Erro ao realizar inscrição");
-    },
+      const msg = error.response?.data?.message || "Erro ao realizar inscrição.";
+      toast.error(msg);
+    }
   });
 
-  const cancelEnrollmentMutation = useMutation({
-    mutationFn: async (enrollmentId) => {
-      await api.delete(`/enrollments/${enrollmentId}`);
-    },
-    onSuccess: () => {
-      setEnrollmentStatus(null);
-      queryClient.invalidateQueries(["enrollment-status", id]);
-      queryClient.invalidateQueries(["enrollments"]);
-      toast.success("Inscrição cancelada com sucesso!");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.error || "Erro ao cancelar inscrição");
-    },
-  });
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      timeZone: "America/Sao_Paulo",
-    });
+  const handleEnroll = () => {
+    if (!user) {
+      navigate(`/login?redirect=/events/${id}`);
+      return;
+    }
+    enrollMutation.mutate();
   };
 
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "America/Sao_Paulo",
-    });
-  };
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = event?.title || "Evento EduAgenda";
+    const text = `Confira este evento: ${title}`;
 
-  const getEventStatus = (startDate, endDate) => {
-    const now = new Date();
-    const start = new Date(startDate.slice(0, -1));
-    const end = new Date(endDate.slice(0, -1));
-
-    if (now < start) {
-      return {
-        label: "Próximo",
-        color: "bg-blue-100 text-blue-800",
-        icon: Clock,
-      };
-    } else if (now >= start && now <= end) {
-      return {
-        label: "Em andamento",
-        color: "bg-green-100 text-green-800",
-        icon: CheckCircle,
-      };
-    } else {
-      return {
-        label: "Finalizado",
-        color: "bg-gray-100 text-gray-800",
-        icon: XCircle,
-      };
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text,
+          url,
+        });
+      } catch (err) {
+        console.log("Erro ao compartilhar", err);
+      }
     }
   };
 
-  const canEnroll = (event) => {
-    if (!event) return false;
-
-    // 1. Pega a data/hora atual.
-    const now = new Date();
-
-    // 2. Corrige a data de INÍCIO do evento para o fuso local.
-    const correctedStartDate = new Date(event.startDate.slice(0, -1));
-
-    // 3. Cria o prazo final de inscrição: 90 minutos APÓS o início corrigido.
-    const enrollmentDeadline = new Date(correctedStartDate);
-    enrollmentDeadline.setMinutes(enrollmentDeadline.getMinutes() + 90);
-
-    // 4. Retorna true se a hora atual for anterior ao prazo final.
-    return now < enrollmentDeadline;
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copiado para a área de transferência!");
+    } catch (err) {
+      toast.error("Não foi possível copiar o link.");
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+      <PublicLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#137fec]" />
         </div>
-      </div>
+      </PublicLayout>
     );
   }
 
-  if (error) {
+  if (isError || !event) {
     return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Erro ao carregar detalhes do evento: {error.message}
-          </AlertDescription>
-        </Alert>
-        <Button onClick={() => navigate("/events")} className="mt-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar para eventos
-        </Button>
-      </div>
+      <PublicLayout>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-slate-500">
+          <AlertCircle className="w-12 h-12 mb-4 text-red-500" />
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Evento não encontrado</h2>
+          <Link to="/" className="text-[#137fec] hover:underline">Voltar para o início</Link>
+        </div>
+      </PublicLayout>
     );
   }
 
-  const eventStatus = getEventStatus(event.startDate, event.endDate);
-  const StatusIcon = eventStatus.icon;
-  const isEnrolled =
-    (enrollmentData?.enrolled && enrollmentData?.status !== "CANCELLED") ||
-    enrollmentStatus === "enrolled" ||
-    enrollmentStatus !== null;
-  const canUserEnroll = canEnroll(event) && !isEnrolled;
+  // Helper to format date range
+  const formatDateRange = (start, end) => {
+    const s = new Date(start);
+    const e = new Date(end);
+
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    const startStr = s.toLocaleDateString('pt-BR', options);
+
+    if (s.getDate() === e.getDate() && s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+      return startStr;
+    }
+
+    return `${startStr} - ${e.toLocaleDateString('pt-BR', options)}`;
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Calculate status/capacity
+  const isFull = event.maxAttendees && event.enrolledCount >= event.maxAttendees;
+  const isClosed = new Date(event.endDate) < new Date();
+  const canRegister = (!isClosed && !isFull) || isEnrolled;
+
+  // Default image if missing
+  const bgImage = event.imageUrl
+    ? getAssetUrl(event.imageUrl)
+    : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop";
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <Button
-        variant="ghost"
-        onClick={() => navigate("/events")}
-        className="mb-4"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Voltar para eventos
-      </Button>
+    <PublicLayout>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-6">
+          <Link to="/" className="hover:text-[#137fec]">Início</Link>
+          <span className="text-xs">/</span>
+          {user && (
+            <>
+              <Link to="/events" className="hover:text-[#137fec]">Eventos</Link>
+              <span className="text-xs">/</span>
+            </>
+          )}
+          <span className="text-slate-900 dark:text-slate-100 font-medium truncate max-w-[200px] md:max-w-none">{event.title}</span>
+        </nav>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start mb-4">
-            <CardTitle className="text-3xl">{event.title}</CardTitle>
-            <Badge className={eventStatus.color}>
-              <StatusIcon className="h-4 w-4 mr-1" />
-              {eventStatus.label}
-            </Badge>
+        {/* Hero Section */}
+        <div className="relative w-full aspect-[21/9] rounded-xl overflow-hidden mb-8 shadow-xl group">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
+          <img
+            src={bgImage}
+            alt={event.title}
+            onError={(e) => console.error("Erro ao carregar imagem de capa:", bgImage, e)}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute bottom-0 left-0 p-6 md:p-10 z-20">
+            <span className="bg-[#137fec] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 inline-block">
+              {/* Categoria seria aqui, mas não temos no BD ainda */}
+              Evento
+            </span>
+            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight max-w-4xl drop-shadow-lg mb-4">
+              {event.title}
+            </h1>
+            <div className="flex gap-3">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="bg-black/30 hover:bg-black/50 text-white border-white/20 backdrop-blur-sm gap-2 whitespace-nowrap">
+                    <Share2 className="w-4 h-4" />
+                    Compartilhar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DialogHeader>
+                    <DialogTitle className="text-slate-900 dark:text-white">Compartilhar Evento</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex items-center justify-center gap-4 py-6">
+                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://api.whatsapp.com/send?text=Confira este evento: ${event?.title} ${window.location.href}`, '_blank')}>
+                      <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12c0 2.17.69 4.18 1.86 5.82L3 22l4.24-.85C8.82 22.31 10.36 23 12 23c6.07 0 11-4.93 11-11S18.07 2 12 2zm5.72 15.34c-.26.74-1.51 1.4-2.09 1.46-.53.06-1.22.18-3.41-.73-2.63-1.08-4.32-3.8-4.46-3.98-.13-.18-1.07-1.42-1.07-2.71s.67-1.92.9-2.16c.23-.24.5-.3.67-.3h.34c.17 0 .4.06.63.63.24.6.82 2.01.9 2.19.07.18.12.39 0 .63-.12.24-.18.39-.37.6-.18.21-.39.46-.55.63-.18.2-.38.42-.16.8 1.13 1.95 2.5 2.66 3.61 3.23.4.21.64.18.88-.06.24-.24 1.05-1.22 1.33-1.64.28-.42.56-.35.94-.21.38.14 2.41 1.14 2.82 1.34.41.2.68.31.78.48.1.17.1.98-.16 1.72z" clipRule="evenodd" /></svg>
+                    </Button>
+                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                      <Facebook className="w-6 h-6 text-blue-600" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(event?.title)}`, '_blank')}>
+                      <Twitter className="w-6 h-6 text-sky-500" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
+                      <Linkedin className="w-6 h-6 text-blue-700" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={copyToClipboard} variant="secondary" className="w-full gap-2">
+                      <LinkIcon className="w-4 h-4" />
+                      Copiar Link
+                    </Button>
+                    <Button onClick={handleShare} variant="secondary" className="w-full gap-2 lg:hidden">
+                      <Share2 className="w-4 h-4" />
+                      Compartilhar via Celular
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
-          <CardDescription className="text-base">
-            {event.description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Separator />
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <Calendar className="h-5 w-5 mr-3 mt-1 text-gray-500" />
-                <div>
-                  <p className="font-semibold">Data de início</p>
-                  <p className="text-gray-600">{formatDate(event.startDate)}</p>
-                  <p className="text-sm text-gray-500">
-                    às {formatTime(event.startDate)}
-                  </p>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Main Content Column */}
+          <div className="lg:col-span-2 space-y-12">
 
-              <div className="flex items-start">
-                <Calendar className="h-5 w-5 mr-3 mt-1 text-gray-500" />
-                <div>
-                  <p className="font-semibold">Data de término</p>
-                  <p className="text-gray-600">{formatDate(event.endDate)}</p>
-                  <p className="text-sm text-gray-500">
-                    às {formatTime(event.endDate)}
-                  </p>
-                </div>
-              </div>
+            {/* Tab Navigation */}
+            <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto scrollbar-hide">
+              <button
+                onClick={() => setActiveTab("about")}
+                className={`pb-4 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === "about" ? "border-[#137fec] text-[#137fec]" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+              >
+                Sobre
+              </button>
+              <button
+                onClick={() => setActiveTab("schedule")}
+                className={`pb-4 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === "schedule" ? "border-[#137fec] text-[#137fec]" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+              >
+                Programação
+              </button>
+              <button
+                onClick={() => setActiveTab("speakers")}
+                className={`pb-4 px-2 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === "speakers" ? "border-[#137fec] text-[#137fec]" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+              >
+                Palestrantes
+              </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <MapPin className="h-5 w-5 mr-3 mt-1 text-gray-500" />
-                <div>
-                  <p className="font-semibold">Local</p>
-                  <p className="text-gray-600">{event.location}</p>
-                </div>
-              </div>
+            {/* Content Sections */}
+            <section className="space-y-6 min-h-[300px]">
+              {activeTab === "about" && (
+                <>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Detalhes</h2>
+                  <div className="prose prose-slate dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+                    {event.description}
+                  </div>
+                </>
+              )}
 
-              {event.maxAttendees && (
-                <div className="flex items-start">
-                  <Users className="h-5 w-5 mr-3 mt-1 text-gray-500" />
-                  <div>
-                    <p className="font-semibold">Capacidade</p>
-                    <p className="text-gray-600">
-                      Até {event.maxAttendees} participantes
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {event.enrolledCount ? event.enrolledCount : 0} inscritos
-                    </p>
+              {activeTab === "schedule" && (
+                <>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Programação</h2>
+                  <div className="space-y-4">
+                    {event.schedule ? (
+                      event.schedule.split("\n").filter(line => line.trim()).map((line, index) => (
+                        <div key={index} className="bg-white dark:bg-slate-800 p-4 rounded-xl border-l-4 border-[#137fec] shadow-sm flex gap-4">
+                          <div className="font-bold text-[#137fec] whitespace-nowrap">
+                            {line.match(/^\d{2}:\d{2}/) ? line.substring(0, 5) : "•"}
+                          </div>
+                          <div className="text-slate-700 dark:text-slate-300">
+                            {line.match(/^\d{2}:\d{2}/) ? line.substring(5).replace(/^-/, '').trim() : line}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-500 italic">A programação detalhada será divulgada em breve.</p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {activeTab === "speakers" && (
+                <>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Palestrantes Confirmados</h2>
+                  {event.speakerName ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div className="w-32 h-32 rounded-full bg-slate-200 overflow-hidden shrink-0 border-4 border-white dark:border-slate-700 shadow-md">
+                          {event.speakerPhotoUrl ? (
+                            <img
+                              src={getAssetUrl(event.speakerPhotoUrl)}
+                              alt={event.speakerName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error("Erro Loading Speaker:", getAssetUrl(event.speakerPhotoUrl));
+                                e.target.src = ""; // Prevent loop
+                                e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100"><svg class="w-12 h-12" ...><path d="..." /></svg></div>'; // Fallback manually? Or just let it hide.
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
+                              <Users className="w-12 h-12" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-center md:text-left">
+                          <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{event.speakerName}</h4>
+                          <p className="text-[#137fec] font-medium text-lg">{event.speakerRole}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 italic">Nenhum palestrante cadastrado ainda.</p>
+                  )}
+                </>
+              )}
+            </section>
+
+          </div>
+
+          {/* Sidebar Column */}
+          <aside className="space-y-6 lg:sticky lg:top-24">
+
+            {/* Registration Card */}
+            <div className="bg-white dark:bg-[#1e293b] rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#137fec]/10 text-[#137fec] flex items-center justify-center shrink-0">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Data e Horário</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white capitalize">
+                        {formatDateRange(event.startDate, event.endDate)}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatTime(event.startDate)} às {formatTime(event.endDate)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#137fec]/10 text-[#137fec] flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Local</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{event.location}</p>
+                      {/* <p className="text-xs text-slate-500">Campina Grande, PB</p> */}
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Mini Map (Static for now) */}
+                <div className="relative w-full h-48 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden group border border-slate-200 dark:border-slate-700">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    scrolling="no"
+                    marginHeight="0"
+                    marginWidth="0"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(event.location)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                    className="w-full h-full grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
+                  ></iframe>
+                  <a
+                    href={event.mapLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 right-2 bg-white dark:bg-slate-900 px-2 py-1 rounded text-[10px] font-bold shadow-sm hover:bg-slate-50 flex items-center gap-1"
+                  >
+                    Abrir no Maps <Share2 className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-slate-500 text-sm">Vagas</span>
+                    <div className="text-right">
+                      {event.maxAttendees ? (
+                        <>
+                          <span className={`text-xl font-black uppercase ${isFull ? 'text-red-500' : 'text-emerald-500'}`}>
+                            {event.enrolledCount} / {event.maxAttendees}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-xl font-black text-emerald-500 uppercase">Ilimitadas</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Lógica de Botão de Ação */}
+                  {isClosed ? (
+                    <Button disabled className="w-full bg-slate-300 text-slate-500 font-bold py-6 rounded-xl cursor-not-allowed">
+                      Evento Encerrado
+                    </Button>
+                  ) : isFull && !isEnrolled ? (
+                    <Button disabled className="w-full bg-red-100 text-red-500 font-bold py-6 rounded-xl cursor-not-allowed">
+                      Vagas Esgotadas
+                    </Button>
+                  ) : isEnrolled ? (
+                    <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-6 rounded-xl transition-all shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 cursor-default">
+                      <CheckCircle className="w-5 h-5" />
+                      Inscrição Confirmada
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleEnroll}
+                      disabled={enrollMutation.isLoading}
+                      className="w-full bg-[#137fec] hover:bg-blue-600 text-white font-bold py-6 rounded-xl transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
+                    >
+                      {enrollMutation.isLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          {user ? "Confirmar Inscrição" : "Garantir Minha Vaga"}
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {!user && (
+                    <p className="text-center text-[11px] text-slate-400 mt-4 px-4 leading-snug">
+                      * Login necessário para realizar a inscrição.
+                    </p>
+                  )}
+                  {user && (
+                    <p className="text-center text-[11px] text-slate-400 mt-4 px-4 leading-snug">
+                      * Ao confirmar, você garante sua vaga e certificado.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          <Separator />
-
-          {isEnrolled && (
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                Você está inscrito neste evento!
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex gap-4">
-            {canUserEnroll && (
-              <Button
-                id="enroll-button"
-                onClick={() => enrollMutation.mutate()}
-                disabled={enrollMutation.isPending}
-                className="flex-1"
-              >
-                {enrollMutation.isPending ? "Inscrevendo..." : "Inscrever-se"}
-              </Button>
-            )}
-
-            {isEnrolled && canEnroll(event) && (
-              <Button
-                variant="destructive"
-                onClick={() =>
-                  cancelEnrollmentMutation.mutate(enrollmentData.enrollmentId)
-                }
-                disabled={cancelEnrollmentMutation.isPending}
-                className="flex-1"
-              >
-                {cancelEnrollmentMutation.isPending
-                  ? "Cancelando..."
-                  : "Cancelar inscrição"}
-              </Button>
-            )}
-
-            {!canEnroll(event) && !isEnrolled && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  As inscrições para este evento foram encerradas.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="bg-slate-900 text-white rounded-xl p-6 relative overflow-hidden shadow-xl">
+              <div className="relative z-10 space-y-3">
+                <h4 className="font-bold">Dúvidas sobre o evento?</h4>
+                <p className="text-xs text-slate-300">Entre em contato com a equipe de coordenação.</p>
+                <a href="mailto:suporte@educacao.cg.pb.gov.br" className="text-xs font-bold flex items-center gap-2 hover:text-[#137fec] transition-colors">
+                  <Mail className="w-4 h-4" />
+                  suporte@educacao.cg.pb.gov.br
+                </a>
+              </div>
+              <div className="absolute -right-4 -bottom-4 text-white/5 pointer-events-none">
+                <AlertCircle className="w-24 h-24" />
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </PublicLayout>
   );
 };
 

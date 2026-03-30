@@ -1,5 +1,5 @@
 # Dockerfile para Frontend React
-from node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 # Definir diretório de trabalho
 WORKDIR /app
@@ -8,11 +8,15 @@ WORKDIR /app
 COPY package*.json ./
 COPY package-lock.json ./
 
-# Instalar pnpm e dependências
-RUN npm ci --legacy-peer-deps
+# Instalar dependências
+RUN npm install --legacy-peer-deps
 
 # Copiar código fonte
 COPY . .
+
+# Definir argumentos de build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # Build da aplicação
 RUN npm run build

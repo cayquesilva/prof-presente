@@ -8,12 +8,18 @@ const {
   getEventEnrollments,
   cancelEnrollment,
   updateEnrollmentStatus,
+  resendConfirmationEmail,
+  deleteEnrollment,
+  moveEnrollment,
+  exportEventEnrollmentsToCSV,
 } = require("../controllers/enrollmentController");
 
 const {
   authenticateToken,
   requireAdmin,
+  requireAdminOrOrganizer,
   requireOwnershipOrAdmin,
+  requireOwnershipOrAdminOrOrganizer,
 } = require("../middleware/auth");
 
 // Inscrever usuário em evento
@@ -23,16 +29,24 @@ router.post("/events/:eventId/enroll", authenticateToken, enrollInEvent);
 router.get(
   "/users/:userId",
   authenticateToken,
-  requireOwnershipOrAdmin,
+  requireOwnershipOrAdminOrOrganizer,
   getUserEnrollments
 );
 
-// Listar inscrições de um evento (apenas admin)
+// Listar inscrições de um evento (admin ou organizador)
 router.get(
   "/events/:eventId",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getEventEnrollments
+);
+
+// Exportar inscrições de um evento para CSV (Admin)
+router.get(
+  "/events/:eventId/export",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  exportEventEnrollmentsToCSV
 );
 
 // Listar inscrições do usuário logado
@@ -87,18 +101,32 @@ router.get("/event/:eventId/status", authenticateToken, async (req, res) => {
 // Listar todas as inscrições (com filtros e paginação)
 router.get("/", authenticateToken, getMyEnrollments);
 
-// Cancelar inscrição (DELETE)
+// Cancelar inscrição (DELETE) - Mantido para compatibilidade, faz o mesmo que o patch cancel
 router.delete("/:enrollmentId", authenticateToken, cancelEnrollment);
+
+// DELETAR INSCRIÇÃO PERMANENTEMENTE (Libera vaga)
+router.delete("/:enrollmentId/permanent", authenticateToken, requireAdminOrOrganizer, deleteEnrollment);
 
 // Cancelar inscrição (PATCH - compatibilidade)
 router.patch("/:enrollmentId/cancel", authenticateToken, cancelEnrollment);
 
-// Atualizar status da inscrição (apenas admin)
+// MOVER PARTICIPANTE PARA OUTRO EVENTO
+router.patch("/:enrollmentId/move", authenticateToken, requireAdminOrOrganizer, moveEnrollment);
+
+// Atualizar status da inscrição (admin ou organizador)
 router.patch(
   "/:enrollmentId/status",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   updateEnrollmentStatus
+);
+
+// Reenviar e-mail de confirmação (admin ou organizador)
+router.post(
+  "/:enrollmentId/resend-confirmation",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  resendConfirmationEmail
 );
 
 module.exports = router;

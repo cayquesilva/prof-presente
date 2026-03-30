@@ -10,6 +10,13 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import {
   Tabs,
@@ -43,6 +50,43 @@ import { getAssetUrl } from "../lib/utils"; // NOVO: Para resolver a URL da imag
 import { Switch } from "../components/ui/switch";
 import { Alert, AlertDescription } from "../components/ui/alert";
 
+const professionOptions = [
+  { value: "gestor", label: "Gestor" },
+  { value: "gestor adjunto", label: "Gestor Adjunto" },
+  { value: "secretário", label: "Secretário" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "educador social voluntário", label: "Educador Social Voluntário" },
+  { value: "professor", label: "Professor" },
+  { value: "merendeiro", label: "Merendeiro" },
+  { value: "apoio", label: "Apoio" },
+  { value: "organizador", label: "Organizador" },
+];
+
+const serieOptions = [
+  { value: "bercário I", label: "Bercário I" },
+  { value: "bercário II", label: "Bercário II" },
+  { value: "maternal I", label: "Maternal I" },
+  { value: "maternal II", label: "Maternal II" },
+  { value: "pré I", label: "Pré I" },
+  { value: "pré II", label: "Pré II" },
+  { value: "1º ao 9º", label: "1º ao 9º" },
+];
+
+const subjectOptions = [
+  { value: "Polivalente", label: "Polivalente" },
+  { value: "Português", label: "Português" },
+  { value: "Matemática", label: "Matemática" },
+  { value: "História", label: "História" },
+  { value: "Geografia", label: "Geografia" },
+  { value: "Ciências", label: "Ciências" },
+  { value: "Inglês", label: "Inglês" },
+  { value: "Artes", label: "Artes" },
+  { value: "Educação Física", label: "Educação Física" },
+  { value: "Ensino Religioso", label: "Ensino Religioso" },
+  { value: "Educação Especial", label: "Educação Especial" },
+  { value: "Outros", label: "Outros" },
+];
+
 const Profile = () => {
   const queryClient = useQueryClient();
   const { user, logout, updateAuthUser } = useAuth(); // Pega a nova função 'updateAuthUser'
@@ -52,6 +96,10 @@ const Profile = () => {
     email: "",
     phone: "",
     address: "",
+    professionName: "",
+    serie: "",
+    subject: "",
+    workload: "",
   });
   const [consentFacial, setConsentFacial] = useState(false); // 2. Estado para o consentimento
   const [isExporting, setIsExporting] = useState(false);
@@ -59,6 +107,9 @@ const Profile = () => {
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Estados para alteração de senha
+  const [passwords, setPasswords] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
   // Busca os dados do perfil do usuário
   const { data: userData, isLoading: isUserLoading } = useQuery({
@@ -76,6 +127,10 @@ const Profile = () => {
         email: data.email || "",
         phone: data.phone || "",
         address: data.address || "",
+        professionName: data.professionName || "",
+        serie: data.serie || "",
+        subject: data.subject || "",
+        workload: data.workload || "",
       });
       setPhotoPreview(getAssetUrl(data.photoUrl));
       setConsentFacial(data.hasConsentFacialRecognition || false); // 3. Atualiza estado do consentimento
@@ -136,6 +191,10 @@ const Profile = () => {
         email: userData.email || "",
         phone: userData.phone || "",
         address: userData.address || "",
+        professionName: userData.professionName || "",
+        serie: userData.serie || "",
+        subject: userData.subject || "",
+        workload: userData.workload || "",
       });
       setPhotoPreview(getAssetUrl(userData.photoUrl));
       setConsentFacial(userData.hasConsentFacialRecognition || false);
@@ -157,6 +216,33 @@ const Profile = () => {
   const handleUpdate = (e) => {
     e.preventDefault();
     updateUserMutation.mutate(formData);
+  };
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (data) => api.put(`/users/me/password`, data),
+    onSuccess: () => {
+      toast.success("Senha alterada com sucesso!");
+      setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao alterar a senha.");
+    },
+  });
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      toast.error("As novas senhas não coincidem.");
+      return;
+    }
+    if (passwords.newPassword.length < 6) {
+      toast.error("A nova senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+    changePasswordMutation.mutate({
+      currentPassword: passwords.currentPassword,
+      newPassword: passwords.newPassword,
+    });
   };
 
   const updatePhotoMutation = useMutation({
@@ -338,11 +424,10 @@ const Profile = () => {
             <button
               onClick={() => fileInputRef.current.click()}
               className={`absolute inset-0 bg-black/50 flex items-center justify-center rounded-full transition-opacity
-                         ${
-                           isEditing
-                             ? "opacity-100"
-                             : "opacity-0 group-hover:opacity-100"
-                         }`}
+                         ${isEditing
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+                }`}
               title="Alterar foto"
             >
               <Camera className="h-8 w-8 text-white" />
@@ -450,6 +535,84 @@ const Profile = () => {
                       }
                       disabled={!isEditing}
                     />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 mt-4 space-y-4">
+                    <h4 className="font-semibold border-b pb-2">Dados Profissionais</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Profissão/Cargo</Label>
+                        <Select
+                          disabled={!isEditing}
+                          value={formData.professionName}
+                          onValueChange={(val) => setFormData({ ...formData, professionName: val })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um cargo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {professionOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.label}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Carga Horária Semanal</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="100"
+                          placeholder="Ex: 40"
+                          value={formData.workload}
+                          disabled={!isEditing}
+                          onChange={(e) => setFormData({ ...formData, workload: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Segmento/Série de Atuação</Label>
+                        <Select
+                          disabled={!isEditing}
+                          value={formData.serie}
+                          onValueChange={(val) => setFormData({ ...formData, serie: val })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o segmento/série" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {serieOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.label}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Disciplina principal (se aplicável)</Label>
+                        <Select
+                          disabled={!isEditing}
+                          value={formData.subject}
+                          onValueChange={(val) => setFormData({ ...formData, subject: val })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a disciplina" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subjectOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.label}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
@@ -606,10 +769,57 @@ const Profile = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
+              {/* NOVA SEÇÃO: ALTERAÇÃO DE SENHA */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center">
+                  <LockKeyhole className="h-5 w-5 mr-2 text-primary" />
+                  Segurança e Senha
+                </h3>
+                <div className="p-4 border rounded-lg">
+                  <form onSubmit={handleChangePassword} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="currentPassword">Senha Atual</Label>
+                        <Input
+                          id="currentPassword"
+                          type="password"
+                          value={passwords.currentPassword}
+                          onChange={(e) => setPasswords({ ...passwords, currentPassword: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword">Nova Senha</Label>
+                        <Input
+                          id="newPassword"
+                          type="password"
+                          value={passwords.newPassword}
+                          onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          value={passwords.confirmPassword}
+                          onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={changePasswordMutation.isPending || !passwords.currentPassword || !passwords.newPassword}
+                    >
+                      {changePasswordMutation.isPending ? "Alterando..." : "Alterar Senha"}
+                    </Button>
+                  </form>
+                </div>
+              </div>
+
               {/* --- NOVA SEÇÃO: RECONHECIMENTO FACIAL --- */}
               <div>
                 <h3 className="text-lg font-semibold mb-2 flex items-center">
-                  <LockKeyhole className="h-5 w-5 mr-2 text-blue-600" />
+                  <Camera className="h-5 w-5 mr-2 text-blue-600" />
                   Reconhecimento Facial para Check-in
                 </h3>
                 <div className="flex items-center justify-between p-4 border rounded-lg">

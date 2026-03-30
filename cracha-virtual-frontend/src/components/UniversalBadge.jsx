@@ -7,10 +7,18 @@ import { toast } from "sonner";
 import Logo from "../assets/logo-prof-presente-white.svg";
 import { getAssetUrl } from "../lib/utils";
 import api from "@/lib/api";
+import { useBranding } from "../contexts/BrandingContext";
 
-const LogoPlaceholder = () => <img src={Logo} className="h-7" />;
+const LogoPlaceholder = ({ logoUrl }) => (
+  <img
+    src={logoUrl ? getAssetUrl(logoUrl) : Logo}
+    className="h-7 object-contain max-w-[150px]"
+    alt="Logo do Sistema"
+  />
+);
 
 const UniversalBadge = ({ user, badge, awards = [] }) => {
+  const { logoUrl } = useBranding();
   const badgeRef = useRef(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -62,7 +70,7 @@ const UniversalBadge = ({ user, badge, awards = [] }) => {
       >
         <div className="relative z-10 flex flex-col items-center justify-between h-full">
           <div className="flex items-center justify-between w-full">
-            <LogoPlaceholder />
+            <LogoPlaceholder logoUrl={logoUrl} />
             {latestAwards.length > 0 && (
               <div className="flex justify-center gap-2">
                 {latestAwards.map(({ award }) => (

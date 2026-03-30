@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce"; // Hook para debounce
 import {
   Card,
@@ -43,11 +44,62 @@ import {
   PaginationPrevious,
 } from "./ui/pagination";
 import { Badge } from "./ui/badge";
-import { Shield, Key, Search } from "lucide-react";
+import { Shield, Key, Search, Plus, UserPlus, Calendar, MapPin, Clock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import AdminUserRegister from "./AdminUserRegister";
+import { DatePicker } from "./ui/date-picker";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { Separator } from "./ui/separator";
+
+const professionOptions = [
+  { value: "gestor", label: "Gestor" },
+  { value: "gestor adjunto", label: "Gestor Adjunto" },
+  { value: "secretário", label: "Secretário" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "educador social voluntário", label: "Educador Social Voluntário" },
+  { value: "professor", label: "Professor" },
+  { value: "merendeiro", label: "Merendeiro" },
+  { value: "apoio", label: "Apoio" },
+  { value: "organizador", label: "Organizador" },
+];
+
+const serieOptions = [
+  { value: "bercário I", label: "Bercário I" },
+  { value: "bercário II", label: "Bercário II" },
+  { value: "maternal I", label: "Maternal I" },
+  { value: "maternal II", label: "Maternal II" },
+  { value: "pré I", label: "Pré I" },
+  { value: "pré II", label: "Pré II" },
+  { value: "1º ao 9º", label: "1º ao 9º" },
+];
+
+const subjectOptions = [
+  { value: "Polivalente", label: "Polivalente" },
+  { value: "Português", label: "Português" },
+  { value: "Matemática", label: "Matemática" },
+  { value: "História", label: "História" },
+  { value: "Geografia", label: "Geografia" },
+  { value: "Ciências", label: "Ciências" },
+  { value: "Inglês", label: "Inglês" },
+  { value: "Artes", label: "Artes" },
+  { value: "Educação Física", label: "Educação Física" },
+  { value: "Ensino Religioso", label: "Ensino Religioso" },
+  { value: "Educação Especial", label: "Educação Especial" },
+  { value: "Outros", label: "Outros" },
+];
+
+const formatCPF = (v) => {
+  if (!v) return "";
+  v = v.replace(/\D/g, "");
+  if (v.length > 11) v = v.slice(0, 11);
+  return v.replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+};
 
 const UserManagement = () => {
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms de delay
@@ -55,9 +107,38 @@ const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false); // NOVO
   const [newRole, setNewRole] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedUserForEnrollments, setSelectedUserForEnrollments] = useState(null);
+  const [isEnrollmentsDialogOpen, setIsEnrollmentsDialogOpen] = useState(false);
+
+  // Edit User State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editProfession, setEditProfession] = useState("");
+  const [editSerie, setEditSerie] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editWorkload, setEditWorkload] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCpf, setEditCpf] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editNeighborhood, setEditNeighborhood] = useState("");
+
+  // QUERY: Histórico de inscrições do usuário
+  const { data: userEnrollments, isLoading: isLoadingEnrollments } = useQuery({
+    queryKey: ["user-enrollments", selectedUserForEnrollments?.id],
+    queryFn: async () => {
+      if (!selectedUserForEnrollments) return [];
+      const response = await api.get(`/users/${selectedUserForEnrollments.id}/enrollments`);
+      return response.data;
+    },
+    enabled: !!selectedUserForEnrollments,
+  });
 
   // QUERY ATUALIZADA para paginação e busca
   const { data, isLoading } = useQuery({
@@ -116,6 +197,36 @@ const UserManagement = () => {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, data }) => {
+      const response = await api.put(`/users/${userId}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin-users"]);
+      toast.success("Dados do usuário atualizados com sucesso!");
+      setIsEditDialogOpen(false);
+      setUserToEdit(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao atualizar usuário");
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId) => {
+      const response = await api.delete(`/users/${userId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin-users"]);
+      toast.success("Usuário excluído com sucesso!");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || "Erro ao excluir usuário");
+    },
+  });
+
   const handleRoleChange = () => {
     if (!newRole) {
       toast.error("Selecione um tipo de usuário");
@@ -123,6 +234,52 @@ const UserManagement = () => {
     }
     updateRoleMutation.mutate({ userId: selectedUser.id, role: newRole });
   };
+
+  const handleEditClick = (user) => {
+    setUserToEdit(user);
+    setEditName(user.name || "");
+    setEditEmail(user.email || "");
+    setEditProfession(user.professionName?.toLowerCase() || "");
+    setEditSerie(user.serie || "");
+    setEditSubject(user.subject || "");
+    setEditWorkload(user.workload || "");
+    setEditPhone(user.phone || "");
+    setEditCpf(formatCPF(user.cpf));
+    setEditBirthDate(user.birthDate || "");
+    setEditAddress(user.address || "");
+    setEditNeighborhood(user.neighborhood || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    if (!editName.trim() || !editEmail.trim()) {
+      toast.error("Nome e Email são obrigatórios");
+      return;
+    }
+    updateUserMutation.mutate({
+      userId: userToEdit.id,
+      data: {
+        name: editName,
+        email: editEmail,
+        professionName: editProfession,
+        serie: editSerie,
+        subject: editSubject,
+        workload: editWorkload,
+        phone: editPhone,
+        cpf: editCpf,
+        birthDate: editBirthDate,
+        address: editAddress,
+        neighborhood: editNeighborhood
+      }
+    });
+  };
+
+  const handleDeleteUser = (user) => {
+    if (window.confirm(`Tem certeza que deseja excluir o usuário "${user.name}"? Esta ação não pode ser desfeita.`)) {
+      deleteUserMutation.mutate(user.id);
+    }
+  };
+
 
   const handlePasswordReset = () => {
     if (!newPassword || newPassword.length < 6) {
@@ -157,6 +314,7 @@ const UserManagement = () => {
       CHECKIN_COORDINATOR: { label: "Coord. Check-in", variant: "secondary" },
       TEACHER: { label: "Professor", variant: "outline" },
       USER: { label: "Usuário", variant: "outline" },
+      SPEAKER: { label: "Palestrante", variant: "default" }, // Usando variant default para destaque
     };
     const config = roleConfig[role] || roleConfig.USER;
     return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -182,8 +340,8 @@ const UserManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
+          <div className="mb-4 flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full sm:w-auto flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar por nome ou email..."
@@ -195,63 +353,194 @@ const UserManagement = () => {
                 className="pl-10"
               />
             </div>
+            <Button onClick={() => setIsRegisterDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Usuário
+            </Button>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
-                      Buscando...
-                    </TableCell>
-                  </TableRow>
-                ) : users.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center py-8 text-gray-500"
-                    >
-                      Nenhum usuário encontrado
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openRoleDialog(user)}
-                        >
-                          <Shield className="h-4 w-4 mr-1" />
-                          Tipo
-                        </Button>
+          <div className="rounded-md border-none md:border">
+            {/* MOBILE VIEW: Cards */}
+            <div className="md:hidden space-y-4">
+              {isLoading ? (
+                <div className="text-center p-4">Carregando...</div>
+              ) : users.length === 0 ? (
+                <div className="text-center p-4 text-gray-500">Nenhum usuário encontrado</div>
+              ) : (
+                users.map((user) => (
+                  <Card key={user.id} className="overflow-hidden border shadow-sm">
+                    <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
+                      <span className="font-semibold truncate max-w-[200px]">{user.name}</span>
+                      {getRoleBadge(user.role)}
+                    </div>
+                    <CardContent className="p-4 space-y-3">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium uppercase">Email</p>
+                        <p className="text-sm break-all">{user.email}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {user.professionName && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Profissão</p>
+                            <p className="capitalize">{user.professionName}</p>
+                          </div>
+                        )}
+                        {user.workload && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Carga H.</p>
+                            <p>{user.workload}</p>
+                          </div>
+                        )}
+                        {user.serie && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Série</p>
+                            <p className="capitalize">{user.serie}</p>
+                          </div>
+                        )}
+                        {user.subject && (
+                          <div>
+                            <p className="text-muted-foreground font-medium uppercase">Comp. Curr.</p>
+                            <p className="capitalize">{user.subject}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2 border-t">
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openRoleDialog(user)}
+                            className="h-8"
+                          >
+                            <Shield className="h-4 w-4 mr-1" />
+                            Tipo
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => openPasswordDialog(user)}
+                          className="h-8"
                         >
                           <Key className="h-4 w-4 mr-1" />
                           Senha
                         </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteUser(user)}
+                            className="h-8"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Excluir
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP VIEW: Table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Profissão</TableHead>
+                    <TableHead>Série</TableHead>
+                    <TableHead>Componente</TableHead>
+                    <TableHead>Carga H.</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        Buscando...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                        Nenhum usuário encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell className="capitalize text-xs">{user.professionName || "-"}</TableCell>
+                        <TableCell className="capitalize text-xs">{user.serie || "-"}</TableCell>
+                        <TableCell className="capitalize text-xs">{user.subject || "-"}</TableCell>
+                        <TableCell className="text-xs">{user.workload || "-"}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditClick(user)}
+                            title="Editar"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil mr-1"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            Editar
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openRoleDialog(user)}
+                            >
+                              <Shield className="h-4 w-4 mr-1" />
+                              Tipo
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPasswordDialog(user)}
+                          >
+                            <Key className="h-4 w-4 mr-1" />
+                            Senha
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedUserForEnrollments(user);
+                              setIsEnrollmentsDialogOpen(true);
+                            }}
+                            title="Ver Inscrições"
+                          >
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Histórico
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteUser(user)}
+                              title="Excluir Usuário"
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Excluir
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {/* COMPONENTE DE PAGINAÇÃO */}
@@ -320,30 +609,179 @@ const UserManagement = () => {
                   <SelectItem value="GESTOR_ESCOLA">
                     Gestor Educacional
                   </SelectItem>
+                  <SelectItem value="SPEAKER">Palestrante</SelectItem>
                   <SelectItem value="ADMIN">Administrador</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsRoleDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleRoleChange}
-              disabled={updateRoleMutation.isPending}
-            >
-              {updateRoleMutation.isPending ? "Salvando..." : "Salvar"}
+            <Button onClick={handleRoleChange} disabled={updateRoleMutation.isPending}>
+              {updateRoleMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* DIALOG DE EDIÇÃO DE USUÁRIO */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Atualize os dados cadastrais do usuário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label>Nome Completo</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Nome do usuário"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Email</Label>
+              <Input
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="email@exemplo.com"
+                type="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data de Nascimento</Label>
+              <DatePicker
+                value={editBirthDate ? toZonedTime(editBirthDate, "America/Sao_Paulo") : null}
+                onSelect={(date) => setEditBirthDate(date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>CPF</Label>
+              <Input
+                value={editCpf}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "");
+                  if (v.length > 11) v = v.slice(0, 11);
+                  v = v.replace(/(\d{3})(\d)/, "$1.$2")
+                    .replace(/(\d{3})(\d)/, "$1.$2")
+                    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+                  setEditCpf(v);
+                }}
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input
+                value={editPhone}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "");
+                  if (v.length > 11) v = v.slice(0, 11);
+                  v = v.replace(/(\d{2})(\d)/, "($1) $2")
+                    .replace(/(\d{5})(\d)/, "$1-$2");
+                  setEditPhone(v);
+                }}
+                placeholder="(00) 00000-0000"
+                maxLength={15}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Endereço</Label>
+              <Input
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                placeholder="Rua, número"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bairro</Label>
+              <Input
+                value={editNeighborhood}
+                onChange={(e) => setEditNeighborhood(e.target.value)}
+                placeholder="Bairro"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Profissão / Cargo</Label>
+              <Select value={editProfession} onValueChange={setEditProfession}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {professionOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Carga Horária</Label>
+          <Input
+            value={editWorkload}
+            onChange={(e) => setEditWorkload(e.target.value)}
+            placeholder="Ex: 40h"
+          />
+        </div>
+
+        {editProfession?.toLowerCase() === "professor" && (
+          <>
+                <div className="space-y-2">
+                  <Label>Série</Label>
+                  <Select value={editSerie} onValueChange={setEditSerie}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {serieOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Componente Curricular</Label>
+                  <Select value={editSubject} onValueChange={setEditSubject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectOptions.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateUser} disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       {/* Dialog para redefinir senha */}
-      <Dialog
+      < Dialog
         open={isPasswordDialogOpen}
         onOpenChange={setIsPasswordDialogOpen}
       >
@@ -391,8 +829,106 @@ const UserManagement = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog >
+
+      <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Cadastrar Novo Usuário</DialogTitle>
+            <DialogDescription>
+              Preencha os dados abaixo para criar uma nova conta manualmente.
+            </DialogDescription>
+          </DialogHeader>
+          <AdminUserRegister
+            onSuccess={() => {
+              setIsRegisterDialogOpen(false);
+              queryClient.invalidateQueries(["admin-users"]);
+            }}
+            onCancel={() => setIsRegisterDialogOpen(false)}
+          />
+        </DialogContent>
       </Dialog>
-    </div>
+
+      {/* Dialog para Histórico de Inscrições */}
+      <Dialog open={isEnrollmentsDialogOpen} onOpenChange={setIsEnrollmentsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico de Inscrições</DialogTitle>
+            <DialogDescription>
+              Eventos participados por <strong>{selectedUserForEnrollments?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingEnrollments ? (
+            <div className="py-8 text-center bg-gray-50 rounded-lg">
+              <p className="text-gray-500">Carregando histórico...</p>
+            </div>
+          ) : userEnrollments && userEnrollments.length > 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Local</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Check-in</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {userEnrollments.map((enrollment) => (
+                    <TableRow key={enrollment.eventId}>
+                      <TableCell className="font-medium">{enrollment.eventTitle}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {new Date(enrollment.eventDate).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {enrollment.location}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {enrollment.status === "APPROVED" ? (
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200 border-none">Confirmado</Badge>
+                        ) : enrollment.status === "PENDING" ? (
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50">Pendente</Badge>
+                        ) : (
+                          <Badge variant="destructive">Cancelado</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {enrollment.checkInTime ? (
+                          <div className="flex items-center text-green-600 font-medium text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {new Date(enrollment.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="py-12 text-center bg-gray-50 rounded-lg border border-dashed">
+              <Calendar className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 font-medium">Nenhuma inscrição encontrada</p>
+              <p className="text-sm text-gray-400">Este usuário ainda não se inscreveu em eventos.</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEnrollmentsDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div >
   );
 };
 

@@ -11,30 +11,86 @@ const {
   uploadEventBadgeTemplate,
   generatePrintableBadges,
   uploadCertificateTemplate,
+  uploadPresentationFile,
+  deletePresentationFile,
   sendEventCertificates,
   getCertificateLogsForEvent,
   uploadEventThumbnailController,
+  uploadSpeakerPhotoController,
+  getEventEnrollments,
+  getEventQuestions,
 } = require("../controllers/eventController");
 
-const { authenticateToken, requireAdmin } = require("../middleware/auth");
+const {
+  addStaffToEvent,
+  removeStaffFromEvent,
+  getEventStaff,
+} = require("../controllers/eventStaffController");
+
+const {
+  authenticateToken,
+  authenticateOptional,
+  requireAdmin,
+  requireAdminOrOrganizer
+} = require("../middleware/auth");
 
 const {
   uploadBadgeTemplate,
   uploadCertificate,
   uploadEventThumbnail,
+  uploadSpeakerPhoto,
+  uploadPresentation,
 } = require("../middleware/upload");
 
-// Listar todos os eventos (público)
-router.get("/", authenticateToken, getAllEvents);
+const { cacheMiddleware } = require("../services/cacheService");
+
+// --- ROTAS DE APRESENTAÇÃO (PDF/PPT) ---
+router.post(
+  "/:id/presentation",
+  authenticateToken,
+  uploadPresentation,
+  uploadPresentationFile
+);
+
+router.delete(
+  "/:id/presentation",
+  authenticateToken,
+  deletePresentationFile
+);
+
+// --- ROTAS DE STAFF (EQUIPE) ---
+router.post(
+  "/:eventId/staff",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  addStaffToEvent
+);
+
+router.delete(
+  "/:eventId/staff/:userId",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  removeStaffFromEvent
+);
+
+router.get(
+  "/:eventId/staff",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  getEventStaff
+);
+
+// Listar todos os eventos (público - authentication optional)
+router.get("/", authenticateOptional, cacheMiddleware(60), getAllEvents);
 
 // Obter evento por ID (público)
-router.get("/:id", getEventById);
+router.get("/:id", cacheMiddleware(60), getEventById);
 
 // Rota para gerar o PDF com os crachás para impressão em lote
 router.get(
   "/:id/print-badges",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   generatePrintableBadges
 );
 
@@ -45,7 +101,7 @@ router.post("/", authenticateToken, eventValidation, createEvent);
 router.post(
   "/:id/badge-template",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   uploadBadgeTemplate, // Middleware para o upload da imagem
   uploadEventBadgeTemplate
 );
@@ -54,27 +110,35 @@ router.post(
 router.put(
   "/:id",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   eventValidation,
   updateEvent
 );
 
 // Deletar evento (apenas admin)
-router.delete("/:id", authenticateToken, requireAdmin, deleteEvent);
+router.delete("/:id", authenticateToken, requireAdminOrOrganizer, deleteEvent);
 
 router.post(
   "/:id/thumbnail",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   uploadEventThumbnail, // Middleware de upload
   uploadEventThumbnailController // Controller
+);
+
+router.post(
+  "/:id/speaker-photo",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  uploadSpeakerPhoto,
+  uploadSpeakerPhotoController
 );
 
 //Criar certificados para o evento
 router.post(
   "/:id/certificate-template",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   uploadCertificate,
   uploadCertificateTemplate
 );
@@ -82,15 +146,29 @@ router.post(
 router.post(
   "/:id/send-certificates",
   authenticateToken, // Middleware de autenticação
-  requireAdmin, // Middleware que verifica se é admin
+  requireAdminOrOrganizer, // Middleware que verifica se é admin
   sendEventCertificates // Nova função no controller
 );
 
 router.get(
   "/:id/certificate-logs",
   authenticateToken,
-  requireAdmin,
+  requireAdminOrOrganizer,
   getCertificateLogsForEvent // Nova função no controller
 );
+
+router.get(
+  "/:id/enrollments",
+  authenticateToken,
+  requireAdminOrOrganizer,
+  getEventEnrollments
+);
+
+router.get(
+  "/:id/questions",
+  authenticateToken,
+  getEventQuestions
+);
+
 
 module.exports = router;

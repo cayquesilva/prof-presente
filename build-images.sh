@@ -6,10 +6,11 @@
 set -e
 
 # Configurações
-DOCKER_USERNAME="seu-usuario"
-BACKEND_IMAGE="cracha-backend"
-FRONTEND_IMAGE="cracha-frontend"
-VERSION="latest"
+DOCKER_USERNAME="vydhal"
+BACKEND_IMAGE="eduagenda-backend"
+FRONTEND_IMAGE="eduagenda-frontend"
+FACIALREC_IMAGE="eduagenda-facialrec"
+VERSION=${1:-"2.2.0"}
 
 echo "🐳 Iniciando build das imagens Docker..."
 
@@ -22,7 +23,13 @@ cd ..
 # Build da imagem do frontend
 echo "📦 Fazendo build da imagem do frontend..."
 cd cracha-virtual-frontend
-docker build -t ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION} .
+docker build -t ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION} --build-arg VITE_API_URL=https://corre.simplisoft.com.br/api .
+cd ..
+
+# Build da imagem de reconhecimento facial
+echo "📦 Fazendo build da imagem de reconhecimento facial..."
+cd cracha-virtual-facialrec
+docker build -t ${DOCKER_USERNAME}/${FACIALREC_IMAGE}:${VERSION} .
 cd ..
 
 echo "✅ Build das imagens concluído!"
@@ -39,15 +46,20 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     
     echo "📤 Fazendo push da imagem do frontend..."
     docker push ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION}
+
+    echo "📤 Fazendo push da imagem de reconhecimento facial..."
+    docker push ${DOCKER_USERNAME}/${FACIALREC_IMAGE}:${VERSION}
     
     echo "✅ Push das imagens concluído!"
     echo "📋 Imagens disponíveis:"
     echo "   - ${DOCKER_USERNAME}/${BACKEND_IMAGE}:${VERSION}"
     echo "   - ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION}"
+    echo "   - ${DOCKER_USERNAME}/${FACIALREC_IMAGE}:${VERSION}"
 else
     echo "ℹ️  Imagens criadas localmente:"
     echo "   - ${DOCKER_USERNAME}/${BACKEND_IMAGE}:${VERSION}"
     echo "   - ${DOCKER_USERNAME}/${FRONTEND_IMAGE}:${VERSION}"
+    echo "   - ${DOCKER_USERNAME}/${FACIALREC_IMAGE}:${VERSION}"
 fi
 
 echo "🎉 Processo concluído!"

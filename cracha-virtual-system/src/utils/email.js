@@ -1,15 +1,25 @@
 const nodemailer = require("nodemailer");
+const path = require("path");
+const fs = require("fs");
 
 const { generateBadgeHtml } = require("../utils/badgeService");
 
+const isSecure = process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1" || process.env.SMTP_SECURE === true || String(process.env.SMTP_SECURE).toLowerCase() === "true";
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE === "true", // Sua configuração está ótima
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: isSecure,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 5000,
+  socketTimeout: 20000,
 });
 
 /**
@@ -21,19 +31,25 @@ const transporter = nodemailer.createTransport({
  */
 const sendEmail = async ({ to, subject, html, attachments }) => {
   // Verificação para garantir que o 'from' está configurado
-  const fromAddress = process.env.EMAIL_FROM || `"<${process.env.SMTP_USER}>"`;
+  const fromAddress = process.env.EMAIL_FROM || process.env.SMTP_USER;
 
   try {
-    await transporter.sendMail({
+    console.log(`[EMAIL] Tentando enviar para: ${to} | Assunto: ${subject}`);
+    const info = await transporter.sendMail({
       from: fromAddress,
       to,
       subject,
       html,
       attachments,
     });
-    console.log(`E-mail enviado com sucesso para ${to}`);
+    console.log(`[EMAIL] Sucesso! ID: ${info.messageId}`);
+    return info;
   } catch (error) {
-    console.error(`Erro ao enviar e-mail para ${to}:`, error);
+    console.error(`[EMAIL-ERROR] Falha ao enviar para ${to}:`, error.message);
+    if (error.code === 'ESOCKET') {
+      console.error(`[EMAIL-ERROR] Dica: Verifique a conexão com ${process.env.SMTP_HOST}`);
+    }
+    throw error; // Re-throw the error so the caller can handle it
   }
 };
 
@@ -60,8 +76,78 @@ const sendEnrollmentConfirmationEmail = async (
     return;
   }
 
-  // 2. Gera o HTML do crachá dinamicamente
-  const badgeHtml = await generateBadgeHtml(user, userBadge, awards);
+
+
+  // ... (existing code) ...
+
+  // 1. Identificar o caminho físico do QR code para anexar como CID
+  let attachments = [];
+  let qrCodeCid = null;
+  let userPhotoCid = null; // Novo
+
+  if (userBadge && userBadge.qrCodeUrl) {
+    // A URL é algo como "/uploads/qrcodes/user_badge_123.png"
+    // Removemos a barra inicial para o path.join funcionar corretamente a partir da raiz
+    const relativePath = userBadge.qrCodeUrl.startsWith("/")
+      ? userBadge.qrCodeUrl.slice(1)
+      : userBadge.qrCodeUrl;
+
+    const qrCodePath = path.join(process.cwd(), relativePath);
+    qrCodeCid = `qrcode_${userBadge.badgeCode}`;
+
+    if (fs.existsSync(qrCodePath)) {
+      attachments.push({
+        filename: "qrcode.png",
+        path: qrCodePath,
+        cid: qrCodeCid,
+      });
+    }
+  }
+
+  // Lógica para anexar a foto do usuário (se for local)
+  if (user.photoUrl && user.photoUrl.startsWith("/uploads")) {
+    const relativePath = user.photoUrl.startsWith("/")
+      ? user.photoUrl.slice(1)
+      : user.photoUrl;
+
+    const photoPath = path.join(process.cwd(), relativePath);
+
+    if (fs.existsSync(photoPath)) {
+      userPhotoCid = `userphoto_${user.id}`;
+      attachments.push({
+        filename: path.basename(photoPath),
+        path: photoPath,
+        cid: userPhotoCid
+      });
+    }
+  }
+
+  // Lógica para anexar o LOGO do sistema (local)
+  const logoPath = path.join(__dirname, "../assets/logo.png");
+  console.log(`[EMAIL-DEBUG] Tentando anexar logo de: ${logoPath}`);
+
+  let logoCid = null;
+  if (fs.existsSync(logoPath)) {
+    console.log("[EMAIL-DEBUG] Logo encontrado via fs.existsSync");
+    logoCid = "logo_prof_presente";
+    attachments.push({
+      filename: "logo.png",
+      path: logoPath,
+      cid: logoCid
+    });
+  } else {
+    console.warn(`[EMAIL-DEBUG] Logo NÃO encontrado no caminho: ${logoPath}`);
+  }
+
+  // 2. Gera o HTML do crachá dinamicamente, passando os CIDs
+  const badgeHtml = generateBadgeHtml(user, userBadge, awards, {
+    qrCodeCid,
+    userPhotoCid,
+    logoCid // Novo CID do logo
+  });
+
+  console.log(`[EMAIL-DEBUG] Attachments preparados: ${attachments.length} arquivos.`);
+  attachments.forEach(att => console.log(` - ${att.filename} (${att.cid}) -> ${att.path}`));
 
   const subject = `Crachá e Confirmação de Inscrição: ${event.title}`;
   const html = `
@@ -81,7 +167,7 @@ const sendEnrollmentConfirmationEmail = async (
     </div>
   `;
 
-  await sendEmail({ to: user.email, subject, html });
+  await sendEmail({ to: user.email, subject, html, attachments });
 };
 
 /**

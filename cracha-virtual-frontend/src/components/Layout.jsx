@@ -34,13 +34,19 @@ import {
   Star,
   Shield,
   Trophy,
+  MessageSquare,
+  GraduationCap,
+  Globe
 } from "lucide-react";
 import Logo from "../assets/logo-prof-presente.svg"; // Importe o seu logo
 import { getAssetUrl } from "../lib/utils"; // NOVO: Importa a função auxiliar
 import AppTour from "./AppTour";
+import BottomNavbar from "./BottomNavbar";
+import { useBranding } from "../contexts/BrandingContext";
 
 const Layout = ({ children }) => {
   const { user, logout, isAdmin, isOrg } = useAuth();
+  const { platformName, logoUrl } = useBranding();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -93,16 +99,34 @@ const Layout = ({ children }) => {
       id: "nav-link-dashboard",
     },
     {
+      name: "Ver Site",
+      href: "/",
+      icon: Globe,
+      id: "nav-link-site",
+    },
+    {
       name: "Eventos",
       href: "/events",
       icon: Calendar,
       id: "nav-link-eventos",
     },
     {
+      name: "Interações em Tempo Real",
+      href: "/interactions",
+      icon: MessageSquare, // Need to import this
+      id: "nav-link-interactions",
+    },
+    {
       name: "Minhas Inscrições",
       href: "/my-enrollments",
       icon: FileText,
       id: "nav-link-minhas-inscrições",
+    },
+    {
+      name: "Minhas Trilhas",
+      href: "/my-tracks",
+      icon: GraduationCap,
+      id: "nav-link-minhas-trilhas",
     },
     {
       name: "Meu Perfil",
@@ -115,8 +139,14 @@ const Layout = ({ children }) => {
       ? [{ name: "Check-in", href: "/check-in", icon: QrCode }]
       : []),
     { name: "Ranking de Checkins", href: "/ranking", icon: Trophy },
-    ...(isAdmin || user?.role === "GESTOR_ESCOLA" || isOrg
-      ? [{ name: "Administração", href: "/admin", icon: Shield }]
+    ...(user && (isAdmin || user?.role === "GESTOR_ESCOLA" || isOrg)
+      ? [
+        { name: "Administração", href: "/admin", icon: Shield },
+        { name: "Gerenciar Trilhas", href: "/admin/tracks", icon: GraduationCap }
+      ]
+      : []),
+    ...(user && (isAdmin || isOrg || user?.role === "CERIMONIAL")
+      ? [{ name: "Gestão de Espaços", href: "/spaces", icon: Calendar, id: "nav-link-spaces" }]
       : []),
   ];
 
@@ -130,7 +160,8 @@ const Layout = ({ children }) => {
     <div className="flex flex-col h-full">
       <div className="flex items-center px-6 py-4 border-b">
         <div className="flex items-center space-x-2">
-          <img src={Logo} alt="Logo" className="h-10" />
+          <img src={logoUrl || Logo} alt={platformName} className="h-10 w-auto object-contain" />
+          <span className="font-bold text-xl text-foreground">{platformName}</span>
         </div>
       </div>
 
@@ -143,11 +174,10 @@ const Layout = ({ children }) => {
               id={item.id}
               to={item.href}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                isActive(item.href)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive(item.href)
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
             >
               <Icon className="w-5 h-5 mr-3" />
               {item.name}
@@ -156,26 +186,28 @@ const Layout = ({ children }) => {
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t">
-        <div className="flex items-center space-x-3">
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={getAssetUrl(user?.photoUrl)} alt={user?.name} />
-            <AvatarFallback>
-              {user?.name
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </p>
+      {user && (
+        <div className="px-4 py-4 border-t">
+          <div className="flex items-center space-x-3">
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={getAssetUrl(user?.photoUrl)} alt={user?.name} />
+              <AvatarFallback>
+                {user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -249,58 +281,68 @@ const Layout = ({ children }) => {
                   Instalar App
                 </Button>
               )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    id="user-avatar-button"
-                    variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={getAssetUrl(user?.photoUrl)}
-                        alt={user?.name}
-                      />
-                      <AvatarFallback>
-                        {user?.name
-                          ?.split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user?.name}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Perfil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      id="user-avatar-button"
+                      variant="ghost"
+                      className="relative h-8 w-8 rounded-full"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={getAssetUrl(user?.photoUrl)}
+                          alt={user?.name}
+                        />
+                        <AvatarFallback>
+                          {user?.name
+                            ?.split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.name}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Perfil</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link to="/login">
+                  <Button size="sm">Entrar</Button>
+                </Link>
+              )}
             </div>
           </div>
         </header>
 
         {/* Conteúdo da página */}
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
         {user && <AppTour user={user} setSidebarOpen={setSidebarOpen} />}
+
+        {/* Global Bottom Nav */}
+        <BottomNavbar />
       </div>
     </div>
   );

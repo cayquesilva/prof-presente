@@ -5,8 +5,22 @@ require("dotenv").config();
 
 const { connectDatabase } = require("./config/database");
 const routes = require("./routes");
+const { setupSecurity, apiLimiter } = require('./middleware/security');
 
 const app = express();
+
+// Log para depuração de ambiente (v22-FIX-ASSETS)
+const dbUrl = process.env.DATABASE_URL || "";
+const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ":****@");
+console.log(`[v22-FIX-ASSETS] Database Host: ${dbUrl.split('@')[1] || 'não definido'}`);
+console.log(`[v22-FIX-ASSETS] NODE_ENV: ${process.env.NODE_ENV}`);
+
+// Confiar no proxy (Traefik) para o rate-limit e logs de IP
+app.set('trust proxy', 1);
+
+// Segurança (Headers + Rate Limit)
+setupSecurity(app);
+app.use(apiLimiter);
 
 // Conectar ao banco de dados
 connectDatabase();
@@ -14,10 +28,22 @@ connectDatabase();
 // Middleware básico
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? "https://checkin.simplisoft.com.br" // Sua URL de produção
-        : "http://localhost:5173", // Sua URL de desenvolvimento do frontend
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "https://corre.simplisoft.com.br",
+        "http://localhost:5173",
+        "http://localhost:3001"
+      ];
+
+      // Permitir requisições sem origin (como apps mobile ou curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== "production") {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -27,6 +53,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Servir arquivos estáticos (uploads)
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/api/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Middleware de log de requisições
 app.use((req, res, next) => {
@@ -49,6 +76,7 @@ app.get("/", (req, res) => {
 
 // Middleware de tratamento de erros 404
 app.use((req, res) => {
+  console.log(`[404] Endpoint não encontrado: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: "Endpoint não encontrado",
     message: `A rota ${req.method} ${req.originalUrl} não existe`,

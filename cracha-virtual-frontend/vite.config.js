@@ -9,8 +9,9 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    tailwindcss(),
     // 2. Adicione o plugin VitePWA à lista de plugins com sua configuração
-    VitePWA({
+    /* VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
@@ -41,11 +42,18 @@ export default defineConfig({
           },
         ],
       },
-    }),
+      devOptions: {
+        enabled: false // Desabilita PWA em dev
+      }
+    }), */
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  server: {
+    port: 3001,
+    strictPort: true, // Fail if port is busy instead of switching
   },
 });

@@ -32,23 +32,37 @@ const registerValidation = [
     .withMessage("Senha deve ter pelo menos 6 caracteres"),
   body("birthDate").isISO8601().withMessage("Data de nascimento inválida"),
   body("cpf")
-    .matches(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/)
-    .withMessage("CPF deve estar no formato XXX.XXX.XXX-XX"),
+    .matches(/^(\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/)
+    .withMessage("CPF inválido (use 11 dígitos ou formato XXX.XXX.XXX-XX)"),
   body("contractType")
-    .isIn(["EFETIVO", "PRESTADOR", "ESTUDANTE"])
+    .optional()
+    .isIn(["EFETIVO", "PRESTADOR", "ESTUDANTE", "EXTERNO"])
     .withMessage("Tipo de vínculo inválido"),
   body("workShifts")
-    .isArray({ min: 1 })
-    .withMessage("Selecione pelo menos um turno."),
+    .optional()
+    .isArray()
+    .withMessage("Turno deve ser um array."),
   body("workShifts.*")
+    .optional()
     .isIn(["MANHA", "TARDE", "NOITE", "INTEGRAL"])
     .withMessage("Turno inválido."),
   body("teachingSegments")
-    .isArray({ min: 1 })
-    .withMessage("Selecione pelo menos um segmento de ensino."),
+    .optional()
+    .isArray()
+    .withMessage("Segmento de ensino deve ser um array."),
   body("teachingSegments.*")
+    .optional()
     .isIn(["INFANTIL", "FUNDAMENTAL1", "FUNDAMENTAL2", "EJA", "ADMINISTRATIVO", "SUPERIOR"])
     .withMessage("Segmento de ensino inválido."),
+  body("serie")
+    .optional()
+    .trim(),
+  body("subject")
+    .optional()
+    .trim(),
+  body("workload")
+    .optional()
+    .trim(),
 ];
 
 // Validações para login
@@ -63,6 +77,9 @@ const register = async (req, res) => {
     // Verificar erros de validação
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.warn("--- FALHA DE VALIDAÇÃO (REGISTRO) ---");
+      console.warn("Dados recebidos:", req.body);
+      console.warn("Erros:", errors.array());
       return res.status(400).json({
         error: "Dados inválidos",
         details: errors.array(),
@@ -83,6 +100,9 @@ const register = async (req, res) => {
       workShifts, // NOVO
       contractType, // NOVO
       teachingSegments, // NOVO
+      serie, // NOVO
+      subject, // NOVO (Componente Curricular)
+      workload, // NOVO (Carga Horária)
     } = req.body;
 
     // Verificar se o email já existe
@@ -156,9 +176,12 @@ const register = async (req, res) => {
           phone: phone || null,
           address: address || null,
           neighborhood: neighborhood || null,
-          workShifts,
+          workShifts: Array.isArray(workShifts) ? workShifts.join(",") : workShifts,
           contractType: contractType || null,
-          teachingSegments,
+          teachingSegments: Array.isArray(teachingSegments) ? teachingSegments.join(",") : teachingSegments,
+          serie: serie || null,
+          subject: subject || null,
+          workload: workload || null,
           photoUrl: null,
           profession: professionName
             ? { connectOrCreate: professionConnectOrCreate }
@@ -320,18 +343,22 @@ const getProfile = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log(`[AUTH] Iniciando forgotPassword para: ${email}`);
 
     if (!email) {
+      console.error("[AUTH] Erro: Email não fornecido na requisição.");
       return res.status(400).json({ error: "Email é obrigatório" });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
+      console.log(`[AUTH] Usuário não encontrado para o email: ${email}. Retornando sucesso silencioso.`);
       // Por segurança, não informamos que o usuário não existe, apenas retornamos sucesso
       return res.json({ message: "Se este email estiver cadastrado, você receberá um link de redefinição." });
     }
 
+    console.log(`[AUTH] Usuário encontrado: ${user.id}. Gerando token de redefinição.`);
     // Gerar token de redefinição (válido por 1 hora)
     const token = jwt.sign(
       { userId: user.id, purpose: "reset_password" },
@@ -339,7 +366,15 @@ const forgotPassword = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    const resetLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/reset-password?token=${token}`;
+    // Utilizar a URL do frontend em produção, ou localhost se não for definido.
+    // Em produção, a porta não é necessária se estiver usando o domínio principal (porta 443/80)
+    const frontendUrl = process.env.NODE_ENV === 'production'
+      ? "https://eduagenda.com.br" // Atualize com o domínio correto de produção se necessário. "https://corre.simplisoft.com.br" estava dando localhost no email? A lógica anterior usava FRONTEND_URL. Se estava falhando, vou forçar a de prod.
+      : "http://localhost:5173";
+
+    // Simplificando e forçando a rota correta:
+    const baseUrl = process.env.FRONTEND_URL || "https://corre.simplisoft.com.br";
+    const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     const subject = "Redefinição de Senha - Prof Presente";
     const html = `
@@ -358,11 +393,13 @@ const forgotPassword = async (req, res) => {
       </div>
     `;
 
+    console.log(`[AUTH] Chamando sendEmail para ${user.email}`);
     await sendEmail({ to: user.email, subject, html });
+    console.log(`[AUTH] sendEmail concluído com sucesso para ${user.email}`);
 
     res.json({ message: "Se este email estiver cadastrado, você receberá um link de redefinição." });
   } catch (error) {
-    console.error("Erro no forgotPassword:", error);
+    console.error(`[AUTH] Erro Crítico no forgotPassword para o email ${req.body?.email}:`, error);
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 };

@@ -15,9 +15,18 @@ const workplaceRoutes = require("./workplaces");
 const rankingRoutes = require("./ranking");
 const professionRoutes = require("./professions");
 const certificateRoutes = require("./certificates");
+const trackRoutes = require("./tracks");
+const bannerRoutes = require("./banners");
+const settingsRoutes = require("./settings");
+const spaceRoutes = require("./spaces");
+const equipmentRoutes = require("./equipments");
+const proposalRoutes = require("./proposals");
+const categoryRoutes = require("./categories");
+const liveStreamRoutes = require("./liveStreams");
 
 // Configurar rotas
 router.use("/auth", authRoutes);
+router.use("/proposals", proposalRoutes);
 router.use("/users", userRoutes);
 router.use("/events", eventRoutes);
 router.use("/enrollments", enrollmentRoutes);
@@ -30,6 +39,13 @@ router.use("/workplaces", workplaceRoutes);
 router.use("/ranking", rankingRoutes);
 router.use("/professions", professionRoutes);
 router.use("/certificates", certificateRoutes);
+router.use("/tracks", trackRoutes);
+router.use("/banners", bannerRoutes);
+router.use("/settings", settingsRoutes);
+router.use("/spaces", spaceRoutes);
+router.use("/equipments", equipmentRoutes);
+router.use("/categories", categoryRoutes);
+router.use("/live-streams", liveStreamRoutes);
 
 // Rota de status da API
 router.get("/status", (req, res) => {

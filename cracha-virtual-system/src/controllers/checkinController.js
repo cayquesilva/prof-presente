@@ -3,6 +3,7 @@ const { prisma } = require("../config/database");
 const { checkAndGrantAutomaticAwards } = require("./awardController");
 const axios = require("axios");
 const { Buffer } = require("buffer");
+const { calculateAndSaveProgress } = require("./trackController");
 
 /**
  * Corrige a data armazenada no banco (que foi salva como UTC por engano)
@@ -12,10 +13,7 @@ const { Buffer } = require("buffer");
  */
 const getCorrectedDate = (storedDate) => {
   if (!storedDate) return null;
-  const isoString = storedDate.toISOString();
-  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
-  const correctDateString = `${naiveDateTimeString}-03:00`;
-  return new Date(correctDateString);
+  return new Date(storedDate);
 };
 
 // Função principal para realizar o check-in.
@@ -118,11 +116,9 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
     const correctedStartDate = getCorrectedDate(event.startDate);
     const correctedEndDate = getCorrectedDate(event.endDate);
 
-    // 2. Criamos a nova data de início do check-in (30 minutos antes).
-    //    Primeiro, criamos uma cópia da data de início para não alterar a original.
+    // 2. Criamos a nova data de início do check-in (60 minutos antes).
     const checkinStartTime = new Date(correctedStartDate);
-    //    Depois, usamos setMinutes() para subtrair 30 minutos.
-    checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 30);
+    checkinStartTime.setMinutes(checkinStartTime.getMinutes() - 60);
 
     if (now < checkinStartTime) {
       return res.status(400).json({ error: "Evento ainda não começou" });
@@ -166,6 +162,27 @@ const processUserCheckin = async (req, res, userBadge, eventId) => {
     });
 
     checkAndGrantAutomaticAwards(userId);
+
+    // Atualizar progresso em Trilhas de Formação
+    try {
+      const tracksToUpdate = await prisma.trackEvent.findMany({
+        where: { eventId },
+        select: { trackId: true }
+      });
+
+      for (const { trackId } of tracksToUpdate) {
+        // Verifica se o usuário está inscrito na trilha antes de atualizar
+        const enrollment = await prisma.trackEnrollment.findUnique({
+          where: { trackId_userId: { trackId, userId } }
+        });
+
+        if (enrollment) {
+          await calculateAndSaveProgress(userId, trackId);
+        }
+      }
+    } catch (trackError) {
+      console.error("Erro ao atualizar progresso da trilha:", trackError);
+    }
 
     res.status(201).json({
       message: "Check-in realizado com sucesso",

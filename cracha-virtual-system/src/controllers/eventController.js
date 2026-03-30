@@ -1,25 +1,33 @@
 const { body, validationResult } = require("express-validator");
 const { prisma } = require("../config/database");
+const { client: redis } = require("../services/cacheService");
 const sharp = require("sharp");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 const fs = require("fs/promises");
 const path = require("path");
-const { sendEmail } = require("../utils/email");
+const { publishToQueue } = require("../services/queueService");
+const certificateService = require("../services/certificateService");
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Corrige a data armazenada no banco (que foi salva como UTC por engano)
- * para um objeto Date que reflete o fuso horário correto (-03:00) para comparação.
- * @param {Date} storedDate O objeto Date vindo do Prisma.
- * @returns {Date} Um novo objeto Date com o fuso horário corrigido.
- */
+// Função auxiliar para invalidar cache de eventos
+const invalidateEventCache = async () => {
+  try {
+    // Agora as chaves têm prefixos: express_cache:ROLE_ID:/api/events...
+    // Usamos um segundo curinga para pegar todos os perfis
+    const keys = await redis.keys("express_cache:*:/api/events*");
+    if (keys.length > 0) {
+      await redis.del(...keys);
+      console.log(`[Cache] Invalidando ${keys.length} chaves de eventos.`);
+    }
+  } catch (error) {
+    console.error("[Cache] Erro ao invalidar cache:", error);
+  }
+};
+// exports.invalidateEventCache = invalidateEventCache; // Redundant, exported at bottom
 const getCorrectedDate = (storedDate) => {
   if (!storedDate) return null;
-  const isoString = storedDate.toISOString();
-  const naiveDateTimeString = isoString.slice(0, -5); // Remove 'Z' e os segundos para simplificar
-  const correctDateString = `${naiveDateTimeString}-03:00`;
-  return new Date(correctDateString);
+  return new Date(storedDate);
 };
 
 // Validações para evento
@@ -39,15 +47,28 @@ const eventValidation = [
     .isLength({ min: 3, max: 255 })
     .withMessage("Local deve ter entre 3 e 255 caracteres"),
   body("maxAttendees")
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 1 })
     .withMessage("Número máximo de participantes deve ser um número positivo"),
 ];
 
+// Helper to check validation results
+const checkValidation = (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.error("[Validation Error]", JSON.stringify(errors.array(), null, 2));
+    return res.status(400).json({
+      error: "Dados inválidos",
+      details: errors.array()
+    });
+  }
+  return null;
+};
+
 // Listar todos os eventos
 const getAllEvents = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, upcoming } = req.query;
+    const { page = 1, limit = 10, search, upcoming, categoryId, startDate, endDate } = req.query;
     const skip = (page - 1) * limit;
     const user = req.user; // Usuário autenticado pelo middleware
 
@@ -63,18 +84,53 @@ const getAllEvents = async (req, res) => {
     }
 
     if (upcoming === "true") {
-      baseWhere.endDate = { gte: new Date() };
+      // O evento permanece visível por até 4 horas após o término (buffer padrão do sistema)
+      const now = new Date();
+      const threshold = new Date(now.getTime() - 4 * 60 * 60 * 1000); // 4h atrás
+      baseWhere.endDate = { gte: threshold };
+    }
+
+    // Filtros de período (Data Início e Fim)
+    if (startDate || endDate) {
+      baseWhere.AND = baseWhere.AND || [];
+      if (startDate) {
+        baseWhere.AND.push({ startDate: { gte: new Date(startDate) } });
+      }
+      if (endDate) {
+        baseWhere.AND.push({ endDate: { lte: new Date(endDate) } });
+      }
+    }
+
+    if (categoryId && categoryId !== 'all') {
+      baseWhere.categoryId = categoryId;
     }
 
     // Construção da cláusula final de visibilidade
     let finalWhere = { ...baseWhere };
 
-    if (user && user.role !== "ADMIN") {
-      if (user.role === "GESTOR_ESCOLA") {
-        // CORREÇÃO: Gestor vê APENAS os eventos que ele mesmo criou
+    if (user) {
+      if (user.role === "ADMIN") {
+        // ADMIN vê tudo
+      } else if (["GESTOR_ESCOLA", "ORGANIZER"].includes(user.role)) {
+        // CORREÇÃO: Gestor e Organizador veem APENAS os eventos que eles mesmos criaram
         finalWhere.creatorId = user.id;
+      } else if (["CHECKIN_COORDINATOR", "SPEAKER"].includes(user.role)) {
+        // --- ALTERAÇÃO PRINCIPAL ---
+        // Coordenadores e Palestrantes veem APENAS eventos onde estão na equipe (staff)
+        // OU eventos públicos (dependendo da regra de negócio, mas geralmente staff vê o restrito)
+        // Vamos assumir que eles veem os eventos onde são staff.
+
+        finalWhere.staff = {
+          some: {
+            userId: user.id
+          }
+        };
+
+        // Opcional: Se quiser que eles TAMBÉM vejam eventos públicos como participantes normais,
+        // use um OR. Mas o pedido foi para "aparecerão os eventos em que ele foi vinculado".
+        // Então mantemos restrito.
       } else {
-        // Usuário comum vê eventos públicos OU os privados da sua escola
+        // Usuário comum (TEACHER, etc) vê eventos públicos OU os privados da sua escola
         const userWithWorkplaces = await prisma.user.findUnique({
           where: { id: user.id },
           select: { workplaces: { select: { id: true } } },
@@ -101,6 +157,9 @@ const getAllEvents = async (req, res) => {
           finalWhere.isPrivate = false;
         }
       }
+    } else {
+      // Usuário ANÔNIMO: Vê apenas eventos públicos
+      finalWhere.isPrivate = false;
     }
 
     // Combina a cláusula base com a de visibilidade, se necessário
@@ -126,6 +185,19 @@ const getAllEvents = async (req, res) => {
         certificateTemplateUrl: true,
         certificateTemplateConfig: true,
         parentId: true,
+        schedule: true,
+        speakerName: true,
+        speakerRole: true,
+        speakerPhotoUrl: true,
+        mapLink: true,
+        categoryId: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        },
         _count: {
           select: {
             enrollments: {
@@ -218,12 +290,8 @@ const getEventById = async (req, res) => {
 // Criar evento
 const createEvent = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res
-        .status(400)
-        .json({ error: "Dados inválidos", details: errors.array() });
-    }
+    const validationError = checkValidation(req, res);
+    if (validationError) return validationError;
 
     const {
       title,
@@ -234,6 +302,12 @@ const createEvent = async (req, res) => {
       maxAttendees,
       imageUrl,
       parentId,
+      mapLink,
+      schedule,
+      speakerName,
+      speakerRole,
+      speakerPhotoUrl,
+      categoryId,
     } = req.body;
 
     // 1. Pegamos o usuário logado que está fazendo a requisição
@@ -255,15 +329,25 @@ const createEvent = async (req, res) => {
       maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
       imageUrl: imageUrl || null,
       parentId: parentId || null,
+      mapLink,
+      schedule,
+      speakerName,
+      speakerRole,
+      speakerPhotoUrl,
+      categoryId: categoryId || null,
     };
 
-    // 3. Se o criador for um GESTOR_ESCOLA, marcamos o evento como privado e associamos o criador
-    if (user.role === "GESTOR_ESCOLA") {
-      data.isPrivate = true;
+    // 3. Se o criador for um GESTOR_ESCOLA ou ORGANIZER, associamos o criador
+    // e permitimos que ele escolha a visibilidade (padrão público se não informado)
+    if (["GESTOR_ESCOLA", "ORGANIZER"].includes(user.role)) {
+      data.isPrivate = req.body.isPrivate !== undefined ? req.body.isPrivate : false;
       data.creatorId = user.id;
     }
 
     const event = await prisma.event.create({ data });
+
+    // Invalidar cache após criação
+    await invalidateEventCache();
 
     res.status(201).json({ message: "Evento criado com sucesso", event });
   } catch (error) {
@@ -294,6 +378,12 @@ const updateEvent = async (req, res) => {
       maxAttendees,
       imageUrl,
       parentId,
+      mapLink,
+      schedule,
+      speakerName,
+      speakerRole,
+      speakerPhotoUrl,
+      categoryId,
     } = req.body;
 
     // Verificar se o evento existe
@@ -304,6 +394,13 @@ const updateEvent = async (req, res) => {
     if (!existingEvent) {
       return res.status(404).json({
         error: "Evento não encontrado",
+      });
+    }
+
+    // CHECK DE PROPRIEDADE: Organizador só edita o que criou
+    if (req.user.role === "ORGANIZER" && existingEvent.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode editar eventos que você criou.",
       });
     }
 
@@ -321,16 +418,24 @@ const updateEvent = async (req, res) => {
     if (startDate) updateData.startDate = new Date(startDate);
     if (endDate) updateData.endDate = new Date(endDate);
     if (location) updateData.location = location;
-    if (maxAttendees !== undefined)
-      updateData.maxAttendees = maxAttendees ? parseInt(maxAttendees) : null;
-    if (imageUrl !== undefined) updateData.imageUrl = imageUrl || null;
+    if (maxAttendees !== undefined) updateData.maxAttendees = maxAttendees ? parseInt(maxAttendees) : null;
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
     if (parentId !== undefined) updateData.parentId = parentId || null;
+    if (mapLink !== undefined) updateData.mapLink = mapLink;
+    if (schedule !== undefined) updateData.schedule = schedule;
+    if (speakerName !== undefined) updateData.speakerName = speakerName;
+    if (speakerRole !== undefined) updateData.speakerRole = speakerRole;
+    if (speakerPhotoUrl !== undefined) updateData.speakerPhotoUrl = speakerPhotoUrl;
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null;
 
     // Atualizar evento
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: updateData,
     });
+
+    // Invalidar cache após atualização
+    await invalidateEventCache();
 
     res.json({
       message: "Evento atualizado com sucesso",
@@ -365,6 +470,13 @@ const deleteEvent = async (req, res) => {
       });
     }
 
+    // CHECK DE PROPRIEDADE: Organizador só deleta o que criou
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode deletar eventos que você criou.",
+      });
+    }
+
     // Verificar se há inscrições no evento
     if (event._count.enrollments > 0) {
       return res.status(400).json({
@@ -377,8 +489,11 @@ const deleteEvent = async (req, res) => {
       where: { id },
     });
 
+    // Invalidar cache após deleção
+    await invalidateEventCache();
+
     res.json({
-      message: "Evento deletado com sucesso",
+      message: "Deletado com sucesso",
     });
   } catch (error) {
     console.error("Erro ao deletar evento:", error);
@@ -398,6 +513,13 @@ const uploadEventBadgeTemplate = async (req, res) => {
     const event = await prisma.event.findUnique({ where: { id } });
     if (!event) {
       return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CHECK DE PROPRIEDADE
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode gerenciar crachás de eventos que você criou.",
+      });
     }
 
     if (!req.file) {
@@ -443,6 +565,19 @@ const generatePrintableBadges = async (req, res) => {
 
     const event = await prisma.event.findUnique({ where: { id } });
 
+    if (!event) {
+      return res.status(404).json({
+        error: "Evento não encontrado",
+      });
+    }
+
+    // CHECK DE PROPRIEDADE
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode gerar crachás de eventos que você criou.",
+      });
+    }
+
     if (!event || !event.badgeTemplateUrl || !event.badgeTemplateConfig) {
       return res.status(404).json({
         error:
@@ -484,11 +619,9 @@ const generatePrintableBadges = async (req, res) => {
       // Cria um SVG para o texto (nome do usuário)
       const nameSvg = `
         <svg width="400" height="100">
-          <text x="0" y="${
-            config.name.fontSize || 24
-          }" font-family="sans-serif" font-size="${
-        config.name.fontSize || 24
-      }" fill="${config.name.color || "#000000"}">
+          <text x="0" y="${config.name.fontSize || 24
+        }" font-family="sans-serif" font-size="${config.name.fontSize || 24
+        }" fill="${config.name.color || "#000000"}">
             ${user.name}
           </text>
         </svg>
@@ -549,17 +682,18 @@ const uploadCertificateTemplate = async (req, res) => {
       return res.status(404).json({ error: "Evento não encontrado" });
     }
 
-    // CORREÇÃO: Adicionada a validação que exige o envio do arquivo, igual à função do crachá.
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ error: "Nenhuma imagem de modelo de certificado foi enviada" });
+    // CHECK DE PROPRIEDADE PARA ORGANIZADOR
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode gerenciar certificados de eventos que você criou.",
+      });
     }
 
-    // CORREÇÃO: 'updateData' agora é inicializado com a URL, garantindo que ela sempre seja salva.
-    const updateData = {
-      certificateTemplateUrl: `/${req.file.path.replace(/\\/g, "/")}`,
-    };
+    // CORREÇÃO: O upload do arquivo agora é opcional se já existir um modelo ou se desejar usar fundo branco.
+    const updateData = {};
+    if (req.file) {
+      updateData.certificateTemplateUrl = `/${req.file.path.replace(/\\/g, "/")}`;
+    }
 
     if (certificateTemplateConfig) {
       try {
@@ -592,11 +726,23 @@ const uploadCertificateTemplate = async (req, res) => {
 // NOVA FUNÇÃO: Para enviar certificados para todos os participantes elegíveis
 const sendEventCertificates = async (req, res) => {
   const { id: parentEventId } = req.params; // Renomeado para clareza
+  const adminEmail = req.user ? req.user.email : null; // Captura email do admin para notificação
 
   try {
     const parentEvent = await prisma.event.findUnique({
       where: { id: parentEventId },
     });
+
+    if (!parentEvent) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CHECK DE PROPRIEDADE
+    if (req.user.role === "ORGANIZER" && parentEvent.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode enviar certificados de eventos que você criou.",
+      });
+    }
 
     if (
       !parentEvent ||
@@ -609,250 +755,37 @@ const sendEventCertificates = async (req, res) => {
       });
     }
 
-    // --- INÍCIO DA NOVA LÓGICA (Baseada no certificateController) ---
-
-    // 1. Encontrar todos os eventos-filho
-    const childEvents = await prisma.event.findMany({
-      where: { parentId: parentEventId },
-    });
-    const eventIds = [parentEventId, ...childEvents.map((e) => e.id)];
-
-    // 2. Encontrar TODOS os check-ins de TODOS os usuários nesses eventos
-    const allCheckIns = await prisma.userCheckin.findMany({
-      where: {
-        eventId: { in: eventIds },
-      },
-      select: {
-        userBadge: {
-          select: {
-            userId: true,
-          },
-        },
-      },
-    });
-
-    // 3. Obter a lista de IDs de usuários únicos que compareceram
-    const attendedUserIds = [
-      ...new Set(allCheckIns.map((checkin) => checkin.userBadge.userId)),
-    ];
-
-    if (attendedUserIds.length === 0) {
-      return res
-        .status(400)
-        .json({ error: "Nenhum participante fez check-in nestes eventos." });
-    }
-
-    // 4. Buscar os dados desses usuários (nome, email)
-    const eligibleUsers = await prisma.user.findMany({
-      where: {
-        id: { in: attendedUserIds },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-    });
-
-    // --- FIM DA LÓGICA DE BUSCA ---
+    // Chamada direta em background (sem await para não travar o request)
+    certificateService.processCertificateBatch(parentEventId, adminEmail)
+      .catch(err => console.error("[EventController] Background certificate processing error:", err));
 
     // Retorna a resposta para o admin imediatamente
     res.status(202).json({
-      message: `O processo de envio de ${eligibleUsers.length} certificados foi iniciado.`,
+      message: `O processo de envio de certificados foi iniciado. Você poderá acompanhar o progresso na lista abaixo.`,
     });
 
-    // --- INÍCIO DO PROCESSO EM SEGUNDO PLANO ---
-
-    // Carrega o template e a config UMA VEZ
-    const templatePath = path.join(
-      process.cwd(),
-      parentEvent.certificateTemplateUrl
-    );
-    const templateImageBuffer = await fs.readFile(templatePath);
-    const config = parentEvent.certificateTemplateConfig;
-
-    // Buscamos todos os eventos de uma vez e colocamos num Map para performance
-    const eventsData = await prisma.event.findMany({
-      where: { id: { in: eventIds } },
-      select: { id: true, startDate: true, endDate: true },
-    });
-    const eventsMap = new Map(eventsData.map((event) => [event.id, event]));
-
-    // Itera sobre cada usuário elegível
-    for (const user of eligibleUsers) {
-      try {
-        // 5. Encontrar os check-ins específicos DESTE usuário (SEM INCLUDE)
-        const userCheckins = await prisma.userCheckin.findMany({
-          where: {
-            eventId: { in: eventIds },
-            userBadge: { userId: user.id },
-          },
-          // O 'include: { event: true }' foi removido daqui
-        });
-
-        // 6. Calcular a soma das horas DESTE usuário (usando o Map)
-        let totalMilliseconds = 0;
-        const attendedEvents = new Set();
-        userCheckins.forEach((checkin) => {
-          if (!attendedEvents.has(checkin.eventId)) {
-            // Pega os dados do evento que buscamos ANTES do loop
-            const event = eventsMap.get(checkin.eventId);
-
-            if (event) {
-              // Garante que o evento foi encontrado no Map
-              const duration =
-                new Date(event.endDate) - new Date(event.startDate);
-              totalMilliseconds += duration;
-              attendedEvents.add(checkin.eventId);
-            }
-          }
-        });
-
-        if (totalMilliseconds === 0) {
-          throw new Error("Participação não resultou em horas (duração 0).");
-        }
-        const roundedHours = Math.round(totalMilliseconds / (1000 * 60 * 60));
-        const totalHours = roundedHours.toString().padStart(2, "0");
-
-        // 7. Gerar o PDF (usando a função auxiliar)
-        const pdfBytes = await generateCertificatePdf(
-          user,
-          config,
-          templateImageBuffer,
-          totalHours
-        );
-
-        // 8. Envia o e-mail
-        await sendEmail({
-          to: user.email,
-          subject: `Seu certificado do evento: ${parentEvent.title}`,
-          html: `
-          <p>Olá, ${user.name}!</p>
-          <p>Agradecemos sua participação no evento "${parentEvent.title}".</p>
-          <p>Seu certificado de participação, com um total de ${totalHours} h. , está em anexo.</p>
-          <br>
-          <p>Atenciosamente,</p>
-          <p>Equipe Organizadora</p>
-        `,
-          attachments: [
-            {
-              filename: `certificado_${user.name.replace(/\s+/g, "_")}.pdf`,
-              content: Buffer.from(pdfBytes),
-              contentType: "application/pdf",
-            },
-          ],
-        });
-
-        // 9. Registra o SUCESSO no banco de dados
-        const successData = {
-          status: "SUCCESS",
-          details: null,
-          createdAt: new Date(),
-          userId: user.id,
-          eventId: parentEventId,
-        };
-
-        const existingLogSuccess = await prisma.certificateLog.findFirst({
-          where: { userId: user.id, eventId: parentEventId },
-        });
-
-        if (existingLogSuccess) {
-          await prisma.certificateLog.update({
-            where: { id: existingLogSuccess.id },
-            data: successData,
-          });
-        } else {
-          await prisma.certificateLog.create({
-            data: successData,
-          });
-        }
-      } catch (error) {
-        console.error(
-          `Falha ao processar certificado para ${user.email}:`,
-          error.message
-        );
-        // 10. Registra a FALHA no banco de dados
-        const failData = {
-          status: "FAILED",
-          details: error.message,
-          createdAt: new Date(),
-          userId: user.id,
-          eventId: parentEventId,
-        };
-
-        const existingLogFail = await prisma.certificateLog.findFirst({
-          where: { userId: user.id, eventId: parentEventId },
-        });
-
-        if (existingLogFail) {
-          await prisma.certificateLog.update({
-            where: { id: existingLogFail.id },
-            data: failData,
-          });
-        } else {
-          await prisma.certificateLog.create({
-            data: failData,
-          });
-        }
-      }
-      await delay(2000);
-    }
   } catch (error) {
     console.error("Erro CRÍTICO ao iniciar o envio de certificados:", error);
-    // Nota: Não podemos enviar um 'res' aqui porque a resposta 202 já foi enviada.
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
 
-// Função auxiliar para organizar o código (pode colocar dentro do mesmo arquivo ou em um utils)
-async function generateCertificatePdf(
-  user,
-  config,
-  templateImageBuffer,
-  totalHours
-) {
-  const nameSvg = `<svg width="800" height="100"><text x="0" y="${
-    config.name.fontSize || 24
-  }" font-family="sans-serif" font-size="${config.name.fontSize || 24}" fill="${
-    config.name.color || "#000000"
-  }">${user.name}</text></svg>`;
-  const hoursText = `${totalHours} h.`;
-
-  const hoursSvg = `<svg width="400" height="100"><text x="0" y="${
-    config.hours.fontSize || 18
-  }" font-family="sans-serif" font-size="${
-    config.hours.fontSize || 18
-  }" fill="${config.hours.color || "#333333"}">${hoursText}</text></svg>`;
-
-  const finalCertificateBuffer = await sharp(templateImageBuffer)
-    .composite([
-      { input: Buffer.from(nameSvg), top: config.name.y, left: config.name.x },
-      {
-        input: Buffer.from(hoursSvg),
-        top: config.hours.y,
-        left: config.hours.x,
-      },
-    ])
-    .jpeg()
-    .toBuffer();
-
-  const pdfDoc = await PDFDocument.create();
-  const certificateImage = await pdfDoc.embedJpg(finalCertificateBuffer);
-  const page = pdfDoc.addPage([
-    certificateImage.width,
-    certificateImage.height,
-  ]);
-  page.drawImage(certificateImage, {
-    x: 0,
-    y: 0,
-    width: page.getWidth(),
-    height: page.getHeight(),
-  });
-  return await pdfDoc.save();
-}
 
 const getCertificateLogsForEvent = async (req, res) => {
   try {
     const { id: eventId } = req.params;
+
+    // Verificar existência e propriedade
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode ver logs de eventos que você criou.",
+      });
+    }
 
     // 1. Pega todos os participantes com inscrição aprovada no evento.
     const enrollments = await prisma.enrollment.findMany({
@@ -882,6 +815,7 @@ const getCertificateLogsForEvent = async (req, res) => {
       select: {
         userId: true,
         status: true,
+        details: true,
         createdAt: true,
       },
     });
@@ -896,7 +830,8 @@ const getCertificateLogsForEvent = async (req, res) => {
         userId: enrollment.user.id,
         userName: enrollment.user.name,
         userEmail: enrollment.user.email,
-        status: log ? log.status : "PENDING", // Se não há log, o status é "Pendente"
+        status: log ? log.status : "PENDING", 
+        details: log ? log.details : null,
         createdAt: log ? log.createdAt : null,
       };
     });
@@ -922,6 +857,18 @@ const uploadEventThumbnailController = async (req, res) => {
     // Normaliza o caminho para salvar no banco (ex: /uploads/events/...)
     const imageUrl = `/${req.file.path.replace(/\\/g, "/")}`;
 
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CHECK DE PROPRIEDADE
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode alterar a capa de eventos que você criou.",
+      });
+    }
+
     // Atualiza o evento no banco com a nova URL
     const updatedEvent = await prisma.event.update({
       where: { id },
@@ -939,6 +886,182 @@ const uploadEventThumbnailController = async (req, res) => {
   }
 };
 
+// Upload da foto do palestrante
+const uploadSpeakerPhotoController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CHECK DE PROPRIEDADE PARA ORGANIZADOR
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode alterar o palestrante de eventos que você criou.",
+      });
+    }
+
+    // Normaliza o caminho do arquivo (com slash inicial)
+    const imageUrl = `/${file.path.replace(/\\/g, "/")}`;
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { speakerPhotoUrl: imageUrl },
+    });
+
+    res.json({
+      message: "Foto do palestrante enviada com sucesso",
+      event: updatedEvent,
+    });
+  } catch (error) {
+    console.error("Erro ao fazer upload da foto do palestrante:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
+// --- NOVA FUNÇÃO: LISTAR INSCRITOS DE UM EVENTO ---
+const getEventEnrollments = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CHECK DE PROPRIEDADE
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode ver inscritos de eventos que você criou.",
+      });
+    }
+
+    // Busca inscrições com dados do usuário
+    const enrollments = await prisma.enrollment.findMany({
+      where: { eventId: id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            cpf: true,
+            phone: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Formata o retorno
+    const formattedEnrollments = enrollments.map(enrollment => ({
+      userId: enrollment.user.id,
+      name: enrollment.user.name,
+      email: enrollment.user.email,
+      cpf: enrollment.user.cpf,
+      phone: enrollment.user.phone,
+      status: enrollment.status,
+      enrolledAt: enrollment.createdAt,
+      checkInTime: enrollment.checkInTime
+    }));
+
+    res.json(formattedEnrollments);
+  } catch (error) {
+    console.error("Erro ao listar inscritos:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
+// --- NOVA FUNÇÃO: LISTAR PERGUNTAS DO EVENTO ---
+const getEventQuestions = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      return res.status(404).json({ error: "Evento não encontrado" });
+    }
+
+    // CHECK DE PROPRIEDADE
+    if (req.user.role === "ORGANIZER" && event.creatorId !== req.user.id) {
+      return res.status(403).json({
+        error: "Acesso negado. Você só pode ver perguntas de eventos que você criou.",
+      });
+    }
+
+    // Busca todas as perguntas do evento
+    const questions = await prisma.question.findMany({
+      where: { eventId: id },
+      include: {
+        user: { select: { id: true, name: true, photoUrl: true } }
+      },
+      orderBy: [
+        { isHighlighted: 'desc' },
+        { votes: 'desc' },
+        { createdAt: 'desc' }
+      ]
+    });
+
+    res.json(questions);
+  } catch (error) {
+    console.error("Erro ao buscar perguntas:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
+// Upload de arquivo de apresentação (PDF/PPT)
+const uploadPresentationFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    }
+
+    // Retorna a URL pública para o frontend
+    const fileUrl = `/${req.file.path.replace(/\\/g, "/")}`;
+
+    res.json({
+      message: "Arquivo de apresentação enviado com sucesso",
+      url: fileUrl
+    });
+  } catch (error) {
+    console.error("Erro no upload da apresentação:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
+// Deletar arquivo de apresentação (Cleanup)
+const deletePresentationFile = async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: "URL do arquivo não fornecida" });
+    }
+
+    // O caminho deve ser relativo à raiz do projeto (onde está a pasta uploads)
+    // A URL vem como /uploads/presentations/filename.ext
+    const filePath = path.join(process.cwd(), url.startsWith("/") ? url.slice(1) : url);
+
+    try {
+      await fs.unlink(filePath);
+      console.log(`[CLEANUP] Arquivo removido: ${filePath}`);
+    } catch (err) {
+      console.warn(`[CLEANUP] Erro ao tentar remover arquivo (pode já não existir): ${err.message}`);
+    }
+
+    res.json({ message: "Limpeza concluída" });
+  } catch (error) {
+    console.error("Erro na limpeza da apresentação:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -946,10 +1069,16 @@ module.exports = {
   updateEvent,
   deleteEvent,
   eventValidation,
+  invalidateEventCache,
   uploadEventBadgeTemplate,
   generatePrintableBadges,
   uploadCertificateTemplate,
   sendEventCertificates,
   getCertificateLogsForEvent,
   uploadEventThumbnailController,
+  uploadSpeakerPhotoController,
+  getEventEnrollments,
+  getEventQuestions,
+  uploadPresentationFile,
+  deletePresentationFile
 };

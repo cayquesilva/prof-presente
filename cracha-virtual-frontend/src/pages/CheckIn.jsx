@@ -24,13 +24,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -63,13 +64,15 @@ const CheckIn = () => {
     },
   });
 
-  // NOVO: Filtra os eventos para mostrar apenas os que estão "Em Andamento"
+  // Filtra os eventos para mostrar apenas os "Ativos" (Próximos ou Em Andamento)
   const ongoingEvents = eventsData?.events?.filter((event) => {
     const now = new Date();
-    const start = new Date(event.startDate);
+    // O evento permanece visível até 4 horas depois de terminar (mesmo critério do backend)
+    const visibilityThreshold = new Date(now.getTime() - 4 * 60 * 60 * 1000);
     const end = new Date(event.endDate);
-    // Retorna true apenas se a data/hora atual estiver ENTRE o início e o fim
-    return start <= now && end >= now;
+
+    // Mostra se o evento ainda não terminou ou terminou há menos de 4 horas
+    return end >= visibilityThreshold;
   });
 
   // Buscar usuários por nome
@@ -137,8 +140,7 @@ const CheckIn = () => {
         data, // Mantém os dados para info adicional se necessário
       });
       toast.success(
-        `Check-in realizado: ${
-          data?.checkin?.userBadge?.user?.name || "Usuário"
+        `Check-in realizado: ${data?.checkin?.userBadge?.user?.name || "Usuário"
         }`
       ); // Toast mais informativo
 
@@ -284,25 +286,34 @@ const CheckIn = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecione um evento" />
-            </SelectTrigger>
-            <SelectContent>
-              {ongoingEvents?.length > 0 ? (
-                ongoingEvents.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.title} -{" "}
-                    {new Date(event.startDate).toLocaleDateString("pt-BR")}
-                  </SelectItem>
-                ))
-              ) : (
-                <div className="p-4 text-center text-sm text-gray-500">
-                  Nenhum evento ocorrendo no momento.
-                </div>
-              )}
-            </SelectContent>
-          </Select>
+          {/* Prepara as opções para o Combobox */}
+          {(() => {
+            const eventOptions =
+              ongoingEvents?.map((event) => {
+                const now = new Date();
+                const start = new Date(event.startDate);
+                const status = now >= start ? "(Em Andamento)" : "(Próximo)";
+
+                return {
+                  value: event.id,
+                  label: `${event.title} ${status} - ${new Date(
+                    event.startDate
+                  ).toLocaleDateString("pt-BR")}`,
+                };
+              }) || [];
+
+            return (
+              <Combobox
+                options={eventOptions}
+                value={selectedEvent}
+                onSelect={setSelectedEvent}
+                placeholder="Selecione um evento"
+                searchPlaceholder="Buscar evento..."
+                emptyText="Nenhum evento encontrado."
+                className="w-full"
+              />
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -311,11 +322,10 @@ const CheckIn = () => {
           {/* Resultado do Check-in */}
           {scanResult && !isFacialScanning && (
             <Alert
-              className={`mb-6 ${
-                scanResult.success
-                  ? "bg-green-50 border-green-200"
-                  : "bg-red-50 border-red-200"
-              }`}
+              className={`mb-6 ${scanResult.success
+                ? "bg-green-50 border-green-200"
+                : "bg-red-50 border-red-200"
+                }`}
             >
               <div className="flex items-center gap-2">
                 {scanResult.success ? (
@@ -582,11 +592,10 @@ const CheckIn = () => {
                         {/* --- ALERTA SOBREPOSTO --- */}
                         {scanResult && (
                           <div
-                            className={`absolute inset-0 flex flex-col items-center justify-center p-4 text-white text-center transition-opacity duration-300 ${
-                              scanResult.success
-                                ? "bg-green-600/90"
-                                : "bg-red-600/90"
-                            }`}
+                            className={`absolute inset-0 flex flex-col items-center justify-center p-4 text-white text-center transition-opacity duration-300 ${scanResult.success
+                              ? "bg-green-600/90"
+                              : "bg-red-600/90"
+                              }`}
                           >
                             {scanResult.success ? (
                               <CheckCircle className="h-16 w-16 mb-2" />
@@ -600,10 +609,10 @@ const CheckIn = () => {
                             </p>
                             {scanResult.data?.checkin?.userBadge?.user
                               ?.name && (
-                              <p className="text-lg">
-                                {scanResult.data.checkin.userBadge.user.name}
-                              </p>
-                            )}
+                                <p className="text-lg">
+                                  {scanResult.data.checkin.userBadge.user.name}
+                                </p>
+                              )}
                             {!scanResult.success && (
                               <p className="text-sm mt-1">
                                 {scanResult.message}

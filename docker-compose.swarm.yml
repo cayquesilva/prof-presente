@@ -3,37 +3,39 @@ version: "3.8"
 services:
   # Serviço do Backend (API)
   backend:
-    image: cayquesilva/prof-presente-backend:latest
+    image: vydhal/eduagenda-backend:2.5.0
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@prof_presente_db:5432/${POSTGRES_DB}?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@eduagenda_db:5432/${POSTGRES_DB}?schema=public
       - JWT_SECRET=${JWT_SECRET}
-      - PORT=${PORT}
-      - NODE_ENV=${NODE_ENV}
-      - CORS_ORIGIN=${CORS_ORIGIN}
+      - PORT=3000
+      - NODE_ENV=production
+      - CORS_ORIGIN=https://corre.simplisoft.com.br
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_SECURE=${SMTP_SECURE}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - EMAIL_FROM=${EMAIL_FROM}
-      - PUBLIC_API_URL=${PUBLIC_API_URL}
-      - PUBLIC_LOGO_URL=${PUBLIC_LOGO_URL}
-      - FACIAL_SERVICE_URL=http://facial-service-py:3002/api
+      - PUBLIC_API_URL=https://corre.simplisoft.com.br/api
+      - AMQP_URL=amqp://guest:guest@eduagenda_rabbitmq:5672
+      - REDIS_URL=redis://eduagenda_redis:6379
+      - FACIAL_SERVICE_URL=http://eduagenda_facialrec:3002/api
     volumes:
-      - backend_uploads:/app/uploads
+      - eduagenda_uploads:/app/uploads
     networks:
-      # Essencial: Conectado a ambas as redes
       - SimpliSoft
-      - prof-presente-internal
+      - interna_network_docs
     depends_on:
-      - prof_presente_db
+      - eduagenda_db
     command: >
       sh -c "
-        echo 'Aguardando 20 segundos extras para estabilização da rede...' &&
-        sleep 20 &&
-        echo 'Rodando prisma migrade deploy...' &&
-        npx prisma migrate deploy &&
-        echo 'Iniciando container...' &&
+        echo '--- DEBUG STARTUP ---' &&
+        echo 'Tentando conectar ao banco: eduagenda_db:5432' &&
+        echo 'DATABASE_URL detectada (mascarada): postgresql://***:***@eduagenda_db:5432/***' &&
+        sleep 10 &&
+        echo 'Sincronizando schema (prisma db push)...' &&
+        npx prisma db push --accept-data-loss --skip-generate &&
+        echo 'Iniciando servidor...' &&
         npm start
       "
     deploy:
@@ -41,16 +43,33 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=SimpliSoft"
-        - "traefik.http.routers.prof-presente-api.rule=Host(`api.checkin.simplisoft.com.br`)"
-        - "traefik.http.routers.prof-presente-api.entrypoints=websecure"
-        - "traefik.http.routers.prof-presente-api.tls.certresolver=letsencryptresolver"
-        - "traefik.http.services.prof-presente-api.loadbalancer.server.port=3000"
+        - "traefik.http.routers.eduagenda-backend.rule=Host(`corre.simplisoft.com.br`) && (PathPrefix(`/api`) || PathPrefix(`/uploads`) || PathPrefix(`/socket.io`))"
+        - "traefik.http.routers.eduagenda-backend.entrypoints=websecure"
+        - "traefik.http.routers.eduagenda-backend.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.eduagenda-backend.priority=100"
+        - "traefik.http.services.eduagenda-backend.loadbalancer.server.port=3000"
+
+  eduagenda_redis:
+    image: redis:alpine
+    networks:
+      - interna_network_docs
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [ node.role == manager ]
+
+  eduagenda_rabbitmq:
+    image: rabbitmq:3-management-alpine
+    networks:
+      - interna_network_docs
+    deploy:
+      replicas: 1
 
   # Serviço do Frontend (React + Nginx)
   frontend:
-    image: cayquesilva/prof-presente-frontend:latest
+    image: vydhal/eduagenda-frontend:2.5.0
     environment:
-      - VITE_API_URL=https://api.checkin.simplisoft.com.br/api
+      - VITE_API_URL=https://corre.simplisoft.com.br/api
     networks:
       - SimpliSoft
     depends_on:
@@ -60,58 +79,54 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=SimpliSoft"
-        - "traefik.http.routers.prof-presente-app.rule=Host(`checkin.simplisoft.com.br`)"
-        - "traefik.http.routers.prof-presente-app.entrypoints=websecure"
-        - "traefik.http.routers.prof-presente-app.tls.certresolver=letsencryptresolver"
-        - "traefik.http.services.prof-presente-app.loadbalancer.server.port=80"
+        - "traefik.http.routers.eduagenda-frontend.rule=Host(`corre.simplisoft.com.br`)"
+        - "traefik.http.routers.eduagenda-frontend.entrypoints=websecure"
+        - "traefik.http.routers.eduagenda-frontend.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.eduagenda-frontend.priority=10"
+        - "traefik.http.services.eduagenda-frontend.loadbalancer.server.port=80"
 
   # Serviço do Banco de Dados (PostgreSQL)
-  db:
+  eduagenda_db:
     image: postgres:15-alpine
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data_v5:/var/lib/postgresql/data
     networks:
-      - prof-presente-internal
+      - interna_network_docs
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints: [ node.role == manager ]
 
-  facial-service-py:
-    # Use a imagem que você construiu com o Dockerfile Python
-    image: cayquesilva/prof-presente-facialrec:latest # <-- Use o nome/tag correto da sua imagem Python
+  eduagenda_facialrec:
+    image: vydhal/eduagenda-facialrec:2.5.0
     environment:
-      - PORT=3002 # Porta interna que o Flask/Gunicorn vai usar
-      - PUBLIC_API_URL=${PUBLIC_API_URL} # Necessário para o serviço baixar fotos de perfil
-      # Adicione outras variáveis se o serviço Python precisar (ex: Limiar de confiança)
-      # - FACE_RECOGNITION_TOLERANCE=0.55
+      - PORT=3002
+      - PUBLIC_API_URL=https://corre.simplisoft.com.br/api
     networks:
-      - prof-presente-internal # Apenas na rede interna, não exposto externamente
-    # Se os modelos NÃO estiverem na imagem, monte um volume (requer modelos no nó do Swarm)
-    # volumes:
-    #   - /path/no/host/dos/modelos:/app/models # Exemplo de montagem de volume
+      - interna_network_docs
     deploy:
-      replicas: 1 # Comece com 1 réplica
+      replicas: 1
       resources:
         limits:
-          memory: 16G # Exemplo: Limita a 2 Gigabytes de RAM
+          memory: 4G
         reservations:
-          memory: 10G # Exemplo: Tenta garantir pelo menos 1 Gigabyte de RAM
+          memory: 2G
 
 volumes:
-  db_data:
-  backend_uploads:
+  postgres_data_v5:
+  eduagenda_uploads:
 
 networks:
-  prof-presente-internal:
+  interna_network_docs:
     driver: overlay
+    attachable: true
   SimpliSoft:
     external: true

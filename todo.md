@@ -155,3 +155,28 @@
 - [ ] 15.2. Relatório por série/ano
 - [ ] 15.4. Relatório por região
 - [ ] 15.4. Relatório por vinculo
+
+### Fase 16: Robustez e Confiabilidade (Opção A) 🛡️
+- [ ] 16.1. Integrar RabbitMQ ao `docker-compose.dev.yml`.
+- [ ] 16.2. Instalar dependências de fila (`amqplib`) no backend.
+- [ ] 16.3. Implementar Producer/Consumer para envio de emails (Certificados).
+- [ ] 16.4. Configurar ambiente de testes (`Jest` + `Supertest`).
+- [ ] 16.5. Criar testes unitários para fluxo de inscrição.
+- [ ] 16.6. Implementar Rate Limiting na API (`express-rate-limit`).
+- [ ] 16.7. Implementar `helmet` para segurança de headers HTTP.
+
+### Fase 17: Vínculo de Staff e Visibilidade Dinâmica ✅
+- [x] 17.1. Criar modelo `EventStaff` no Prisma para vinculação de usuários a eventos.
+- [x] 17.2. Desenvolver endpoints para adicionar/remover membros da equipe.
+- [x] 17.3. Implementar filtragem de eventos baseada em vínculo para Coordenadores e Palestrantes.
+- [x] 17.4. Desenvolver componente `EventStaffManager` com busca de usuários (Combobox).
+- [x] 17.5. Implementar sistema de invalidação de cache (Redis) para atualizações em tempo real.
+- [x] 17.6. Relaxar filtros de visualização no frontend para permitir preparação da equipe.
+
+### Fase 18: Gestão de Espaços e Ambientes ✅
+- [x] 18.1. Implementar Módulo de Gestão de Espaços (Auditórios/Salas) com CRUD completo.
+- [x] 18.2. Desenvolver sistema de Reservas com aprovação do Cerimonial/Admin.
+- [x] 18.3. Criar Inventário de Equipamentos com controle de disponibilidade por data.
+- [x] 18.4. Implementar Agenda redesignada com visualização em cartões e timeline visual.
+- [x] 18.5. Adicionar integração com número de protocolo 1Doc nas solicitações.
+- [x] 18.6. Desenvolver Dashboard de ocupação e estatísticas de uso de espaços.
