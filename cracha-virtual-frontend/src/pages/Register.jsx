@@ -62,12 +62,19 @@ const professionOptions = [
   { value: "gestor", label: "Gestor" },
   { value: "gestor adjunto", label: "Gestor Adjunto" },
   { value: "secretário", label: "Secretário" },
-  { value: "supervisor", label: "Supervisor" },
   { value: "educador social voluntário", label: "Educador Social Voluntário" },
+  { value: "supervisor", label: "Supervisor" },
+  { value: "suporte pedagógico", label: "Suporte Pedagógico" },
+  { value: "orientador(a) educacional", label: "Orientador(a) Educacional" },
+  { value: "coordenador(a) pedagógico(a)", label: "Coordenador(a) Pedagógico(a)" },
   { value: "professor", label: "Professor" },
   { value: "merendeiro", label: "Merendeiro" },
   { value: "apoio", label: "Apoio" },
+  { value: "nutricionista", label: "Nutricionista" },
+  { value: "psicólogo", label: "Psicólogo" },
+  { value: "assistente social", label: "Assistente Social" },
   { value: "organizador", label: "Organizador" },
+  { value: "vigia", label: "Vigia" },
 ];
 
 const serieOptions = [
@@ -77,7 +84,8 @@ const serieOptions = [
   { value: "maternal II", label: "Maternal II" },
   { value: "pré I", label: "Pré I" },
   { value: "pré II", label: "Pré II" },
-  { value: "1º ao 9º", label: "1º ao 9º" },
+  { value: "1º ao 5º", label: "1º ao 5º" },
+  { value: "6º ao 9º", label: "6º ao 9º" },
 ];
 
 const subjectOptions = [
@@ -250,18 +258,6 @@ const Register = () => {
     if (!formData.phone) newErrors.phone = "Telefone é obrigatório";
     if (!formData.address) newErrors.address = "Endereço é obrigatório";
     if (!formData.neighborhood) newErrors.neighborhood = "Bairro é obrigatório";
-    if (!formData.professionName) newErrors.professionName = "Profissão é obrigatória";
-    if (!formData.workload) newErrors.workload = "Carga Horária é obrigatória";
-
-    if (formData.professionName === "professor" || formData.professionName?.toLowerCase() === "professor") {
-      if (!formData.serie) newErrors.serie = "Série é obrigatória para professores";
-      if (!formData.subject) newErrors.subject = "Componente Curricular é obrigatório para professores";
-    }
-
-    if (!formData.contractType) newErrors.contractType = "Tipo de vínculo é obrigatório";
-    if (formData.workShifts.length === 0) newErrors.workShifts = "Selecione pelo menos um turno de trabalho";
-    if (formData.teachingSegments.length === 0) newErrors.teachingSegments = "Selecione pelo menos um segmento de ensino";
-    if (formData.workplaceIds.length === 0) newErrors.workplaceIds = "Selecione pelo menos uma unidade educacional";
 
     return newErrors;
   };
@@ -462,201 +458,6 @@ const Register = () => {
                 </div>
               </section>
 
-
-              {/* SEÇÃO 3: DADOS PROFISSIONAIS */}
-              <section>
-                <div className="flex items-center gap-2 mb-4 mt-8 text-primary">
-                  <Briefcase className="h-5 w-5" />
-                  <h3 className="text-lg font-semibold">Dados Profissionais</h3>
-                </div>
-                <Separator className="mb-6" />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FieldWrapper id="field-wrapper-professionName" error={errors.professionName} label="Profissão / Cargo">
-                    <Select
-                      value={formData.professionName}
-                      onValueChange={(value) => handleSelectChange("professionName", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione sua profissão" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {professionOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FieldWrapper>
-
-                  <FieldWrapper id="field-wrapper-workload" error={errors.workload} label="Carga Horária (Ex: 40h)">
-                    <Input
-                      name="workload"
-                      placeholder="Sua carga horária"
-                      value={formData.workload}
-                      onChange={handleChange}
-                    />
-                  </FieldWrapper>
-                </div>
-
-                {formData.professionName === "professor" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <FieldWrapper id="field-wrapper-serie" error={errors.serie} label="Série">
-                      <Select
-                        value={formData.serie}
-                        onValueChange={(value) => handleSelectChange("serie", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a série" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {serieOptions.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FieldWrapper>
-
-                    <FieldWrapper id="field-wrapper-subject" error={errors.subject} label="Componente Curricular">
-                      <Select
-                        value={formData.subject}
-                        onValueChange={(value) => handleSelectChange("subject", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a disciplina" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subjectOptions.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FieldWrapper>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <FieldWrapper id="field-wrapper-contractType" error={errors.contractType} label="Vínculo Empregatício">
-                    <Select
-                      value={formData.contractType}
-                      onValueChange={(value) => handleSelectChange("contractType", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="EFETIVO">Efetivo</SelectItem>
-                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
-                        <SelectItem value="ESTUDANTE">Estudante</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FieldWrapper>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <FieldWrapper id="field-wrapper-workShifts" error={errors.workShifts} label="Turno(s) de Trabalho" required>
-                    <Popover open={openShiftPopover} onOpenChange={setOpenShiftPopover}>
-                      <PopoverTrigger asChild>
-                        <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
-                          <div className="flex flex-wrap gap-1">
-                            {selectedShifts.length > 0 ? (
-                              selectedShifts.map((shift) => (
-                                <Badge key={shift.value} variant="secondary" className="mr-1">
-                                  {shift.label}
-                                  <span onClick={(e) => { e.stopPropagation(); handleShiftRemove(shift); }} className="ml-1 cursor-pointer hover:text-red-500"><X className="h-3 w-3" /></span>
-                                </Badge>
-                              ))
-                            ) : <span className="text-muted-foreground">Selecione...</span>}
-                          </div>
-                          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0" align="start">
-                        <Command>
-                          <CommandList>
-                            <CommandGroup>
-                              {workShiftOptions.map((opt) => (
-                                <CommandItem key={opt.value} onSelect={() => handleShiftSelect(opt)}>
-                                  {opt.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </FieldWrapper>
-
-                  <FieldWrapper id="field-wrapper-teachingSegments" error={errors.teachingSegments} label="Segmento(s) de Atuação" required>
-                    <Popover open={openSegmentPopover} onOpenChange={setOpenSegmentPopover}>
-                      <PopoverTrigger asChild>
-                        <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
-                          <div className="flex flex-wrap gap-1">
-                            {selectedSegments.length > 0 ? (
-                              selectedSegments.map((seg) => (
-                                <Badge key={seg.value} variant="secondary" className="mr-1">
-                                  {seg.label}
-                                  <span onClick={(e) => { e.stopPropagation(); handleSegmentRemove(seg); }} className="ml-1 cursor-pointer hover:text-red-500"><X className="h-3 w-3" /></span>
-                                </Badge>
-                              ))
-                            ) : <span className="text-muted-foreground">Selecione...</span>}
-                          </div>
-                          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0" align="start">
-                        <Command>
-                          <CommandList>
-                            <CommandGroup>
-                              {teachingSegmentOptions.map((opt) => (
-                                <CommandItem key={opt.value} onSelect={() => handleSegmentSelect(opt)}>
-                                  {opt.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </FieldWrapper>
-                </div>
-
-                <div className="mt-6">
-                  <FieldWrapper id="field-wrapper-workplaceIds" error={errors.workplaceIds} label="Unidade(s) Educacional(is)" required>
-                    <Popover open={openWorkplacePopover} onOpenChange={setOpenWorkplacePopover}>
-                      <PopoverTrigger asChild>
-                        <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
-                          <div className="flex flex-wrap gap-1">
-                            {selectedWorkplaces.length > 0 ? (
-                              selectedWorkplaces.map((w) => (
-                                <Badge key={w.id} variant="secondary" className="mr-1">
-                                  {w.name}
-                                  <span onClick={(e) => { e.stopPropagation(); handleWorkplaceRemove(w); }} className="ml-1 cursor-pointer hover:text-red-500"><X className="h-3 w-3" /></span>
-                                </Badge>
-                              ))
-                            ) : <span className="text-muted-foreground">Pesquisar unidade...</span>}
-                          </div>
-                          <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar unidade..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
-                            <CommandGroup>
-                              {workplaces.filter(w => !selectedWorkplaces.some(s => s.id === w.id)).map((w) => (
-                                <CommandItem key={w.id} onSelect={() => handleWorkplaceSelect(w)}>
-                                  {w.name} - {w.city}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </FieldWrapper>
-                </div>
-              </section>
 
               <div className="pt-6">
                 <Button type="submit" className="w-full text-lg h-12" disabled={loading}>
