@@ -17,6 +17,40 @@ const getCorrectedDate = (storedDate) => {
   return new Date(storedDate);
 };
 
+/**
+ * Função utilitária para sincronizar a inscrição de um usuário em todos 
+ * os eventos de uma trilha caso o evento alvo pertença a uma ou mais trilhas.
+ */
+const syncTrackEnrollments = async (userId, eventId) => {
+  const trackEvents = await prisma.trackEvent.findMany({
+    where: { eventId },
+    include: { track: { include: { events: true } } },
+  });
+
+  for (const te of trackEvents) {
+    // 1. Inscreve na Trilha
+    await prisma.trackEnrollment.upsert({
+      where: { trackId_userId: { trackId: te.trackId, userId } },
+      update: {},
+      create: { trackId: te.trackId, userId, progress: 0, isCompleted: false },
+    });
+
+    // 2. Inscreve em Eventos Irmãos silenciosamente (sem email) de forma ADITIVA
+    const siblingEvents = te.track.events.filter(e => e.eventId !== eventId);
+    for (const sibling of siblingEvents) {
+      const existing = await prisma.enrollment.findUnique({
+        where: { userId_eventId: { userId, eventId: sibling.eventId } },
+      });
+
+      if (!existing) {
+        await prisma.enrollment.create({
+          data: { userId, eventId: sibling.eventId, status: "APPROVED" },
+        });
+      }
+    }
+  }
+};
+
 // Inscrever usuário em evento
 const enrollInEvent = async (req, res) => {
   try {
@@ -99,7 +133,10 @@ const enrollInEvent = async (req, res) => {
         });
 
         // --- MUDANÇA: Dispara o e-mail de confirmação ao reativar a inscrição ---
-        sendEnrollmentConfirmationEmail(user, event, userBadge, userAwards);
+        sendEnrollmentConfirmationEmail(user, event, userBadge, userAwards).catch(e => console.error("[EMAIL-ERROR] Ocultando erro de SMTP no teste/prod:", e.message));
+
+        // --- NOVA LÓGICA: Sincronização automática com a Trilhas ---
+        await syncTrackEnrollments(userId, eventId);
 
         // ALTERAÇÃO: A geração de crachá foi removida daqui.
         return res
@@ -149,7 +186,10 @@ const enrollInEvent = async (req, res) => {
     // O crachá universal do usuário será usando a variável já carregada acima.
 
     // --- MUDANÇA: Dispara o e-mail de confirmação ao reativar a inscrição ---
-    sendEnrollmentConfirmationEmail(user, event, userBadge, userAwards);
+    sendEnrollmentConfirmationEmail(user, event, userBadge, userAwards).catch(e => console.error("[EMAIL-ERROR] Ocultando erro de SMTP no teste/prod:", e.message));
+
+    // --- NOVA LÓGICA: Sincronização automática com a Trilhas ---
+    await syncTrackEnrollments(userId, eventId);
 
     res.status(201).json({
       message: "Inscrição realizada com sucesso",

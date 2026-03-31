@@ -93,6 +93,7 @@ import EventStaffManager from "../components/EventStaffManager";
 import BannerManagement from "../components/BannerManagement";
 import BrandingManagement from "../components/BrandingManagement";
 import LiveStreamConfig from "../components/LiveStreamConfig";
+import DataIntegrityTab from "../components/DataIntegrityTab";
 import { Badge } from "../components/ui/badge";
 import { Combobox } from "../components/ui/combobox";
 import { getAssetUrl } from "../lib/utils";
@@ -884,6 +885,10 @@ const Admin = () => {
                   <Tags className="h-4 w-4 mr-2" />
                   Categorias
                 </TabsTrigger>
+                <TabsTrigger value="data-integrity">
+                  <Target className="h-4 w-4 mr-2" />
+                  Integridade de Dados
+                </TabsTrigger>
               </>
             )}
             <TabsTrigger value="reports">
@@ -954,6 +959,12 @@ const Admin = () => {
         <TabsContent value="categories">
           <AdminCategories />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="data-integrity">
+            <DataIntegrityTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="events" className="space-y-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
