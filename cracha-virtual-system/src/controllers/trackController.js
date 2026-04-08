@@ -433,7 +433,10 @@ const getTrackEnrollments = async (req, res) => {
                         }
                     }
                 },
-                orderBy: { createdAt: "desc" },
+                orderBy: [
+                    { progress: "desc" },
+                    { user: { name: "asc" } }
+                ],
                 skip: parseInt(skip),
                 take: parseInt(limit)
             }),

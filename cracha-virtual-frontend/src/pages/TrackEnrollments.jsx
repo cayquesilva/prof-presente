@@ -42,6 +42,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "../components/ui/progress";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../components/ui/select";
 
 const TrackEnrollments = () => {
     const { id } = useParams();
@@ -49,7 +56,7 @@ const TrackEnrollments = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [page, setPage] = useState(1);
-    const limit = 20;
+    const [limit, setLimit] = useState(20);
 
     // Debounce search term
     useEffect(() => {
@@ -68,7 +75,7 @@ const TrackEnrollments = () => {
 
     // Fetch Enrollments
     const { data: enrollmentsData, isLoading: isLoadingEnrollments } = useQuery({
-        queryKey: ["track-enrollments", id, page, debouncedSearch],
+        queryKey: ["track-enrollments", id, page, debouncedSearch, limit],
         queryFn: async () => {
             const res = await tracksAPI.getEnrollments(id, {
                 page,
@@ -145,6 +152,25 @@ const TrackEnrollments = () => {
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-400 uppercase hidden sm:inline">Exibir:</span>
+                                <Select
+                                    value={limit.toString()}
+                                    onValueChange={(val) => {
+                                        setLimit(parseInt(val));
+                                        setPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger className="w-[80px] h-10 rounded-xl border-slate-200">
+                                        <SelectValue placeholder="20" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="20">20</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                        <SelectItem value="100">100</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <Button variant="outline" size="sm" onClick={handleExportCSV} className="rounded-xl font-bold border-slate-200">
                                 <Download className="h-4 w-4 mr-2" />
@@ -297,6 +323,25 @@ const TrackEnrollments = () => {
                         >
                             Próxima <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase">Itens por página:</span>
+                        <Select
+                            value={limit.toString()}
+                            onValueChange={(val) => {
+                                setLimit(parseInt(val));
+                                setPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="w-[70px] h-8 text-xs rounded-lg border-slate-200">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="20">20</SelectItem>
+                                <SelectItem value="50">50</SelectItem>
+                                <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             )}
