@@ -84,10 +84,10 @@ const subjectOptions = [
     { value: "Outros", label: "Outros" },
 ];
 
-const FieldWrapper = ({ label, children, required = true }) => (
-    <div className="space-y-1.5">
-        <Label className="text-sm font-medium text-gray-700">
-            {label} {required && <span className="text-red-500">*</span>}
+const FieldWrapper = ({ label, children, required = true, className = "" }) => (
+    <div className={cn("space-y-2", className)}>
+        <Label className="text-sm font-bold text-slate-700 ml-1">
+            {label} {required && <span className="text-destructive font-black">*</span>}
         </Label>
         {children}
     </div>
@@ -284,51 +284,52 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full bg-slate-50/30">
+            <div className="flex-1 overflow-y-auto px-6 py-8 space-y-10 custom-scrollbar">
                 {error && (
-                    <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
+                    <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive rounded-2xl animate-in zoom-in-95 duration-300">
+                        <AlertDescription className="font-bold">{error}</AlertDescription>
                     </Alert>
                 )}
 
                 {/* SEÇÃO 1: DADOS PESSOAIS */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4 text-primary">
-                        <User className="h-5 w-5" />
-                        <h3 className="text-lg font-semibold">Dados Pessoais</h3>
+                <section className="bg-white p-6 rounded-3xl border shadow-sm space-y-6">
+                    <div className="flex items-center gap-3 text-primary pb-2 border-b">
+                        <div className="p-2 bg-primary/10 rounded-xl">
+                            <User className="h-5 w-5" />
+                        </div>
+                        <h3 className="text-lg font-black tracking-tight">Informações Pessoais</h3>
                     </div>
-                    <Separator className="mb-6" />
 
-                    <div className="grid grid-cols-1 gap-4">
-                        <FieldWrapper label="Nome Completo">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <FieldWrapper label="Nome Completo" className="md:col-span-2 lg:col-span-3">
                             <Input
                                 name="name"
-                                placeholder="Seu nome completo"
+                                placeholder="Nome completo do servidor"
                                 value={formData.name}
                                 onChange={handleChange}
+                                className="h-12 rounded-xl shadow-none focus-visible:ring-primary border-slate-200"
                             />
                         </FieldWrapper>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FieldWrapper label="Data de Nascimento">
-                                <DatePicker
-                                    value={formData.birthDate ? toZonedTime(formData.birthDate, "America/Sao_Paulo") : null}
-                                    onSelect={(date) => handleSelectChange("birthDate", date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
-                                    disabled={false}
-                                />
-                            </FieldWrapper>
+                        <FieldWrapper label="Data de Nascimento">
+                            <DatePicker
+                                value={formData.birthDate ? toZonedTime(formData.birthDate, "America/Sao_Paulo") : null}
+                                onSelect={(date) => handleSelectChange("birthDate", date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
+                                disabled={false}
+                            />
+                        </FieldWrapper>
 
-                            <FieldWrapper label="CPF">
-                                <Input
-                                    name="cpf"
-                                    placeholder="000.000.000-00"
-                                    value={formData.cpf}
-                                    onChange={handleChange}
-                                    maxLength={14}
-                                />
-                            </FieldWrapper>
-                        </div>
+                        <FieldWrapper label="CPF">
+                            <Input
+                                name="cpf"
+                                placeholder="000.000.000-00"
+                                value={formData.cpf}
+                                onChange={handleChange}
+                                maxLength={14}
+                                className="h-12 rounded-xl shadow-none border-slate-200"
+                            />
+                        </FieldWrapper>
 
                         <FieldWrapper label="Telefone / WhatsApp">
                             <Input
@@ -337,51 +338,54 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
                                 value={formData.phone}
                                 onChange={handleChange}
                                 maxLength={15}
+                                className="h-12 rounded-xl shadow-none border-slate-200"
                             />
                         </FieldWrapper>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FieldWrapper label="Endereço">
-                                <Input
-                                    name="address"
-                                    placeholder="Rua Exemplo, 123"
-                                    value={formData.address}
-                                    onChange={handleChange}
-                                />
-                            </FieldWrapper>
+                        <FieldWrapper label="Endereço (Rua, Nº)" className="md:col-span-2">
+                            <Input
+                                name="address"
+                                placeholder="Ex: Rua das Flores, 123"
+                                value={formData.address}
+                                onChange={handleChange}
+                                className="h-12 rounded-xl shadow-none border-slate-200"
+                            />
+                        </FieldWrapper>
 
-                            <FieldWrapper label="Bairro">
-                                <Input
-                                    name="neighborhood"
-                                    placeholder="Seu bairro"
-                                    value={formData.neighborhood}
-                                    onChange={handleChange}
-                                />
-                            </FieldWrapper>
-                        </div>
+                        <FieldWrapper label="Bairro">
+                            <Input
+                                name="neighborhood"
+                                placeholder="Bairro de residência"
+                                value={formData.neighborhood}
+                                onChange={handleChange}
+                                className="h-12 rounded-xl shadow-none border-slate-200"
+                            />
+                        </FieldWrapper>
                     </div>
                 </section>
 
                 {/* SEÇÃO 2: DADOS DE ACESSO */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4 mt-6 text-primary">
-                        <div className="h-5 w-5 flex items-center justify-center font-bold">@</div>
-                        <h3 className="text-lg font-semibold">Dados de Acesso</h3>
+                <section className="bg-white p-6 rounded-3xl border shadow-sm space-y-6">
+                    <div className="flex items-center gap-3 text-primary pb-2 border-b">
+                        <div className="p-2 bg-primary/10 rounded-xl">
+                            <Key className="h-5 w-5" />
+                        </div>
+                        <h3 className="text-lg font-black tracking-tight">Segurança e Acesso</h3>
                     </div>
-                    <Separator className="mb-6" />
 
-                    <div className="space-y-4">
-                        <FieldWrapper label="Email">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FieldWrapper label="Email Institucional">
                             <Input
                                 name="email"
                                 type="email"
-                                placeholder="seu@email.com"
+                                placeholder="email@servidor.gov.br"
                                 value={formData.email}
                                 onChange={handleChange}
+                                className="h-12 rounded-xl shadow-none border-slate-200"
                             />
                         </FieldWrapper>
 
-                        <FieldWrapper label="Senha Inicial">
+                        <FieldWrapper label="Senha Provisória">
                             <div className="relative">
                                 <Input
                                     type={showPassword ? "text" : "password"}
@@ -389,15 +393,16 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
                                     placeholder="Mínimo 6 caracteres"
                                     value={formData.password}
                                     onChange={handleChange}
+                                    className="h-12 rounded-xl shadow-none pr-12 border-slate-200"
                                 />
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate-400"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                 </Button>
                             </div>
                         </FieldWrapper>
@@ -406,50 +411,50 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
 
 
                 {/* SEÇÃO 3: DADOS PROFISSIONAIS */}
-                <section>
-                    <div className="flex items-center gap-2 mb-4 mt-6 text-primary">
-                        <Briefcase className="h-5 w-5" />
-                        <h3 className="text-lg font-semibold">Dados Profissionais</h3>
-                    </div>
-                    <Separator className="mb-6" />
-
-                    <div className="grid grid-cols-1 gap-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <FieldWrapper label="Profissão / Cargo">
-                                <Select
-                                    value={formData.professionName}
-                                    onValueChange={(value) => handleSelectChange("professionName", value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {professionOptions.map(opt => (
-                                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </FieldWrapper>
-
-                            <FieldWrapper label="Carga Horária">
-                                <Input
-                                    name="workload"
-                                    placeholder="Ex: 40h"
-                                    value={formData.workload}
-                                    onChange={handleChange}
-                                />
-                            </FieldWrapper>
+                <section className="bg-white p-6 rounded-3xl border shadow-sm space-y-6 mb-8">
+                    <div className="flex items-center gap-3 text-primary pb-2 border-b">
+                        <div className="p-2 bg-primary/10 rounded-xl">
+                            <Briefcase className="h-5 w-5" />
                         </div>
+                        <h3 className="text-lg font-black tracking-tight">Atuação Profissional</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <FieldWrapper label="Profissão / Cargo" className="lg:col-span-2">
+                            <Select
+                                value={formData.professionName}
+                                onValueChange={(value) => handleSelectChange("professionName", value)}
+                            >
+                                <SelectTrigger className="h-12 rounded-xl border-slate-200">
+                                    <SelectValue placeholder="Selecione o cargo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {professionOptions.map(opt => (
+                                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Carga Horária">
+                            <Input
+                                name="workload"
+                                placeholder="Ex: 40h"
+                                value={formData.workload}
+                                onChange={handleChange}
+                                className="h-12 rounded-xl shadow-none border-slate-200"
+                            />
+                        </FieldWrapper>
 
                         {formData.professionName === "professor" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                                <FieldWrapper label="Série">
+                            <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 animate-in slide-in-from-top-4 duration-500">
+                                <FieldWrapper label="Série / Ano">
                                     <Select
                                         value={formData.serie}
                                         onValueChange={(value) => handleSelectChange("serie", value)}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione" />
+                                        <SelectTrigger className="h-12 rounded-xl bg-white border-slate-200">
+                                            <SelectValue placeholder="Selecione..." />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {serieOptions.map(opt => (
@@ -459,13 +464,13 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
                                     </Select>
                                 </FieldWrapper>
 
-                                <FieldWrapper label="Comp. Curricular">
+                                <FieldWrapper label="Componente Curricular">
                                     <Select
                                         value={formData.subject}
                                         onValueChange={(value) => handleSelectChange("subject", value)}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione" />
+                                        <SelectTrigger className="h-12 rounded-xl bg-white border-slate-200">
+                                            <SelectValue placeholder="Selecione..." />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {subjectOptions.map(opt => (
@@ -477,139 +482,136 @@ const AdminUserRegister = ({ onSuccess, onCancel }) => {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FieldWrapper label="Vínculo">
-                                <Select
-                                    value={formData.contractType}
-                                    onValueChange={(value) => handleSelectChange("contractType", value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="EFETIVO">Efetivo</SelectItem>
-                                        <SelectItem value="PRESTADOR">Prestador</SelectItem>
-                                        <SelectItem value="ESTUDANTE">Estudante</SelectItem>
-                                        <SelectItem value="EXTERNO">Externo</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </FieldWrapper>
-                        </div>
+                        <FieldWrapper label="Tipo de Vínculo">
+                            <Select
+                                value={formData.contractType}
+                                onValueChange={(value) => handleSelectChange("contractType", value)}
+                            >
+                                <SelectTrigger className="h-12 rounded-xl border-slate-200">
+                                    <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="EFETIVO">Efetivo</SelectItem>
+                                    <SelectItem value="PRESTADOR">Prestador</SelectItem>
+                                    <SelectItem value="ESTUDANTE">Estudante</SelectItem>
+                                    <SelectItem value="EXTERNO">Externo</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FieldWrapper>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FieldWrapper label="Turno(s)">
-                                <Popover open={openShiftPopover} onOpenChange={setOpenShiftPopover}>
-                                    <PopoverTrigger asChild>
-                                        <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
-                                            <div className="flex flex-wrap gap-1">
-                                                {selectedShifts.length > 0 ? (
-                                                    selectedShifts.map((shift) => (
-                                                        <Badge key={shift.value} variant="secondary" className="mr-1">
-                                                            {shift.label}
-                                                            <span onClick={(e) => { e.stopPropagation(); handleShiftRemove(shift); }} className="ml-1 cursor-pointer hover:text-red-500"><X className="h-3 w-3" /></span>
-                                                        </Badge>
-                                                    ))
-                                                ) : <span className="text-muted-foreground">Selecione...</span>}
-                                            </div>
-                                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        <FieldWrapper label="Turno(s) de Trabalho">
+                            <Popover open={openShiftPopover} onOpenChange={setOpenShiftPopover}>
+                                <PopoverTrigger asChild>
+                                    <div className="flex h-12 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm cursor-pointer shadow-none">
+                                        <div className="flex flex-wrap gap-1 overflow-hidden">
+                                            {selectedShifts.length > 0 ? (
+                                                selectedShifts.map((shift) => (
+                                                    <Badge key={shift.value} variant="secondary" className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-none px-2 rounded-lg text-[10px] font-bold">
+                                                        {shift.label}
+                                                        <span onClick={(e) => { e.stopPropagation(); handleShiftRemove(shift); }} className="ml-1 cursor-pointer hover:text-destructive"><X className="h-3 w-3" /></span>
+                                                    </Badge>
+                                                ))
+                                            ) : <span className="text-slate-400 italic">Selecione...</span>}
                                         </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="p-0" align="start">
-                                        <Command>
-                                            <CommandList>
-                                                <CommandGroup>
-                                                    {workShiftOptions.map((opt) => (
-                                                        <CommandItem key={opt.value} onSelect={() => handleShiftSelect(opt)}>
-                                                            {opt.label}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </FieldWrapper>
+                                        <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 rounded-2xl overflow-hidden shadow-xl border-slate-100" align="start">
+                                    <Command>
+                                        <CommandList>
+                                            <CommandGroup>
+                                                {workShiftOptions.map((opt) => (
+                                                    <CommandItem key={opt.value} onSelect={() => handleShiftSelect(opt)} className="py-3 px-4">
+                                                        {opt.label}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </FieldWrapper>
 
-                            <FieldWrapper label="Segmento(s)">
-                                <Popover open={openSegmentPopover} onOpenChange={setOpenSegmentPopover}>
-                                    <PopoverTrigger asChild>
-                                        <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
-                                            <div className="flex flex-wrap gap-1">
-                                                {selectedSegments.length > 0 ? (
-                                                    selectedSegments.map((seg) => (
-                                                        <Badge key={seg.value} variant="secondary" className="mr-1">
-                                                            {seg.label}
-                                                            <span onClick={(e) => { e.stopPropagation(); handleSegmentRemove(seg); }} className="ml-1 cursor-pointer hover:text-red-500"><X className="h-3 w-3" /></span>
-                                                        </Badge>
-                                                    ))
-                                                ) : <span className="text-muted-foreground">Selecione...</span>}
-                                            </div>
-                                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        <FieldWrapper label="Segmento(s) Atuante(s)">
+                            <Popover open={openSegmentPopover} onOpenChange={setOpenSegmentPopover}>
+                                <PopoverTrigger asChild>
+                                    <div className="flex h-12 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm cursor-pointer shadow-none">
+                                        <div className="flex flex-wrap gap-1 overflow-hidden">
+                                            {selectedSegments.length > 0 ? (
+                                                selectedSegments.map((seg) => (
+                                                    <Badge key={seg.value} variant="secondary" className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-none px-2 rounded-lg text-[10px] font-bold">
+                                                        {seg.label}
+                                                        <span onClick={(e) => { e.stopPropagation(); handleSegmentRemove(seg); }} className="ml-1 cursor-pointer hover:text-destructive"><X className="h-3 w-3" /></span>
+                                                    </Badge>
+                                                ))
+                                            ) : <span className="text-slate-400 italic">Selecione...</span>}
                                         </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="p-0" align="start">
-                                        <Command>
-                                            <CommandList>
-                                                <CommandGroup>
-                                                    {teachingSegmentOptions.map((opt) => (
-                                                        <CommandItem key={opt.value} onSelect={() => handleSegmentSelect(opt)}>
-                                                            {opt.label}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </FieldWrapper>
-                        </div>
+                                        <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 rounded-2xl overflow-hidden shadow-xl border-slate-100" align="start">
+                                    <Command>
+                                        <CommandList>
+                                            <CommandGroup>
+                                                {teachingSegmentOptions.map((opt) => (
+                                                    <CommandItem key={opt.value} onSelect={() => handleSegmentSelect(opt)} className="py-3 px-4">
+                                                        {opt.label}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </FieldWrapper>
 
-                        <div className="">
-                            <FieldWrapper label="Unidade(s) Educacional(is)">
-                                <Popover open={openWorkplacePopover} onOpenChange={setOpenWorkplacePopover}>
-                                    <PopoverTrigger asChild>
-                                        <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer">
-                                            <div className="flex flex-wrap gap-1">
-                                                {selectedWorkplaces.length > 0 ? (
-                                                    selectedWorkplaces.map((w) => (
-                                                        <Badge key={w.id} variant="secondary" className="mr-1">
-                                                            {w.name}
-                                                            <span onClick={(e) => { e.stopPropagation(); handleWorkplaceRemove(w); }} className="ml-1 cursor-pointer hover:text-red-500"><X className="h-3 w-3" /></span>
-                                                        </Badge>
-                                                    ))
-                                                ) : <span className="text-muted-foreground">Pesquisar unidade...</span>}
-                                            </div>
-                                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        <FieldWrapper label="Unidade(s) Educacional(is)" className="md:col-span-2 lg:col-span-3">
+                            <Popover open={openWorkplacePopover} onOpenChange={setOpenWorkplacePopover}>
+                                <PopoverTrigger asChild>
+                                    <div className="flex min-h-[48px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm cursor-pointer shadow-none">
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedWorkplaces.length > 0 ? (
+                                                selectedWorkplaces.map((w) => (
+                                                    <Badge key={w.id} variant="secondary" className="bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20 px-3 py-1 rounded-xl text-xs font-black">
+                                                        {w.name}
+                                                        <span onClick={(e) => { e.stopPropagation(); handleWorkplaceRemove(w); }} className="ml-2 cursor-pointer hover:text-destructive"><X className="h-3 w-3" /></span>
+                                                    </Badge>
+                                                ))
+                                            ) : <span className="text-slate-400 italic">Pesquisar e selecionar unidades...</span>}
                                         </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="p-0" align="start">
-                                        <Command>
-                                            <CommandInput placeholder="Buscar unidade..." />
-                                            <CommandList>
-                                                <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {workplaces.filter(w => !selectedWorkplaces.some(s => s.id === w.id)).map((w) => (
-                                                        <CommandItem key={w.id} onSelect={() => handleWorkplaceSelect(w)}>
-                                                            {w.name} - {w.city}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </FieldWrapper>
-                        </div>
+                                        <ChevronsUpDown className="h-4 w-4 opacity-50 ml-2" />
+                                    </div>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[400px] p-0 rounded-2xl overflow-hidden shadow-2xl border-slate-100" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Digite o nome da unidade..." className="h-12" />
+                                        <CommandList className="max-h-[300px]">
+                                            <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
+                                            <CommandGroup>
+                                                {workplaces.filter(w => !selectedWorkplaces.some(s => s.id === w.id)).map((w) => (
+                                                    <CommandItem key={w.id} onSelect={() => handleWorkplaceSelect(w)} className="py-3 px-4 cursor-pointer">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-900">{w.name}</span>
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">{w.city} - {w.type || 'Escola'}</span>
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </FieldWrapper>
                     </div>
                 </section>
             </div >
 
-            <div className="p-6 grid grid-cols-2 gap-4 bg-background border-t mt-auto">
-                <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+            <div className="p-6 bg-white border-t flex flex-col sm:flex-row gap-4 items-center justify-end">
+                <Button type="button" variant="ghost" onClick={onCancel} disabled={loading} className="w-full sm:w-32 rounded-xl font-bold hover:bg-slate-100">
                     Cancelar
                 </Button>
-                <Button type="submit" disabled={loading}>
-                    {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Confirmar Cadastro"}
+                <Button type="submit" disabled={loading} className="w-full sm:px-12 h-12 rounded-xl font-black bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all active:scale-95">
+                    {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Finalizar Cadastro"}
                 </Button>
             </div>
 

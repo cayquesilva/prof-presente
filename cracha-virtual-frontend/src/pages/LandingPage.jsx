@@ -204,53 +204,103 @@ const LandingPage = () => {
                 {/* Controlled by custom trigger usually, but we can wrap or use state. We used DialogTrigger or controlled state? 
                      Let's use a controlled Dialog with `searchModalOpen` state. 
                  */}
-                <DialogContent className="sm:max-w-[600px] p-0 gap-0 bg-white dark:bg-[#101922] border-slate-200 dark:border-slate-800 overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                        <Search className="w-5 h-5 text-slate-400" />
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-[650px] w-full bg-white dark:bg-slate-900 mx-auto">
+                    <div className="p-6 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+                        <div className="bg-blue-600 text-white p-2.5 rounded-2xl shadow-lg shadow-blue-100 dark:shadow-none">
+                            <Search className="w-5 h-5" />
+                        </div>
                         <Input
-                            className="border-none shadow-none focus-visible:ring-0 px-0 text-base bg-transparent"
-                            placeholder="Pesquisar eventos..."
+                            className="border-none shadow-none focus-visible:ring-0 px-0 text-xl font-black bg-transparent placeholder:text-slate-400 placeholder:font-bold"
+                            placeholder="O que você quer aprender hoje?"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             autoFocus
                         />
                         {searchTerm && (
-                            <button onClick={() => setSearchTerm("")}><X className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => setSearchTerm("")}
+                                className="rounded-full hover:bg-slate-200"
+                            >
+                                <X className="w-5 h-5 text-slate-400" />
+                            </Button>
                         )}
                     </div>
-                    <div className="max-h-[60vh] overflow-y-auto p-2">
+                    
+                    <div className="max-h-[70vh] overflow-y-auto p-4 custom-scrollbar bg-white dark:bg-slate-900">
                         {isLoading ? (
-                            <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-[#137fec]" /></div>
+                            <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                                <Loader2 className="animate-spin text-blue-600 w-10 h-10" />
+                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Buscando conhecimento...</p>
+                            </div>
                         ) : isError ? (
-                            <div className="py-8 flex justify-center text-red-500">Erro ao carregar eventos.</div>
+                            <div className="py-20 text-center space-y-2">
+                                <p className="text-red-500 font-bold">Erro ao carregar eventos.</p>
+                                <p className="text-xs text-slate-400">Verifique sua conexão e tente novamente.</p>
+                            </div>
                         ) : searchTerm === "" ? (
-                            <div className="py-12 text-center text-slate-500 text-sm">
-                                <p>Digite para buscar eventos...</p>
+                            <div className="py-20 text-center space-y-4">
+                                <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-full w-20 h-20 mx-auto flex items-center justify-center">
+                                    <Search className="w-10 h-10 text-slate-300" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-900 dark:text-white font-black text-lg">Inicie sua busca</p>
+                                    <p className="text-slate-400 text-sm max-w-[250px] mx-auto italic">Digite o nome de uma palestra, workshop ou tema de interesse.</p>
+                                </div>
                             </div>
                         ) : searchResults.length === 0 ? (
-                            <div className="py-12 text-center text-slate-500 text-sm">
-                                <p>Nenhum evento encontrado.</p>
+                            <div className="py-20 text-center space-y-4">
+                                <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-full w-20 h-20 mx-auto flex items-center justify-center">
+                                    <FlaskConical className="w-10 h-10 text-slate-300" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-900 dark:text-white font-black text-lg">Nenhum resultado</p>
+                                    <p className="text-slate-400 text-sm max-w-[250px] mx-auto italic">Não encontramos nada para "{searchTerm}". Tente outros termos.</p>
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-1">
+                            <div className="grid grid-cols-1 gap-2">
+                                <div className="px-3 py-2">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{searchResults.length} Resultados encontrados</span>
+                                </div>
                                 {searchResults.map(event => (
                                     <Link
                                         to={`/events/${event.id}`}
                                         key={event.id}
-                                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+                                        className="flex items-center gap-4 p-4 rounded-[1.5rem] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group border border-transparent hover:border-blue-100 dark:hover:border-blue-900/30"
                                         onClick={() => setSearchModalOpen(false)}
                                     >
-                                        <div className="w-12 h-12 rounded-md bg-slate-200 shrink-0 overflow-hidden">
-                                            <img src={event.imageUrl ? getAssetUrl(event.imageUrl) : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"} className="w-full h-full object-cover" />
+                                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0 overflow-hidden shadow-inner">
+                                            <img 
+                                                src={event.imageUrl ? getAssetUrl(event.imageUrl) : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"} 
+                                                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                                                alt=""
+                                            />
                                         </div>
-                                        <div>
-                                            <h4 className="font-semibold text-sm group-hover:text-[#137fec]">{event.title}</h4>
-                                            <p className="text-xs text-slate-500 truncate max-w-[300px]">{event.location || "Online"} • {formatDate(event.startDate)}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Badge className="bg-blue-50 text-blue-600 border-blue-100 text-[9px] uppercase font-black tracking-widest px-2 py-0">Evento</Badge>
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{formatDate(event.startDate)}</span>
+                                            </div>
+                                            <h4 className="font-black text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">{event.title}</h4>
+                                            <p className="text-xs text-slate-500 font-medium truncate flex items-center gap-1 mt-0.5">
+                                                <MapPin className="w-3 h-3 text-blue-500" />
+                                                {event.location || "Evento Online"}
+                                            </p>
+                                        </div>
+                                        <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all text-slate-400">
+                                            <ArrowRight className="w-4 h-4" />
                                         </div>
                                     </Link>
                                 ))}
                             </div>
                         )}
+                    </div>
+
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Dica: Use palavras-chave como "Tecnologia" ou "Metodologia"</p>
+                        <Button variant="ghost" size="sm" onClick={() => setSearchModalOpen(false)} className="text-xs font-bold rounded-lg uppercase tracking-wider">Fechar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -622,77 +672,158 @@ const LandingPage = () => {
 
             {/* EVENTOS DA DATA SELECIONADA MODAL */}
             <Dialog open={dateEventsModalOpen} onOpenChange={setDateEventsModalOpen}>
-                <DialogContent className="sm:max-w-[500px] bg-white dark:bg-[#101922] border-slate-200 dark:border-slate-800">
-                    <div className="p-6">
-                        <h3 className="text-xl font-bold mb-4 text-[#137fec] border-b border-slate-100 dark:border-slate-800 pb-3">
-                            Eventos em {selectedDate && formatDate(selectedDate)}
-                        </h3>
-                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                            {selectedDateEvents.length > 0 ? (
-                                selectedDateEvents.map((event) => (
-                                    <div key={event.id} className="p-4 border rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:border-[#137fec]/50 transition-colors">
-                                        <h4 className="font-bold text-lg">{event.title}</h4>
-                                        <div className="flex items-center gap-2 text-sm text-slate-500 mt-2">
-                                            <Calendar className="w-4 h-4" /> {formatDate(event.startDate)}
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-lg w-full bg-white dark:bg-slate-900 mx-auto">
+                    <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-slate-800/50">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg shadow-blue-100 dark:shadow-none">
+                                <Calendar className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+                                    Eventos do Dia
+                                </DialogTitle>
+                                <DialogDescription className="font-medium text-blue-600 dark:text-blue-400">
+                                    {selectedDate && formatDate(selectedDate)}
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="p-8 pb-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
+                        {selectedDateEvents.length > 0 ? (
+                            selectedDateEvents.map((event) => (
+                                <div key={event.id} className="p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 hover:border-blue-100 dark:hover:border-blue-900/30 transition-all group">
+                                    <h4 className="font-black text-lg text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{event.title}</h4>
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                            Começa às: {new Date(event.startDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </div>
-                                        <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-                                            <MapPin className="w-4 h-4" /> {event.location || "Online"}
-                                        </div>
-                                        <div className="mt-4">
-                                            <Link to={`/events/${event.id}`}>
-                                                <Button size="sm" className="w-full bg-[#137fec]/10 text-[#137fec] hover:bg-[#137fec] hover:text-white">
-                                                    Ver Detalhes do Evento
-                                                </Button>
-                                            </Link>
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                                            Local: {event.location || "Online"}
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <p className="text-slate-500 text-center py-8">Nenhum evento para esta data.</p>
-                            )}
-                        </div>
+                                    <div className="mt-6">
+                                        <Link to={`/events/${event.id}`}>
+                                            <Button className="w-full h-12 bg-white hover:bg-blue-600 text-slate-900 hover:text-white border-slate-200 hover:border-blue-600 rounded-xl font-black text-sm shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2">
+                                                Ver Detalhes do Evento
+                                                <ArrowRight className="w-4 h-4" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-12 text-center text-slate-500 italic">
+                                Nenhum evento programado para esta data.
+                            </div>
+                        )}
                     </div>
+
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* COMPARTILHE SEU SABER MODAL */}
             <Dialog open={proposalModalOpen} onOpenChange={setProposalModalOpen}>
-                <DialogContent className="sm:max-w-[550px] bg-white dark:bg-[#101922] border-slate-200 dark:border-slate-800">
-                    <div className="p-6">
-                        <h3 className="text-xl font-bold mb-2 text-[#137fec]">Compartilhe seu saber</h3>
-                        <p className="text-sm text-slate-500 mb-6">Preencha os dados abaixo e a Secretaria de Educação entrará em contato.</p>
-
-                        <form onSubmit={handleProposalSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Seu Nome *</label>
-                                <Input required value={proposalForm.name} onChange={e => setProposalForm({ ...proposalForm, name: e.target.value })} placeholder="Ex: Prof. Silva" className="bg-white/5" />
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-[550px] w-full bg-white dark:bg-slate-900 mx-auto">
+                    <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-[#137fec] text-white p-3 rounded-2xl shadow-lg shadow-blue-100">
+                                <FlaskConical className="w-6 h-6" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">E-mail *</label>
-                                    <Input required type="email" value={proposalForm.email} onChange={e => setProposalForm({ ...proposalForm, email: e.target.value })} placeholder="seu@email.com" className="bg-white/5" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Telefone</label>
-                                    <Input value={proposalForm.phone} onChange={e => setProposalForm({ ...proposalForm, phone: e.target.value })} placeholder="(00) 00000-0000" className="bg-white/5" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Tema da Palestra/Workshop *</label>
-                                <Input required value={proposalForm.topic} onChange={e => setProposalForm({ ...proposalForm, topic: e.target.value })} placeholder="Ex: Metodologias Ativas" className="bg-white/5" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Resumo Curto *</label>
-                                <textarea required value={proposalForm.description} onChange={e => setProposalForm({ ...proposalForm, description: e.target.value })} className="w-full flex min-h-[80px] rounded-md border border-input dark:border-white/10 bg-transparent dark:bg-white/5 px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" placeholder="Sobre o que você gostaria de falar?"></textarea>
-                            </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <Button type="button" variant="outline" onClick={() => setProposalModalOpen(false)}>Cancelar</Button>
-                                <Button type="submit" disabled={proposalLoading} className="bg-[#137fec] text-white hover:bg-[#137fec]/90">
-                                    {proposalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                            <div>
+                                <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
                                     Enviar Proposta
+                                </DialogTitle>
+                                <DialogDescription className="font-medium text-slate-500">
+                                    Compartilhe seu saber com a nossa comunidade educativa.
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="p-8 space-y-6 bg-white dark:bg-slate-900">
+                        <form onSubmit={handleProposalSubmit} className="space-y-5">
+                            <div className="space-y-2">
+                                <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Seu Nome *</Label>
+                                <Input 
+                                    required 
+                                    value={proposalForm.name} 
+                                    onChange={e => setProposalForm({ ...proposalForm, name: e.target.value })} 
+                                    placeholder="Como gostaria de ser chamado?" 
+                                    className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-medium"
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">E-mail Corporativo *</Label>
+                                    <Input 
+                                        required 
+                                        type="email" 
+                                        value={proposalForm.email} 
+                                        onChange={e => setProposalForm({ ...proposalForm, email: e.target.value })} 
+                                        placeholder="seu@email.com" 
+                                        className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-medium" 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">WhatsApp / Telefone</Label>
+                                    <Input 
+                                        value={proposalForm.phone} 
+                                        onChange={e => setProposalForm({ ...proposalForm, phone: e.target.value })} 
+                                        placeholder="(00) 00000-0000" 
+                                        className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-medium" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Tema da Palestra ou Workshop *</Label>
+                                <Input 
+                                    required 
+                                    value={proposalForm.topic} 
+                                    onChange={e => setProposalForm({ ...proposalForm, topic: e.target.value })} 
+                                    placeholder="Ex: Novos Rumos da Educação 4.0" 
+                                    className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-bold text-blue-600" 
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Resumo da sua Proposta *</Label>
+                                <textarea 
+                                    required 
+                                    value={proposalForm.description} 
+                                    onChange={e => setProposalForm({ ...proposalForm, description: e.target.value })} 
+                                    className="w-full flex min-h-[120px] rounded-2xl border border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-3 text-sm font-medium shadow-inner placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all" 
+                                    placeholder="Conte-nos brevemente sobre o que você gostaria de apresentar, objetivos e público-alvo."
+                                ></textarea>
+                            </div>
+
+                            <div className="pt-4 flex flex-col sm:flex-row justify-end gap-3">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    onClick={() => setProposalModalOpen(false)}
+                                    className="h-12 rounded-xl font-bold order-2 sm:order-1"
+                                >
+                                    Agora não
+                                </Button>
+                                <Button 
+                                    type="submit" 
+                                    disabled={proposalLoading} 
+                                    className="h-12 px-8 bg-[#137fec] text-white hover:bg-blue-600 rounded-xl font-black shadow-xl shadow-blue-100 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 order-1 sm:order-2"
+                                >
+                                    {proposalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                    Enviar para Curadoria
                                 </Button>
                             </div>
                         </form>
+                    </div>
+
+                    <div className="p-6 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 text-center">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic font-sans">Sua ideia pode transformar a educação.</p>
                     </div>
                 </DialogContent>
             </Dialog>

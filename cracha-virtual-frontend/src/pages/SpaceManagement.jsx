@@ -288,20 +288,26 @@ const SpaceManagement = () => {
                     )}
                     <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 shadow-lg shadow-blue-100 dark:shadow-none transition-all hover:scale-[1.02]">
+                            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-black gap-2 shadow-xl shadow-blue-100 dark:shadow-none transition-all hover:scale-[1.05] active:scale-95 h-12 px-8 rounded-2xl">
                                 <Plus className="h-5 w-5" />
                                 Nova Solicitação
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[700px]">
-                            <DialogHeader>
-                                <DialogTitle className="text-2xl flex items-center gap-3">
-                                    <CalendarIcon className="h-6 w-6 text-blue-600" />
-                                    Solicitar Espaço
-                                </DialogTitle>
-                                <DialogDescription>
-                                    Reserve um ambiente para seu evento. A equipe do Cerimonial analisará seu pedido.
-                                </DialogDescription>
+                        <DialogContent className="sm:max-w-[800px] p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-slate-900 mx-auto">
+                            <DialogHeader className="p-8 pb-6 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center gap-5">
+                                    <div className="bg-blue-600 text-white p-4 rounded-3xl shadow-lg shadow-blue-100 dark:shadow-none">
+                                        <CalendarIcon className="h-7 w-7" />
+                                    </div>
+                                    <div>
+                                        <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                                            Solicitar Reserva
+                                        </DialogTitle>
+                                        <DialogDescription className="font-medium text-slate-500 text-base mt-1">
+                                            Preencha os detalhes do evento para análise do Cerimonial.
+                                        </DialogDescription>
+                                    </div>
+                                </div>
                             </DialogHeader>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -317,111 +323,151 @@ const SpaceManagement = () => {
                                     date: format(formDate, "yyyy-MM-dd"),
                                     needsCerimonial,
                                 });
-                            }} className="grid gap-6 py-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Nome do Evento</Label>
-                                        <Input name="eventTitle" placeholder="Ex: Jornada Pedagógica" required />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Número do Chamado (1Doc)</Label>
-                                        <Input name="oneDocNumber" placeholder="Ex: 12345/2026" required />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Setor Responsável</Label>
-                                        <Select name="sector" required>
-                                            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                            <SelectContent>
-                                                {config?.sectors.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Local do Evento</Label>
-                                        <Select name="spaceId" required>
-                                            <SelectTrigger><SelectValue placeholder="Selecione o local" /></SelectTrigger>
-                                            <SelectContent>
-                                                {spaces?.map(s => <SelectItem key={s.id} value={s.id}>{s.name} ({s.capacity} pessoas)</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Data do Evento</Label>
-                                        <Input
-                                            name="date"
-                                            type="date"
-                                            value={format(formDate, "yyyy-MM-dd")}
-                                            onChange={(e) => setFormDate(parseISO(e.target.value))}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Início</Label>
-                                        <Input name="startTime" type="time" required />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Término</Label>
-                                        <Input name="endTime" type="time" required />
-                                    </div>
-                                </div>
-                                <div className="space-y-4 pt-2 border-t">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <Label className="text-base font-bold">Apoio do Cerimonial</Label>
-                                            <p className="text-xs text-slate-500">Solicitar presença de um cerimonialista no evento.</p>
+                            }} className="flex flex-col max-h-[85vh] bg-white dark:bg-slate-900">
+                                <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="h-6 w-1 bg-blue-600 rounded-full" />
+                                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Identificação do Evento</h3>
                                         </div>
-                                        <Checkbox
-                                            checked={needsCerimonial}
-                                            onCheckedChange={setNeedsCerimonial}
-                                            className="h-6 w-6"
-                                        />
-                                    </div>
-                                    {needsCerimonial && (
-                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                                            <Label className="text-blue-600 font-bold">Link da Minuta/Roteiro (Google Docs)</Label>
-                                            <Input name="eventScriptUrl" placeholder="https://docs.google.com/document/d/..." required={needsCerimonial} />
-                                            <p className="text-[10px] text-slate-400 italic">* Certifique-se de que o documento esteja público ou compartilhado com o cerimonial.</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Título do Evento *</Label>
+                                                <Input name="eventTitle" placeholder="Ex: Jornada Pedagógica 2026" className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white" required />
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Número do Chamado 1Doc *</Label>
+                                                <Input name="oneDocNumber" placeholder="Ex: 12345/2026" className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-black text-slate-900 dark:text-white uppercase" required />
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Descrição</Label>
-                                    <Textarea name="description" placeholder="Objetivo do evento e observações..." rows={3} />
-                                </div>
-                                <div className="space-y-4">
-                                    <Label className="text-base font-semibold">Equipamentos e Serviços</Label>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {(inventory || []).filter(item => {
-                                            // Se não houver configuração explícita de IDs REAIS (UUIDs), mostramos tudo
-                                            const habilitatedIds = config?.equipment || [];
-                                            const hasValidConfig = habilitatedIds.some(id => inventory.some(inv => inv.id === id));
+                                    </div>
 
-                                            if (!hasValidConfig) return true; // Mostra tudo se nada válido foi configurado
-                                            return habilitatedIds.includes(item.id);
-                                        }).map(item => {
-                                            const Icon = ICON_MAP[item.icon] || Layout;
-                                            return (
-                                                <div key={item.id} className="flex items-center space-x-2 border rounded-xl p-3 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors border-slate-200">
-                                                    <Checkbox id={item.id} name={item.id} />
-                                                    <Label htmlFor={item.id} className="flex items-center gap-2 cursor-pointer font-medium text-sm">
-                                                        <Icon className="h-4 w-4 text-blue-500" />
-                                                        {item.name}
-                                                    </Label>
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="h-6 w-1 bg-amber-500 rounded-full" />
+                                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Logística e Local</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Setor Responsável *</Label>
+                                                <Select name="sector" required>
+                                                    <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold"><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
+                                                    <SelectContent className="rounded-2xl shadow-2xl border-slate-100 p-2">
+                                                        {config?.sectors.map(s => <SelectItem key={s} value={s} className="rounded-xl font-medium">{s}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Local Desejado *</Label>
+                                                <Select name="spaceId" required>
+                                                    <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold"><SelectValue placeholder="Selecione o local" /></SelectTrigger>
+                                                    <SelectContent className="rounded-2xl shadow-2xl border-slate-100 p-2">
+                                                        {spaces?.map(s => <SelectItem key={s.id} value={s.id} className="rounded-xl">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold">{s.name}</span>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Capacidade: {s.capacity} pessoas</span>
+                                                            </div>
+                                                        </SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-2">
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Data do Evento *</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        name="date"
+                                                        type="date"
+                                                        value={format(formDate, "yyyy-MM-dd")}
+                                                        onChange={(e) => setFormDate(parseISO(e.target.value))}
+                                                        className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-black text-blue-600 block w-full"
+                                                        required
+                                                    />
                                                 </div>
-                                            );
-                                        })}
-                                        {inventory?.length === 0 && (
-                                            <p className="text-xs text-slate-400 col-span-full italic">Nenhum equipamento cadastrado no inventário.</p>
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Horário Início *</Label>
+                                                <Input name="startTime" type="time" className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-black" required />
+                                            </div>
+                                            <div className="space-y-2.5">
+                                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Horário Término *</Label>
+                                                <Input name="endTime" type="time" className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-black" required />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-8 bg-blue-50/40 dark:bg-blue-900/10 rounded-[2.5rem] border border-blue-100/50 dark:border-blue-900/30 space-y-6 shadow-inner">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm text-blue-600">
+                                                    <Mic className="h-6 w-6" />
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-xl font-black text-blue-900 dark:text-blue-100 tracking-tight">Apoio do Cerimonial</Label>
+                                                    <p className="text-sm text-blue-600/70 dark:text-blue-400/70 font-medium">Solicitar presença de um cerimonialista para coordenação.</p>
+                                                </div>
+                                            </div>
+                                            <Checkbox
+                                                checked={needsCerimonial}
+                                                onCheckedChange={setNeedsCerimonial}
+                                                className="h-8 w-8 rounded-xl border-2 border-blue-200 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all shadow-sm"
+                                            />
+                                        </div>
+                                        {needsCerimonial && (
+                                            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                                                <Label className="text-blue-900 dark:text-blue-100 font-black ml-1 uppercase text-[10px] tracking-[0.2em]">Link do Roteiro (Google Docs) *</Label>
+                                                <Input name="eventScriptUrl" placeholder="https://docs.google.com/document/d/..." required={needsCerimonial} className="bg-white dark:bg-slate-800 rounded-2xl border-blue-200 dark:border-blue-900/50 h-12 font-medium" />
+                                                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider flex items-center gap-2">
+                                                    <Volume2 className="h-3 w-3" />
+                                                    O Cerimonial necessita de acesso à leitura para análise.
+                                                </p>
+                                            </div>
                                         )}
                                     </div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="h-6 w-1 bg-emerald-500 rounded-full" />
+                                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Equipamentos Mobiliários</h3>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {(inventory || []).filter(item => {
+                                                const habilitatedIds = config?.equipment || [];
+                                                const hasValidConfig = habilitatedIds.some(id => inventory.some(inv => inv.id === id));
+                                                if (!hasValidConfig) return true;
+                                                return habilitatedIds.includes(item.id);
+                                            }).map(item => {
+                                                const Icon = ICON_MAP[item.icon] || Layout;
+                                                return (
+                                                    <label key={item.id} className="flex items-center space-x-4 border border-slate-100 dark:border-slate-800 rounded-[1.5rem] p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer group shadow-sm hover:shadow-md">
+                                                        <Checkbox id={item.id} name={item.id} className="h-6 w-6 rounded-lg border-2 border-slate-200 group-hover:border-blue-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all" />
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-2xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors text-slate-500 group-hover:text-blue-600">
+                                                                <Icon className="h-5 w-5" />
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-black text-slate-900 dark:text-white text-sm tracking-tight">{item.name}</span>
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Disponível</span>
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 pt-4">
+                                        <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Observações Adicionais</Label>
+                                        <Textarea name="description" placeholder="Descreva brevemente o objetivo e necessidades especiais..." rows={4} className="rounded-3xl border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 resize-none focus-visible:ring-blue-500 transition-all shadow-inner" />
+                                    </div>
                                 </div>
-                                <DialogFooter>
-                                    <Button type="submit" disabled={createReservationMutation.isPending} className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700">
-                                        {createReservationMutation.isPending ? "Processando..." : "Enviar Solicitação"}
+                                <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+                                    <Button type="button" variant="ghost" onClick={() => setIsRequestModalOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900">
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" disabled={createReservationMutation.isPending} className="h-14 bg-blue-600 hover:bg-blue-700 font-black text-white rounded-2xl shadow-2xl shadow-blue-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]">
+                                        {createReservationMutation.isPending ? <Loader2 className="animate-spin h-6 w-6 mr-2" /> : "Confirmar Solicitação"}
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -808,9 +854,21 @@ const SpaceManagement = () => {
                     </Card>
 
                     <Dialog open={isSpaceModalOpen} onOpenChange={setIsSpaceModalOpen}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{editingSpace ? "Editar Local" : "Novo Local"}</DialogTitle>
+                        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2rem] border-none shadow-2xl bg-white dark:bg-slate-900 mx-auto max-w-lg">
+                            <DialogHeader className="p-8 pb-6 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg shadow-blue-100 dark:shadow-none">
+                                        <MapPin className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                                            {editingSpace ? "Editar Local" : "Novo Espaço"}
+                                        </DialogTitle>
+                                        <DialogDescription className="font-medium text-slate-500 mt-1">
+                                            Configure as capacidades e recursos físicos.
+                                        </DialogDescription>
+                                    </div>
+                                </div>
                             </DialogHeader>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
@@ -819,25 +877,30 @@ const SpaceManagement = () => {
                                     id: editingSpace?.id,
                                     ...Object.fromEntries(formData.entries())
                                 });
-                            }} className="grid gap-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Nome do Local</Label>
-                                    <Input name="name" defaultValue={editingSpace?.name} placeholder="Ex: Auditório II" required />
+                            }} className="p-8 space-y-6 bg-white dark:bg-slate-900">
+                                <div className="space-y-2.5">
+                                    <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Nome do Local *</Label>
+                                    <Input name="name" defaultValue={editingSpace?.name} placeholder="Ex: Auditório Master" className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white" required />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Capacidade (Aprox.)</Label>
-                                    <Input name="capacity" type="number" defaultValue={editingSpace?.capacity} required />
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2.5">
+                                        <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Capacidade Máxima *</Label>
+                                        <Input name="capacity" type="number" defaultValue={editingSpace?.capacity} className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-black" required />
+                                    </div>
+                                    <div className="space-y-2.5">
+                                        <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Endereço/Bloco</Label>
+                                        <Input name="location" defaultValue={editingSpace?.location} placeholder="Ex: Bloco A" className="h-12 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold" />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Endereço/Bloco</Label>
-                                    <Input name="location" defaultValue={editingSpace?.location} placeholder="Ex: Bloco A - Primeiro Andar" />
+                                <div className="space-y-2.5">
+                                    <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Recursos Fixos</Label>
+                                    <Textarea name="description" defaultValue={editingSpace?.description} rows={4} placeholder="Mencione recursos fixos como ar-condicionado, multimídia, etc." className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 resize-none focus-visible:ring-blue-500 transition-all shadow-inner" />
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Descrição</Label>
-                                    <Textarea name="description" defaultValue={editingSpace?.description} />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit" className="w-full bg-blue-600" disabled={upsertSpaceMutation.isPending}>Salvar Local</Button>
+                                <DialogFooter className="pt-4 flex gap-4">
+                                    <Button type="button" variant="ghost" onClick={() => setIsSpaceModalOpen(false)} className="rounded-2xl font-black uppercase tracking-widest flex-1 h-12 text-slate-500">Descartar</Button>
+                                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700 font-black text-white rounded-2xl h-12 flex-[2] shadow-2xl shadow-blue-100 dark:shadow-none active:scale-95 transition-all uppercase tracking-wider" disabled={upsertSpaceMutation.isPending}>
+                                        {upsertSpaceMutation.isPending ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : "Salvar Local"}
+                                    </Button>
                                 </DialogFooter>
                             </form>
                         </DialogContent>
@@ -1054,38 +1117,48 @@ const SpaceManagement = () => {
 
             {/* Modal de Observações/Motivo de Rejeição */}
             <Dialog open={isObservationModalOpen} onOpenChange={setIsObservationModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            {actingStatus === "APPROVED" ? (
-                                <><CheckCircle2 className="h-5 w-5 text-green-600" /> Aprovar com Observação</>
-                            ) : (
-                                <><XCircle className="h-5 w-5 text-red-600" /> Motivo da Rejeição</>
-                            )}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {actingStatus === "APPROVED"
-                                ? "Adicione alguma observação importante para o solicitante (opcional)."
-                                : "Por favor, informe ao organizador o motivo pelo qual a solicitação foi negada."}
-                        </DialogDescription>
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2rem] border-none shadow-2xl bg-white dark:bg-slate-900 mx-auto max-w-lg">
+                    <DialogHeader className={`p-8 pb-6 border-b border-white/10 ${actingStatus === 'APPROVED' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                        <div className="flex items-center gap-5">
+                            <div className="bg-white/20 p-4 rounded-3xl backdrop-blur-md shadow-inner text-white">
+                                {actingStatus === "APPROVED" ? (
+                                    <CheckCircle2 className="h-7 w-7" />
+                                ) : (
+                                    <XCircle className="h-7 w-7" />
+                                )}
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black tracking-tight uppercase leading-tight">
+                                    {actingStatus === "APPROVED" ? "Aprovar Espaço" : "Rejeitar Pedido"}
+                                </DialogTitle>
+                                <DialogDescription className="font-medium text-white/80 mt-1">
+                                    {actingStatus === "APPROVED"
+                                        ? "Adicione instruções para o organizador."
+                                        : "Explique o motivo da indisponibilidade."}
+                                </DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
-                    <div className="py-4">
-                        <Label htmlFor="observation" className="mb-2 block font-bold">
-                            {actingStatus === "APPROVED" ? "Observações Internas/Externas" : "Motivo"}
-                        </Label>
-                        <Textarea
-                            id="observation"
-                            placeholder={actingStatus === "APPROVED" ? "Ex: Aprovado, mas o projetor do local está em manutenção..." : "Ex: O local já estará ocupado por uma manutenção preventiva..."}
-                            value={observationText}
-                            onChange={(e) => setObservationText(e.target.value)}
-                            rows={4}
-                            required={actingStatus === "REJECTED"}
-                        />
+                    <div className="p-10 space-y-6 bg-white dark:bg-slate-900">
+                        <div className="space-y-3">
+                            <Label htmlFor="observation" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">
+                                {actingStatus === "APPROVED" ? "Orientações Adicionais (Opcional)" : "Motivo da Indisponibilidade *"}
+                            </Label>
+                            <Textarea
+                                id="observation"
+                                placeholder={actingStatus === "APPROVED" ? "Ex: Chaves estão na recepção do Bloco B..." : "Ex: O local passará por manutenção elétrica neste dia..."}
+                                value={observationText}
+                                onChange={(e) => setObservationText(e.target.value)}
+                                rows={5}
+                                required={actingStatus === "REJECTED"}
+                                className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 resize-none focus-visible:ring-blue-500 transition-all shadow-inner text-slate-900 dark:text-white font-medium"
+                            />
+                        </div>
                     </div>
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="ghost" onClick={() => setIsObservationModalOpen(false)}>Cancelar</Button>
+                    <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+                        <Button variant="ghost" onClick={() => setIsObservationModalOpen(false)} className="h-12 rounded-2xl font-black uppercase tracking-widest text-slate-500 sm:flex-1">Descartar</Button>
                         <Button
-                            className={actingStatus === "APPROVED" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+                            className={`h-12 rounded-2xl font-black text-white sm:flex-[2] shadow-2xl transition-all active:scale-95 uppercase tracking-wider ${actingStatus === "APPROVED" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100" : "bg-rose-600 hover:bg-rose-700 shadow-rose-100"}`}
                             onClick={() => {
                                 if (actingStatus === "REJECTED" && !observationText) {
                                     toast.error("O motivo da rejeição é obrigatório.");
@@ -1101,7 +1174,7 @@ const SpaceManagement = () => {
                                 setIsObservationModalOpen(false);
                             }}
                         >
-                            Confirmar {actingStatus === "APPROVED" ? "Aprovação" : "Rejeição"}
+                            Finalizar e {actingStatus === "APPROVED" ? "Aprovar" : "Rejeitar"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

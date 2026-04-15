@@ -244,100 +244,149 @@ const AdminTracks = () => {
 
             {/* DIALOG DE CRIAÇÃO/EDIÇÃO */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl sm:rounded-3xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-black">{editingTrack ? 'Editar Trilha' : 'Nova Trilha'}</DialogTitle>
+                <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-slate-900 mx-auto">
+                    <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-6">
+                            <div className="bg-blue-600 text-white p-4 rounded-3xl shadow-lg shadow-blue-100 dark:shadow-none">
+                                <LinkIcon className="h-7 w-7" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                                    {editingTrack ? 'Editar Trilha' : 'Nova Trilha'}
+                                </DialogTitle>
+                                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                                    Configuração de formação continuada.
+                                </DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
 
-                    <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-                        <div className="space-y-4">
-                            <div className="grid gap-2">
-                                <label className="text-sm font-bold uppercase tracking-wider text-slate-500">Título</label>
-                                <Input
-                                    value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="Ex: Formação em IA para Professores"
-                                    className="rounded-xl border-slate-200"
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <label className="text-sm font-bold uppercase tracking-wider text-slate-500">Descrição</label>
-                                <Textarea
-                                    value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Descreva o objetivo da trilha..."
-                                    className="rounded-xl border-slate-200 min-h-[100px]"
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <label className="text-sm font-bold uppercase tracking-wider text-slate-500">Imagem da Trilha (Opcional)</label>
-                                <div className="flex items-center gap-4">
-                                    {(imagePreview || formData.imageUrl) && (
-                                        <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-100 flex-shrink-0">
-                                            <img src={imagePreview ? imagePreview : getAssetUrl(formData.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
-                                        </div>
-                                    )}
-                                    <div className="flex-1">
+                    <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[80vh] bg-white dark:bg-slate-900">
+                        <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+                            <div className="space-y-8">
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="h-6 w-1 bg-blue-600 rounded-full" />
+                                        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Metadados da Trilha</h3>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Título da Trilha *</Label>
                                         <Input
-                                            type="file"
-                                            onChange={handleFileChange}
-                                            accept="image/*"
-                                            className="rounded-xl border-slate-200 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            value={formData.title}
+                                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                            placeholder="Ex: Formação em IA para Professores"
+                                            className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
+                                            required
                                         />
-                                        <p className="text-[10px] text-slate-400 mt-1">PNG, JPG ou WEBP até 5MB.</p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Descrição Detalhada *</Label>
+                                        <Textarea
+                                            value={formData.description}
+                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                            placeholder="Descreva o objetivo da trilha, público-alvo e o que será abordado..."
+                                            className="rounded-[2rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[140px] resize-none focus-visible:ring-blue-500 transition-all shadow-inner font-medium"
+                                            required
+                                        />
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="grid gap-4">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold uppercase tracking-wider text-slate-500">Vincular Eventos ({formData.eventIds.length})</label>
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="h-6 w-1 bg-emerald-500 rounded-full" />
+                                        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Identidade Visual</h3>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-inner">
+                                        <div className="w-28 h-28 rounded-3xl overflow-hidden border-4 border-white dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-800 flex-shrink-0 group relative cursor-pointer">
+                                            {imagePreview || formData.imageUrl ? (
+                                                <img src={imagePreview ? imagePreview : getAssetUrl(formData.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                                                    <ImageIcon className="w-8 h-8 opacity-20" />
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Upload className="w-6 h-6 text-white" />
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 w-full space-y-4">
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Upload da Capa</p>
+                                            <Label htmlFor="track-image" className="flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white dark:bg-slate-800 px-6 text-sm font-black text-slate-900 dark:text-white hover:bg-slate-50 transition-all shadow-sm">
+                                                {selectedFile ? 'Trocar Arquivo' : 'Escolher Imagem...'}
+                                                <Input
+                                                    id="track-image"
+                                                    type="file"
+                                                    onChange={handleFileChange}
+                                                    accept="image/*"
+                                                    className="sr-only"
+                                                />
+                                            </Label>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight px-1 italic">Recomendado: 1200x630px • PNG ou WEBP</p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                                    <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-                                        {loadingEvents ? (
-                                            <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-500" /></div>
-                                        ) : eventsData?.map((event) => {
-                                            const isSelected = formData.eventIds.includes(event.id);
-                                            return (
-                                                <div
-                                                    key={event.id}
-                                                    onClick={() => toggleEventSelection(event.id)}
-                                                    className={`p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-4 h-4 rounded border-2 transition-all flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300 dark:border-slate-700'}`}>
-                                                            {isSelected && <Plus className="w-3 h-3 text-white" />}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-bold line-clamp-1">{event.title}</div>
-                                                            <div className="text-xs text-slate-500">{new Date(event.startDate).toLocaleDateString('pt-BR')}</div>
-                                                        </div>
-                                                    </div>
-                                                    {isSelected && (
-                                                        <Badge className="bg-blue-600 text-white border-none text-[10px]">Selecionado</Badge>
-                                                    )}
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-6 w-1 bg-amber-500 rounded-full" />
+                                            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Eventos Vinculados</h3>
+                                        </div>
+                                        <Badge className="bg-blue-600 text-white border-none py-1.5 px-3 rounded-full font-black text-[10px] uppercase shadow-lg shadow-blue-100 dark:shadow-none">
+                                            {formData.eventIds.length} {formData.eventIds.length === 1 ? 'Selecionado' : 'Selecionados'}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="border border-slate-100 dark:border-slate-800 rounded-[2rem] overflow-hidden bg-white dark:bg-slate-900 shadow-inner">
+                                        <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800 custom-scrollbar">
+                                            {loadingEvents ? (
+                                                <div className="p-16 text-center">
+                                                    <Loader2 className="w-10 h-10 animate-spin mx-auto text-blue-500 opacity-20" />
                                                 </div>
-                                            );
-                                        })}
+                                            ) : eventsData?.length === 0 ? (
+                                                <div className="p-16 text-center text-slate-400 italic text-sm font-medium">Nenhum evento disponível para vinculação.</div>
+                                            ) : (
+                                                eventsData?.map((event) => {
+                                                    const isSelected = formData.eventIds.includes(event.id);
+                                                    return (
+                                                        <div
+                                                            key={event.id}
+                                                            onClick={() => toggleEventSelection(event.id)}
+                                                            className={`p-6 flex items-center justify-between cursor-pointer group transition-all duration-300 ${isSelected ? 'bg-blue-50/40 dark:bg-blue-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'}`}
+                                                        >
+                                                            <div className="flex items-center gap-5">
+                                                                <div className={`w-7 h-7 rounded-xl border-2 transition-all flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-200 dark:shadow-none scale-110' : 'border-slate-200 group-hover:border-blue-400'}`}>
+                                                                    {isSelected && <Plus className="w-4 h-4 text-white stroke-[4px]" />}
+                                                                </div>
+                                                                <div>
+                                                                    <div className={`text-base font-black transition-colors ${isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-slate-700 dark:text-slate-300'}`}>{event.title}</div>
+                                                                    <div className="flex items-center text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
+                                                                        <Users className="w-3 h-3 mr-1.5" />
+                                                                        Data: {new Date(event.startDate).toLocaleDateString('pt-BR')}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2 sm:gap-0">
-                            <Button type="button" variant="ghost" onClick={closeDialog} className="rounded-xl font-bold">Cancelar</Button>
+                        <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+                            <Button type="button" variant="ghost" onClick={closeDialog} className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900">
+                                Descartar
+                            </Button>
                             <Button
                                 type="submit"
                                 disabled={saveMutation.isLoading}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-8"
+                                className="h-14 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-2xl shadow-blue-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]"
                             >
-                                {saveMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingTrack ? 'Salvar Alterações' : 'Criar Trilha')}
+                                {saveMutation.isLoading ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : (editingTrack ? 'Salvar Alterações' : 'Confirmar e Criar')}
                             </Button>
                         </DialogFooter>
                     </form>

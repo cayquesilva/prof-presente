@@ -585,42 +585,47 @@ const UserManagement = () => {
 
       {/* Dialog para alterar tipo de usuário */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Alterar Tipo de Usuário</DialogTitle>
-            <DialogDescription>
-              Alterando tipo para: <strong>{selectedUser?.name}</strong>
-            </DialogDescription>
+        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-[450px] w-full bg-white dark:bg-slate-900 mx-auto">
+          <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-left">
+            <div className="flex items-center gap-6">
+              <div className="bg-indigo-600 text-white p-4 rounded-3xl shadow-lg shadow-indigo-100 dark:shadow-none">
+                <Shield className="h-7 w-7" />
+              </div>
+              <div>
+                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                  Permissões
+                </DialogTitle>
+                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                  Nível de acesso para <strong>{selectedUser?.name}</strong>.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">Tipo de Usuário</Label>
+          <div className="p-10 space-y-4 bg-white dark:bg-slate-900">
+            <div className="space-y-4">
+              <Label htmlFor="role" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Nível de Acesso no Sistema</Label>
               <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger id="role">
+                <SelectTrigger id="role" className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-900 dark:text-white">
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USER">Usuário</SelectItem>
-                  <SelectItem value="TEACHER">Professor</SelectItem>
-                  <SelectItem value="CHECKIN_COORDINATOR">
-                    Coordenador de Check-in
-                  </SelectItem>
-                  <SelectItem value="ORGANIZER">Organizador</SelectItem>
-                  <SelectItem value="GESTOR_ESCOLA">
-                    Gestor Educacional
-                  </SelectItem>
-                  <SelectItem value="SPEAKER">Palestrante</SelectItem>
-                  <SelectItem value="ADMIN">Administrador</SelectItem>
+                <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/90 backdrop-blur-xl">
+                  <SelectItem value="USER" className="rounded-xl font-bold py-3">Usuário (Professor/Servidor)</SelectItem>
+                  <SelectItem value="TEACHER" className="rounded-xl font-bold py-3">Professor (Destaque)</SelectItem>
+                  <SelectItem value="CHECKIN_COORDINATOR" className="rounded-xl font-bold py-3">Coord. de Check-in</SelectItem>
+                  <SelectItem value="ORGANIZER" className="rounded-xl font-bold py-3">Organizador (Gestor)</SelectItem>
+                  <SelectItem value="GESTOR_ESCOLA" className="rounded-xl font-bold py-3">Gestor Educacional</SelectItem>
+                  <SelectItem value="SPEAKER" className="rounded-xl font-bold py-3">Palestrante</SelectItem>
+                  <SelectItem value="ADMIN" className="rounded-xl font-bold py-3">Administrador</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+          <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+            <Button variant="ghost" onClick={() => setIsRoleDialogOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900">
               Cancelar
             </Button>
-            <Button onClick={handleRoleChange} disabled={updateRoleMutation.isPending}>
-              {updateRoleMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            <Button onClick={handleRoleChange} disabled={updateRoleMutation.isPending} className="h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-2xl shadow-indigo-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]">
+              {updateRoleMutation.isPending ? "Salvando..." : "Salvar Nível"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -628,303 +633,367 @@ const UserManagement = () => {
 
       {/* DIALOG DE EDIÇÃO DE USUÁRIO */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>
-              Atualize os dados cadastrais do usuário.
-            </DialogDescription>
+        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-2xl w-full bg-white dark:bg-slate-900 mx-auto">
+          <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-left">
+            <div className="flex items-center gap-6">
+              <div className="bg-slate-900 text-white p-4 rounded-3xl shadow-lg border-2 border-slate-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+              </div>
+              <div>
+                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                  Editar Cadastro
+                </DialogTitle>
+                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                  Atualize os dados de <strong>{userToEdit?.name}</strong>.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label>Nome Completo</Label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Nome do usuário"
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>Email</Label>
-              <Input
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                placeholder="email@exemplo.com"
-                type="email"
-              />
-            </div>
+          
+          <div className="max-h-[70vh] overflow-y-auto p-10 space-y-10 custom-scrollbar bg-white dark:bg-slate-900">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
+              <div className="space-y-4 md:col-span-2">
+                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Nome Completo *</Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Nome do usuário"
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                />
+              </div>
+              <div className="space-y-4 md:col-span-2">
+                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Email Institucional *</Label>
+                <Input
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="email@exemplo.com"
+                  type="email"
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>Data de Nascimento</Label>
-              <DatePicker
-                value={editBirthDate ? toZonedTime(editBirthDate, "America/Sao_Paulo") : null}
-                onSelect={(date) => setEditBirthDate(date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>CPF</Label>
-              <Input
-                value={editCpf}
-                onChange={(e) => {
-                  let v = e.target.value.replace(/\D/g, "");
-                  if (v.length > 11) v = v.slice(0, 11);
-                  v = v.replace(/(\d{3})(\d)/, "$1.$2")
-                    .replace(/(\d{3})(\d)/, "$1.$2")
-                    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-                  setEditCpf(v);
-                }}
-                placeholder="000.000.000-00"
-                maxLength={14}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Telefone</Label>
-              <Input
-                value={editPhone}
-                onChange={(e) => {
-                  let v = e.target.value.replace(/\D/g, "");
-                  if (v.length > 11) v = v.slice(0, 11);
-                  v = v.replace(/(\d{2})(\d)/, "($1) $2")
-                    .replace(/(\d{5})(\d)/, "$1-$2");
-                  setEditPhone(v);
-                }}
-                placeholder="(00) 00000-0000"
-                maxLength={15}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Endereço</Label>
-              <Input
-                value={editAddress}
-                onChange={(e) => setEditAddress(e.target.value)}
-                placeholder="Rua, número"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Bairro</Label>
-              <Input
-                value={editNeighborhood}
-                onChange={(e) => setEditNeighborhood(e.target.value)}
-                placeholder="Bairro"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Profissão / Cargo</Label>
-              <Select value={editProfession} onValueChange={setEditProfession}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {professionOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Carga Horária</Label>
-          <Input
-            value={editWorkload}
-            onChange={(e) => setEditWorkload(e.target.value)}
-            placeholder="Ex: 40h"
-          />
-        </div>
-
-        {editProfession?.toLowerCase() === "professor" && (
-          <>
-                <div className="space-y-2">
-                  <Label>Série</Label>
-                  <Select value={editSerie} onValueChange={setEditSerie}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {serieOptions.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Data de Nascimento</Label>
+                <div className="h-14">
+                  <DatePicker
+                    value={editBirthDate ? toZonedTime(editBirthDate, "America/Sao_Paulo") : null}
+                    onSelect={(date) => setEditBirthDate(date ? fromZonedTime(date, "America/Sao_Paulo") : "")}
+                  />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Componente Curricular</Label>
-                  <Select value={editSubject} onValueChange={setEditSubject}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjectOptions.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="space-y-4">
+                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">CPF</Label>
+                <Input
+                  value={editCpf}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "");
+                    if (v.length > 11) v = v.slice(0, 11);
+                    v = v.replace(/(\d{3})(\d)/, "$1.$2")
+                      .replace(/(\d{3})(\d)/, "$1.$2")
+                      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+                    setEditCpf(v);
+                  }}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">WhatsApp / Contato</Label>
+                <Input
+                  value={editPhone}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "");
+                    if (v.length > 11) v = v.slice(0, 11);
+                    v = v.replace(/(\d{2})(\d)/, "($1) $2")
+                      .replace(/(\d{5})(\d)/, "$1-$2");
+                    setEditPhone(v);
+                  }}
+                  placeholder="(00) 00000-0000"
+                  maxLength={15}
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Carga Horária</Label>
+                <Input
+                  value={editWorkload}
+                  onChange={(e) => setEditWorkload(e.target.value)}
+                  placeholder="Ex: 40h"
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="pt-4 md:col-span-2">
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-8">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 px-1">Localização</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <Label className="font-black text-slate-500 uppercase text-[9px] tracking-widest ml-1">Logradouro / Número</Label>
+                      <Input
+                        value={editAddress}
+                        onChange={(e) => setEditAddress(e.target.value)}
+                        placeholder="Rua, número"
+                        className="h-12 rounded-xl bg-white border-transparent focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white text-sm"
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="font-black text-slate-500 uppercase text-[9px] tracking-widest ml-1">Bairro</Label>
+                      <Input
+                        value={editNeighborhood}
+                        onChange={(e) => setEditNeighborhood(e.target.value)}
+                        placeholder="Bairro"
+                        className="h-12 rounded-xl bg-white border-transparent focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
+              </div>
+
+              <div className="pt-4 md:col-span-2">
+                <div className="p-8 bg-blue-50/30 dark:bg-blue-900/10 rounded-[2.5rem] border border-blue-100/50 dark:border-blue-800/30 space-y-8">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 px-1">Dados Profissionais</h4>
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <Label className="font-black text-blue-500 uppercase text-[9px] tracking-widest ml-1">Profissão / Cargo Atual</Label>
+                      <Select value={editProfession} onValueChange={setEditProfession}>
+                        <SelectTrigger className="h-14 rounded-2xl bg-white border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white">
+                          <SelectValue placeholder="Selecione o cargo" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
+                          {professionOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value} className="rounded-xl font-bold py-3">{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {editProfession?.toLowerCase() === "professor" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="space-y-3">
+                          <Label className="font-black text-blue-500 uppercase text-[9px] tracking-widest ml-1">Série / Ano</Label>
+                          <Select value={editSerie} onValueChange={setEditSerie}>
+                            <SelectTrigger className="h-12 rounded-xl bg-white border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white text-sm">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
+                              {serieOptions.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value} className="rounded-xl font-bold py-2">{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="font-black text-blue-500 uppercase text-[9px] tracking-widest ml-1">Comp. Curricular</Label>
+                          <Select value={editSubject} onValueChange={setEditSubject}>
+                            <SelectTrigger className="h-12 rounded-xl bg-white border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white text-sm">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
+                              {subjectOptions.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value} className="rounded-xl font-bold py-2">{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          
+          <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+            <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900">
               Cancelar
             </Button>
-            <Button onClick={handleUpdateUser} disabled={updateUserMutation.isPending}>
-              {updateUserMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            <Button onClick={handleUpdateUser} disabled={updateUserMutation.isPending} className="h-14 bg-slate-900 hover:bg-black text-white font-black rounded-2xl shadow-2xl shadow-slate-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]">
+              {updateUserMutation.isPending ? "Processando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
 
-      {/* Dialog para redefinir senha */}
-      < Dialog
-        open={isPasswordDialogOpen}
-        onOpenChange={setIsPasswordDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Redefinir Senha</DialogTitle>
-            <DialogDescription>
-              Redefinindo senha para: <strong>{selectedUser?.name}</strong>
-            </DialogDescription>
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-[450px] w-full bg-white dark:bg-slate-900 mx-auto">
+          <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-left">
+            <div className="flex items-center gap-6">
+              <div className="bg-rose-600 text-white p-4 rounded-3xl shadow-lg shadow-rose-100 dark:shadow-none">
+                <Key className="h-7 w-7" />
+              </div>
+              <div>
+                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                  Nova Senha
+                </DialogTitle>
+                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                  Redefinição para <strong>{selectedUser?.name}</strong>.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Nova Senha</Label>
+          <div className="p-10 space-y-8 bg-white dark:bg-slate-900">
+            <div className="space-y-4">
+              <Label htmlFor="newPassword" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Crie uma Nova Senha</Label>
               <Input
                 id="newPassword"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
+                className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-rose-500 transition-all font-bold text-slate-900 dark:text-white"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+            <div className="space-y-4">
+              <Label htmlFor="confirmPassword" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Confirme a Senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Digite a senha novamente"
+                placeholder="Repita a nova senha"
+                className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-rose-500 transition-all font-bold text-slate-900 dark:text-white"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsPasswordDialogOpen(false)}
-            >
+          <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+            <Button variant="ghost" onClick={() => setIsPasswordDialogOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900">
               Cancelar
             </Button>
-            <Button
-              onClick={handlePasswordReset}
-              disabled={resetPasswordMutation.isPending}
-            >
-              {resetPasswordMutation.isPending ? "Redefinindo..." : "Redefinir"}
+            <Button onClick={handlePasswordReset} disabled={resetPasswordMutation.isPending} className="h-14 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl shadow-2xl shadow-rose-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]">
+              {resetPasswordMutation.isPending ? "Processando..." : "Redefinir Senha"}
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle>Cadastrar Novo Usuário</DialogTitle>
-            <DialogDescription>
-              Preencha os dados abaixo para criar uma nova conta manualmente.
-            </DialogDescription>
+        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-4xl w-full h-full sm:h-auto max-h-[95vh] flex flex-col bg-white dark:bg-slate-900 mx-auto">
+          <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-left">
+            <div className="flex items-center gap-6">
+              <div className="bg-emerald-600 text-white p-4 rounded-3xl shadow-lg shadow-emerald-100 dark:shadow-none">
+                <UserPlus className="h-7 w-7" />
+              </div>
+              <div>
+                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                  Novo Cadastro
+                </DialogTitle>
+                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                  Criação manual de conta institucional no sistema.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <AdminUserRegister
-            onSuccess={() => {
-              setIsRegisterDialogOpen(false);
-              queryClient.invalidateQueries(["admin-users"]);
-            }}
-            onCancel={() => setIsRegisterDialogOpen(false)}
-          />
+          <div className="flex-1 overflow-hidden">
+            <AdminUserRegister
+              onSuccess={() => {
+                setIsRegisterDialogOpen(false);
+                queryClient.invalidateQueries(["admin-users"]);
+              }}
+              onCancel={() => setIsRegisterDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para Histórico de Inscrições */}
       <Dialog open={isEnrollmentsDialogOpen} onOpenChange={setIsEnrollmentsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Histórico de Inscrições</DialogTitle>
-            <DialogDescription>
-              Eventos participados por <strong>{selectedUserForEnrollments?.name}</strong>
-            </DialogDescription>
+        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-4xl w-full h-full sm:h-auto max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 mx-auto">
+          <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-left">
+            <div className="flex items-center gap-6">
+              <div className="bg-blue-600 text-white p-4 rounded-3xl shadow-lg shadow-blue-100 dark:shadow-none">
+                <Calendar className="h-7 w-7" />
+              </div>
+              <div>
+                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                  Histórico
+                </DialogTitle>
+                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                  Participações de <strong>{selectedUserForEnrollments?.name}</strong>.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          {isLoadingEnrollments ? (
-            <div className="py-8 text-center bg-gray-50 rounded-lg">
-              <p className="text-gray-500">Carregando histórico...</p>
-            </div>
-          ) : userEnrollments && userEnrollments.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Local</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check-in</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {userEnrollments.map((enrollment) => (
-                    <TableRow key={enrollment.eventId}>
-                      <TableCell className="font-medium">{enrollment.eventTitle}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {new Date(enrollment.eventDate).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {enrollment.location}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {enrollment.status === "APPROVED" ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200 border-none">Confirmado</Badge>
-                        ) : enrollment.status === "PENDING" ? (
-                          <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50">Pendente</Badge>
-                        ) : (
-                          <Badge variant="destructive">Cancelado</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {enrollment.checkInTime ? (
-                          <div className="flex items-center text-green-600 font-medium text-xs">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {new Date(enrollment.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
-                      </TableCell>
+          <div className="flex-1 overflow-y-auto p-10 bg-slate-50/10 dark:bg-slate-900/10 custom-scrollbar">
+            {isLoadingEnrollments ? (
+              <div className="py-20 text-center">
+                <div className="animate-spin h-10 w-10 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-6" />
+                <p className="text-slate-500 font-black uppercase text-[10px] tracking-widest">Sincronizando registros...</p>
+              </div>
+            ) : userEnrollments && userEnrollments.length > 0 ? (
+              <div className="rounded-[2rem] border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
+                    <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-500 p-6">Evento</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-500 p-6">Sessão / Local</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-500 p-6 text-center">Status</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-500 p-6 text-center">Presença</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="py-12 text-center bg-gray-50 rounded-lg border border-dashed">
-              <Calendar className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 font-medium">Nenhuma inscrição encontrada</p>
-              <p className="text-sm text-gray-400">Este usuário ainda não se inscreveu em eventos.</p>
-            </div>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {userEnrollments.map((enrollment) => (
+                      <TableRow key={enrollment.eventId} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors border-slate-50 dark:border-slate-800">
+                        <TableCell className="p-6">
+                          <p className="font-black text-slate-900 dark:text-white text-sm leading-tight">{enrollment.eventTitle}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tight">ID: {enrollment.eventId.slice(-8).toUpperCase()}</p>
+                        </TableCell>
+                        <TableCell className="p-6">
+                          <div className="space-y-2">
+                            <div className="flex items-center text-xs font-black text-slate-600 dark:text-slate-300">
+                              <Calendar className="w-3.5 h-3.5 mr-2 text-blue-500" />
+                              {new Date(enrollment.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </div>
+                            <div className="flex items-center text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                              <MapPin className="w-3 h-3 mr-2" />
+                              {enrollment.location}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="p-6 text-center">
+                          {enrollment.status === "APPROVED" ? (
+                            <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border-none px-4 h-7 rounded-full font-black text-[9px] uppercase tracking-widest">Confirmado</Badge>
+                          ) : enrollment.status === "PENDING" ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/20 px-4 h-7 rounded-full font-black text-[9px] uppercase tracking-widest">Pendente</Badge>
+                          ) : (
+                            <Badge variant="destructive" className="px-4 h-7 rounded-full font-black text-[9px] uppercase tracking-widest">Cancelado</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="p-6 text-center">
+                          {enrollment.checkInTime ? (
+                            <div className="inline-flex items-center px-4 py-2 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-xl text-[10px] font-black uppercase tracking-tighter shadow-sm">
+                              <Clock className="w-3.5 h-3.5 mr-2" />
+                              {new Date(enrollment.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          ) : (
+                            <span className="text-slate-200 dark:text-slate-700 font-black text-xs tracking-widest">--:--</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="py-20 text-center bg-white dark:bg-slate-800/50 rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                <div className="bg-slate-50 dark:bg-slate-800 h-24 w-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <Calendar className="w-10 h-10 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Sem Registros</h3>
+                <p className="text-slate-400 text-sm font-bold max-w-xs mx-auto px-6 italic">Este membro ainda não registrou participação em eventos.</p>
+              </div>
+            )}
+          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEnrollmentsDialogOpen(false)}>Fechar</Button>
+          <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800">
+            <Button variant="ghost" onClick={() => setIsEnrollmentsDialogOpen(false)} className="h-14 rounded-2xl font-black uppercase tracking-widest w-full text-slate-500 hover:text-slate-900">
+              Concluir Visualização
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

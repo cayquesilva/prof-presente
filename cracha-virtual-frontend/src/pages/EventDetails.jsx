@@ -183,33 +183,81 @@ const EventDetails = () => {
                     Compartilhar
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                  <DialogHeader>
-                    <DialogTitle className="text-slate-900 dark:text-white">Compartilhar Evento</DialogTitle>
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-[450px] w-full bg-white dark:bg-slate-900 mx-auto">
+                  <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-slate-800/50">
+                    <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Compartilhar Evento</DialogTitle>
+                    <DialogDescription className="font-medium text-slate-600 dark:text-slate-400">
+                      Convide seus colegas para este evento educativo.
+                    </DialogDescription>
                   </DialogHeader>
-                  <div className="flex items-center justify-center gap-4 py-6">
-                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://api.whatsapp.com/send?text=Confira este evento: ${event?.title} ${window.location.href}`, '_blank')}>
-                      <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12c0 2.17.69 4.18 1.86 5.82L3 22l4.24-.85C8.82 22.31 10.36 23 12 23c6.07 0 11-4.93 11-11S18.07 2 12 2zm5.72 15.34c-.26.74-1.51 1.4-2.09 1.46-.53.06-1.22.18-3.41-.73-2.63-1.08-4.32-3.8-4.46-3.98-.13-.18-1.07-1.42-1.07-2.71s.67-1.92.9-2.16c.23-.24.5-.3.67-.3h.34c.17 0 .4.06.63.63.24.6.82 2.01.9 2.19.07.18.12.39 0 .63-.12.24-.18.39-.37.6-.18.21-.39.46-.55.63-.18.2-.38.42-.16.8 1.13 1.95 2.5 2.66 3.61 3.23.4.21.64.18.88-.06.24-.24 1.05-1.22 1.33-1.64.28-.42.56-.35.94-.21.38.14 2.41 1.14 2.82 1.34.41.2.68.31.78.48.1.17.1.98-.16 1.72z" clipRule="evenodd" /></svg>
-                    </Button>
-                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')}>
-                      <Facebook className="w-6 h-6 text-blue-600" />
-                    </Button>
-                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(event?.title)}`, '_blank')}>
-                      <Twitter className="w-6 h-6 text-sky-500" />
-                    </Button>
-                    <Button variant="outline" size="icon" className="rounded-full w-12 h-12" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank')}>
-                      <Linkedin className="w-6 h-6 text-blue-700" />
-                    </Button>
+                  
+                  <div className="p-8 space-y-8 bg-white dark:bg-slate-900">
+                    <div className="grid grid-cols-4 gap-4">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="rounded-2xl w-full h-16 border-slate-100 dark:border-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 transition-all group" 
+                        onClick={() => window.open(`https://api.whatsapp.com/send?text=Confira este evento: ${event?.title} ${window.location.href}`, '_blank')}
+                        title="WhatsApp"
+                      >
+                        <svg className="w-8 h-8 text-emerald-500 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 2.17.69 4.18 1.86 5.82L3 22l4.24-.85C8.82 22.31 10.36 23 12 23c6.07 0 11-4.93 11-11S18.07 2 12 2zm5.72 15.34c-.26.74-1.51 1.4-2.09 1.46-.53.06-1.22.18-3.41-.73-2.63-1.08-4.32-3.8-4.46-3.98-.13-.18-1.07-1.42-1.07-2.71s.67-1.92.9-2.16c.23-.24.5-.3.67-.3h.34c.17 0 .4.06.63.63.24.6.82 2.01.9 2.19.07.18.12.39 0 .63-.12.24-.18.39-.37.6-.18.21-.39.46-.55.63-.18.2-.38.42-.16.8 1.13 1.95 2.5 2.66 3.61 3.23.4.21.64.18.88-.06.24-.24 1.05-1.22 1.33-1.64.28-.42.56-.35.94-.21.38.14 2.41 1.14 2.82 1.34.41.2.68.31.78.48.1.17.1.98-.16 1.72z"/></svg>
+                      </Button>
+
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="rounded-2xl w-full h-16 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 transition-all group" 
+                        onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank')}
+                        title="Facebook"
+                      >
+                        <Facebook className="w-8 h-8 text-blue-600 group-hover:scale-110 transition-transform" />
+                      </Button>
+
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="rounded-2xl w-full h-16 border-slate-100 dark:border-slate-800 hover:bg-sky-50 dark:hover:bg-sky-900/20 hover:border-sky-200 transition-all group" 
+                        onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(event?.title)}`, '_blank')}
+                        title="Twitter"
+                      >
+                        <Twitter className="w-8 h-8 text-sky-500 group-hover:scale-110 transition-transform" />
+                      </Button>
+
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="rounded-2xl w-full h-16 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 transition-all group" 
+                        onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank')}
+                        title="LinkedIn"
+                      >
+                        <Linkedin className="w-8 h-8 text-blue-700 group-hover:scale-110 transition-transform" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Link do Evento</Label>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={copyToClipboard} 
+                          className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold gap-2 shadow-xl shadow-blue-100 dark:shadow-none transition-all active:scale-95"
+                        >
+                          <LinkIcon className="w-4 h-4" />
+                          Copiar Link
+                        </Button>
+                        <Button 
+                          onClick={handleShare} 
+                          variant="secondary" 
+                          className="h-12 w-12 rounded-xl flex items-center justify-center p-0 lg:hidden"
+                          title="Mais opções"
+                        >
+                          <Share2 className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button onClick={copyToClipboard} variant="secondary" className="w-full gap-2">
-                      <LinkIcon className="w-4 h-4" />
-                      Copiar Link
-                    </Button>
-                    <Button onClick={handleShare} variant="secondary" className="w-full gap-2 lg:hidden">
-                      <Share2 className="w-4 h-4" />
-                      Compartilhar via Celular
-                    </Button>
+
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 text-center">
+                    <p className="text-xs text-slate-500 font-medium italic">A educação transforma quando compartilhada.</p>
                   </div>
                 </DialogContent>
               </Dialog>

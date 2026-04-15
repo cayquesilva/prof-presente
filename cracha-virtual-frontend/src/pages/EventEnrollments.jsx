@@ -418,58 +418,74 @@ const EventEnrollments = () => {
 
             {/* Move Participant Modal */}
             <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle>Mover Participante</DialogTitle>
-                        <CardDescription>
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-[500px] w-full bg-white dark:bg-slate-900 mx-auto">
+                    <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-slate-800/50">
+                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Mover Participante</DialogTitle>
+                        <DialogDescription className="font-medium text-slate-600 dark:text-slate-400">
                             {selectedEnrollment ? (
                                 <>Selecione o evento de destino para <strong>{selectedEnrollment?.user.name}</strong>.</>
                             ) : (
                                 <>Selecione o evento de destino para os <strong>{selectedEnrollments.length} participantes selecionados</strong>.</>
                             )}
-                        </CardDescription>
+                        </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-4">
+                    <div className="p-8 space-y-6 bg-white dark:bg-slate-900">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Buscar Evento de Destino</label>
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Buscar Evento de Destino</Label>
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                 <Input
-                                    placeholder="Nome do evento..."
-                                    className="pl-8"
+                                    placeholder="Digite o nome do evento..."
+                                    className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 transition-all"
                                     value={eventSearch}
                                     onChange={(e) => setEventSearch(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Selecione na lista:</label>
-                            <div className="border rounded-md max-h-[200px] overflow-y-auto">
+                        <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Resultados da busca</Label>
+                            <div className="border border-slate-100 rounded-2xl max-h-[250px] overflow-y-auto custom-scrollbar divide-y divide-slate-50">
                                 {eventsList?.map((ev) => (
                                     <div
                                         key={ev.id}
-                                        className={`p-3 cursor-pointer hover:bg-muted border-b last:border-0 flex justify-between items-center ${targetEventId === ev.id ? 'bg-muted border-primary' : ''}`}
+                                        className={`p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 flex justify-between items-center transition-all ${targetEventId === ev.id ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
                                         onClick={() => setTargetEventId(ev.id)}
                                     >
-                                        <div>
-                                            <p className="font-medium text-sm">{ev.title}</p>
-                                            <p className="text-xs text-muted-foreground">{ev.location}</p>
+                                        <div className="min-w-0 pr-4">
+                                            <p className={`font-bold text-sm truncate ${targetEventId === ev.id ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>{ev.title}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <MapPin className="h-3 w-3 text-slate-400" />
+                                                <p className="text-xs text-slate-500 truncate">{ev.location}</p>
+                                            </div>
                                         </div>
-                                        {targetEventId === ev.id && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                                        {targetEventId === ev.id && (
+                                            <div className="bg-blue-600 text-white p-1 rounded-full shadow-lg shadow-blue-200">
+                                                <CheckCircle2 className="h-4 w-4" />
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                                 {eventsList?.length === 0 && (
-                                    <p className="p-4 text-center text-sm text-muted-foreground">Nenhum evento encontrado.</p>
+                                    <div className="p-8 text-center bg-slate-50/30">
+                                        <p className="text-sm text-slate-400 italic">Nenhum evento encontrado.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsMoveModalOpen(false)}>Cancelar</Button>
+                    <DialogFooter className="p-6 bg-slate-50 dark:bg-slate-800 flex flex-col sm:flex-row gap-3">
+                        <Button 
+                            variant="ghost" 
+                            className="h-11 rounded-xl font-bold order-2 sm:order-1"
+                            onClick={() => setIsMoveModalOpen(false)}
+                        >
+                            Cancelar
+                        </Button>
                         <Button
+                            className="h-11 px-8 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-50 order-1 sm:order-2"
                             disabled={!targetEventId || moveParticipantMutation.isPending}
                             onClick={() => moveParticipantMutation.mutate({
                                 enrollmentId: selectedEnrollment ? selectedEnrollment.id : "BULK",

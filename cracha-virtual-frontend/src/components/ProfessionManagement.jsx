@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Briefcase } from "lucide-react";
 
 const ProfessionManagement = () => {
   const queryClient = useQueryClient();
@@ -200,47 +200,63 @@ const ProfessionManagement = () => {
 
         {/* Dialog para Criar/Editar */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingProfession ? "Editar Profissão" : "Nova Profissão"}
-              </DialogTitle>
+          <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-[500px] w-full bg-white dark:bg-slate-900 mx-auto">
+            <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-left">
+              <div className="flex items-center gap-6">
+                <div className="bg-slate-900 text-white p-4 rounded-3xl shadow-lg border-2 border-slate-100 dark:border-slate-800">
+                  <Briefcase className="h-7 w-7" />
+                </div>
+                <div>
+                  <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                    {editingProfession ? "Editar Cargo" : "Novo Cargo"}
+                  </DialogTitle>
+                  <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                    Gestão de especialidades.
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome da Profissão</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
+            <form onSubmit={handleSubmit} className="flex flex-col bg-white dark:bg-slate-900">
+              <div className="p-10 space-y-8 bg-white dark:bg-slate-900">
+                <div className="space-y-4">
+                  <Label htmlFor="name" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Nome da Profissão *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder="Ex: Professor de Matemática"
+                    className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                    required
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="description" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Descrição (Opcional)</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Breve descrição sobre a especialidade..."
+                    rows={3}
+                    className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-slate-900 transition-all shadow-inner font-medium text-slate-900 dark:text-white"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição (Opcional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                />
-              </div>
-              <DialogFooter>
+              <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
                 <DialogClose asChild>
-                  <Button type="button" variant="secondary">
+                  <Button type="button" variant="ghost" className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900">
                     Cancelar
                   </Button>
                 </DialogClose>
                 <Button
                   type="submit"
-                  disabled={
-                    createMutation.isPending || updateMutation.isPending
-                  }
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="h-14 bg-slate-900 hover:bg-black text-white font-black rounded-2xl shadow-2xl shadow-slate-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]"
                 >
-                  Salvar
+                  {createMutation.isPending || updateMutation.isPending ? "Salvando..." : (editingProfession ? "Salvar Alterações" : "Confirmar Cargo")}
                 </Button>
               </DialogFooter>
             </form>

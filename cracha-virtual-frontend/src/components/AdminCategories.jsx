@@ -115,57 +115,102 @@ export default function AdminCategories() {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {editingCategory ? "Editar Categoria" : "Nova Categoria"}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Preencha os dados da categoria abaixo.
-                        </DialogDescription>
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl max-w-[500px] w-full bg-white dark:bg-slate-900 mx-auto">
+                    <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-6">
+                            <div className="bg-indigo-600 text-white p-4 rounded-3xl shadow-lg shadow-indigo-100 dark:shadow-none">
+                                <Tag className="h-7 w-7" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+                                    {editingCategory ? "Editar Categoria" : "Nova Categoria"}
+                                </DialogTitle>
+                                <DialogDescription className="font-bold text-slate-500 text-base mt-1">
+                                    Organização temática de eventos.
+                                </DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Nome da Categoria</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Cor da Tag</Label>
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className="w-10 h-10 rounded-md border shadow-sm cursor-pointer"
-                                    style={{ backgroundColor: formData.color }}
-                                    onClick={() => setShowColorPicker(!showColorPicker)}
-                                />
+                    <form onSubmit={handleSubmit} className="flex flex-col bg-white dark:bg-slate-900">
+                        <div className="p-10 space-y-10 custom-scrollbar overflow-y-auto max-h-[70vh]">
+                            <div className="space-y-4">
+                                <Label htmlFor="name" className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Nome da Categoria *</Label>
                                 <Input
-                                    value={formData.color}
-                                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                                    placeholder="#000000"
-                                    className="flex-1"
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="Ex: Tecnologia, Educação, Gestão"
+                                    className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-900 dark:text-white"
+                                    required
                                 />
                             </div>
-                            {showColorPicker && (
-                                <div className="mt-2 p-2 border rounded-md inline-block bg-white shadow-lg z-50">
-                                    <HexColorPicker color={formData.color} onChange={(val) => setFormData({ ...formData, color: val })} />
+
+                            <div className="space-y-4">
+                                <Label className="font-black text-slate-700 dark:text-slate-300 ml-1 uppercase text-[10px] tracking-[0.2em]">Identificação Visual (Cor)</Label>
+                                <div className="flex items-center gap-6 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-inner">
+                                    <button
+                                        type="button"
+                                        className="w-20 h-20 rounded-[1.5rem] border-4 border-white dark:border-slate-800 shadow-2xl cursor-pointer transition-transform hover:scale-110 active:scale-95 flex-shrink-0"
+                                        style={{ backgroundColor: formData.color }}
+                                        onClick={() => setShowColorPicker(!showColorPicker)}
+                                        title="Abrir seletor de cores"
+                                    />
+                                    <div className="flex-1 space-y-3">
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs">HEX</div>
+                                            <Input
+                                                value={formData.color.replace('#', '')}
+                                                onChange={(e) => setFormData({ ...formData, color: `#${e.target.value.replace('#', '')}` })}
+                                                placeholder="FFFFFF"
+                                                className="h-12 rounded-xl border-slate-200 pl-12 font-mono uppercase text-slate-900 dark:text-white font-black"
+                                                maxLength={7}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight px-1 italic">Clique no quadrado para selecionar visualmente</p>
+                                    </div>
                                 </div>
-                            )}
+                                
+                                {showColorPicker && (
+                                    <div className="mt-4 p-8 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] bg-slate-50 dark:bg-slate-800/30 shadow-inner w-full flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-300">
+                                        <div className="w-full flex justify-center">
+                                            <HexColorPicker 
+                                                color={formData.color} 
+                                                onChange={(val) => setFormData({ ...formData, color: val })} 
+                                                className="!w-full !max-w-[240px] !h-[200px]"
+                                            />
+                                        </div>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => setShowColorPicker(false)}
+                                            className="rounded-full font-black text-[10px] uppercase tracking-widest px-6 h-8"
+                                        >
+                                            Concluído
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-4">
-                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                        <DialogFooter className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setIsDialogOpen(false)}
+                                className="h-14 rounded-2xl font-black uppercase tracking-widest order-2 sm:order-1 sm:flex-1 text-slate-500 hover:text-slate-900"
+                            >
                                 Cancelar
                             </Button>
-                            <Button type="submit">
-                                {editingCategory ? "Salvar Alterações" : "Criar Categoria"}
+                            <Button
+                                type="submit"
+                                disabled={createMutation.isLoading || updateMutation.isLoading}
+                                className="h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-2xl shadow-indigo-100 dark:shadow-none active:scale-95 transition-all text-lg uppercase tracking-wider order-1 sm:order-2 sm:flex-[2]"
+                            >
+                                {createMutation.isLoading || updateMutation.isLoading ? "Processando..." : editingCategory ? "Salvar Alterações" : "Confirmar Categoria"}
                             </Button>
-                        </div>
+                        </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>

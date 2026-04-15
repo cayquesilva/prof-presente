@@ -997,238 +997,210 @@ const Admin = () => {
                     Novo Evento
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[98vw] h-[98vh] max-h-[98vh] p-0 overflow-hidden flex flex-col">
-                  <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-hidden">
-
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingEvent ? "Editar Evento" : "Criar Novo Evento"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        Gerencie os detalhes, personalização e equipe do evento.
-                      </DialogDescription>
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-5xl w-full h-[100dvh] sm:h-[90vh] flex flex-col">
+                  <div className="flex-1 flex flex-col min-h-0 bg-white">
+                    <DialogHeader className="p-6 sm:p-8 pb-4 bg-slate-50/50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <DialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+                            {editingEvent ? "Editar Evento" : "Criar Novo Evento"}
+                          </DialogTitle>
+                          <DialogDescription className="font-medium">
+                            Gerencie os detalhes, personalização e equipe do seu evento educativo.
+                          </DialogDescription>
+                        </div>
+                      </div>
                     </DialogHeader>
 
                     <Tabs defaultValue="details" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
-                      <div className="w-full overflow-x-auto pb-2 block scrollbar-hide">
-                        <TabsList className="inline-flex w-max min-w-full justify-start space-x-2 h-auto p-1">
-                          <TabsTrigger value="details">Detalhes</TabsTrigger>
-                          <TabsTrigger value="badge" disabled={!editingEvent}>Crachá</TabsTrigger>
-                          <TabsTrigger value="certificate" disabled={!editingEvent}>Certificado</TabsTrigger>
-                          <TabsTrigger value="streaming" disabled={!editingEvent}>Transmissão</TabsTrigger>
-                          <TabsTrigger value="staff" disabled={!editingEvent}>Equipe</TabsTrigger>
-                        </TabsList>
+                      <div className="px-6 sm:px-8 border-b bg-slate-50/30">
+                        <div className="w-full overflow-x-auto pb-0 block scrollbar-hide">
+                          <TabsList className="inline-flex w-max min-w-full justify-start gap-2 h-12 p-0 bg-transparent border-none">
+                            <TabsTrigger value="details" className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-t-xl px-6 font-bold text-sm">Detalhes</TabsTrigger>
+                            <TabsTrigger value="badge" disabled={!editingEvent} className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-t-xl px-6 font-bold text-sm">Crachá</TabsTrigger>
+                            <TabsTrigger value="certificate" disabled={!editingEvent} className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-t-xl px-6 font-bold text-sm">Certificado</TabsTrigger>
+                            <TabsTrigger value="streaming" disabled={!editingEvent} className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-t-xl px-6 font-bold text-sm">Transmissão</TabsTrigger>
+                            <TabsTrigger value="staff" disabled={!editingEvent} className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-t-xl px-6 font-bold text-sm">Equipe</TabsTrigger>
+                          </TabsList>
+                        </div>
                       </div>
 
-                      <TabsContent value="details" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                      <TabsContent value="details" className="flex-1 overflow-y-auto p-6 sm:p-8 mt-0 space-y-8 custom-scrollbar">
+                        <form onSubmit={handleSubmit} className="space-y-8 pb-4">
                           {/* ... Campos do formulário Principal ... */}
-                          <div className="space-y-2">
-                            <Label htmlFor="title">Título</Label>
-                            <Input
-                              id="title"
-                              value={eventForm.title}
-                              onChange={(e) =>
-                                setEventForm({ ...eventForm, title: e.target.value })
-                              }
-                              required
-                            />
-                          </div>
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="title" className="font-bold ml-1 text-slate-700 text-sm">Título do Evento <span className="text-destructive">*</span></Label>
+                                <Input
+                                  id="title"
+                                  value={eventForm.title}
+                                  onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                                  placeholder="Digite o nome do evento..."
+                                  className="h-11 rounded-xl border-slate-200"
+                                  required
+                                />
+                              </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="description">Descrição</Label>
-                            <Textarea
-                              id="description"
-                              value={eventForm.description}
-                              onChange={(e) =>
-                                setEventForm({
-                                  ...eventForm,
-                                  description: e.target.value,
-                                })
-                              }
-                              rows={4}
-                              required
-                            />
-                          </div>
+                              <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="description" className="font-bold ml-1 text-slate-700 text-sm">Descrição <span className="text-destructive">*</span></Label>
+                                <Textarea
+                                  id="description"
+                                  value={eventForm.description}
+                                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                                  rows={4}
+                                  placeholder="Descreva os objetivos e público-alvo do evento..."
+                                  className="rounded-xl border-slate-200 resize-none"
+                                  required
+                                />
+                              </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="location">Local</Label>
-                            <Input
-                              id="location"
-                              value={eventForm.location}
-                              onChange={(e) =>
-                                setEventForm({ ...eventForm, location: e.target.value })
-                              }
-                              required
-                            />
-                          </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="location" className="font-bold ml-1 text-slate-700 text-sm">Local <span className="text-destructive">*</span></Label>
+                                <Input
+                                  id="location"
+                                  value={eventForm.location}
+                                  onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
+                                  placeholder="Ex: Auditório Principal, Sala 102..."
+                                  className="h-11 rounded-xl border-slate-200"
+                                  required
+                                />
+                              </div>
 
-                          <div className="space-y-2">
-                            <Label>Evento Pai (Opcional)</Label>
-                            <Combobox
-                              options={[
-                                {
-                                  value: "",
-                                  label: "Nenhum (Este é um evento principal)",
-                                },
-                                ...(events
-                                  ?.filter((e) => e.id !== editingEvent?.id)
-                                  .map((e) => ({ value: e.id, label: e.title })) || []),
-                              ]}
-                              value={eventForm.parentId}
-                              onSelect={(value) =>
-                                setEventForm({ ...eventForm, parentId: value })
-                              }
-                              placeholder="Selecione o evento principal..."
-                              searchPlaceholder="Pesquisar evento..."
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Selecione se este evento faz parte de um evento maior (ex:
-                              uma palestra dentro de um congresso).
-                            </p>
-                          </div>
+                              <div className="space-y-2">
+                                <Label className="font-bold ml-1 text-slate-700 text-sm">Categoria (Opcional)</Label>
+                                <Combobox
+                                  options={[
+                                    { value: "", label: "Sem categoria" },
+                                    ...(categoriesArray?.map((c) => ({ value: c.id, label: c.name })) || []),
+                                  ]}
+                                  value={eventForm.categoryId}
+                                  onSelect={(value) => setEventForm({ ...eventForm, categoryId: value })}
+                                  placeholder="Selecione a categoria..."
+                                  className="h-11 rounded-xl border-slate-200"
+                                />
+                              </div>
 
-                          <div className="space-y-2">
-                            <Label>Categoria do Evento (Opcional)</Label>
-                            <Combobox
-                              options={[
-                                {
-                                  value: "",
-                                  label: "Sem categoria",
-                                },
-                                ...(categoriesArray?.map((c) => ({ value: c.id, label: c.name })) || []),
-                              ]}
-                              value={eventForm.categoryId}
-                              onSelect={(value) =>
-                                setEventForm({ ...eventForm, categoryId: value })
-                              }
-                              placeholder="Selecione a categoria..."
-                              searchPlaceholder="Pesquisar categoria..."
-                            />
-                          </div>
+                              <div className="space-y-2">
+                                <Label className="font-bold ml-1 text-slate-700 text-sm">Evento Pai (Opcional)</Label>
+                                <Combobox
+                                  options={[
+                                    { value: "", label: "Nenhum (Evento Principal)" },
+                                    ...(events?.filter((e) => e.id !== editingEvent?.id).map((e) => ({ value: e.id, label: e.title })) || []),
+                                  ]}
+                                  value={eventForm.parentId}
+                                  onSelect={(value) => setEventForm({ ...eventForm, parentId: value })}
+                                  placeholder="Vincular a um evento maior..."
+                                />
+                              </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="mapLink">Link do Mapa (URL)</Label>
-                              <Input
-                                id="mapLink"
-                                value={eventForm.mapLink}
-                                onChange={(e) =>
-                                  setEventForm({ ...eventForm, mapLink: e.target.value })
-                                }
-                                placeholder="https://maps.google.com/..."
-                              />
+                              <div className="space-y-2">
+                                <Label htmlFor="mapLink" className="font-bold ml-1 text-slate-700 text-sm">Link do Mapa (URL)</Label>
+                                <Input
+                                  id="mapLink"
+                                  value={eventForm.mapLink}
+                                  onChange={(e) => setEventForm({ ...eventForm, mapLink: e.target.value })}
+                                  placeholder="https://maps.google.com/..."
+                                  className="h-11 rounded-xl border-slate-200"
+                                />
+                              </div>
                             </div>
+
+                            <Separator className="bg-slate-100" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <Label htmlFor="speakerName" className="font-bold ml-1 text-slate-700 text-sm">Nome do Palestrante</Label>
+                                <Input
+                                  id="speakerName"
+                                  value={eventForm.speakerName}
+                                  onChange={(e) => setEventForm({ ...eventForm, speakerName: e.target.value })}
+                                  placeholder="Ex: Dr. Pedro Silva"
+                                  className="h-11 rounded-xl border-slate-200"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="speakerRole" className="font-bold ml-1 text-slate-700 text-sm">Cargo do Palestrante</Label>
+                                <Input
+                                  id="speakerRole"
+                                  value={eventForm.speakerRole}
+                                  onChange={(e) => setEventForm({ ...eventForm, speakerRole: e.target.value })}
+                                  placeholder="Ex: Secretário Municipal"
+                                  className="h-11 rounded-xl border-slate-200"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <Label htmlFor="startDate" className="font-bold ml-1 text-slate-700 text-sm">Data de Início <span className="text-destructive">*</span></Label>
+                                <Input
+                                  id="startDate"
+                                  type="datetime-local"
+                                  value={eventForm.startDate}
+                                  onChange={(e) => setEventForm({ ...eventForm, startDate: e.target.value })}
+                                  className="h-11 rounded-xl border-slate-200"
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="endDate" className="font-bold ml-1 text-slate-700 text-sm">Data de Término <span className="text-destructive">*</span></Label>
+                                <Input
+                                  id="endDate"
+                                  type="datetime-local"
+                                  value={eventForm.endDate}
+                                  onChange={(e) => setEventForm({ ...eventForm, endDate: e.target.value })}
+                                  className="h-11 rounded-xl border-slate-200"
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="maxAttendees" className="font-bold ml-1 text-slate-700 text-sm">Vagas Máximas (Vazio = Ilimitado)</Label>
+                                <Input
+                                  id="maxAttendees"
+                                  type="number"
+                                  min="1"
+                                  value={eventForm.maxAttendees}
+                                  onChange={(e) => setEventForm({ ...eventForm, maxAttendees: e.target.value })}
+                                  className="h-11 rounded-xl border-slate-200"
+                                  placeholder="Ex: 100"
+                                />
+                              </div>
+
+                              <div className="flex items-center space-x-3 pt-6">
+                                <input
+                                  type="checkbox"
+                                  id="isPrivate"
+                                  checked={eventForm.isPrivate}
+                                  onChange={(e) => setEventForm({ ...eventForm, isPrivate: e.target.checked })}
+                                  className="h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                />
+                                <Label htmlFor="isPrivate" className="font-bold text-slate-700 cursor-pointer text-sm">
+                                  Evento Privado (Ocultar da listagem)
+                                </Label>
+                              </div>
+                            </div>
+
                             <div className="space-y-2">
-                              <Label htmlFor="schedule">Programação (Resumo)</Label>
+                              <Label htmlFor="schedule" className="font-bold ml-1 text-slate-700 text-sm">Programação (Resumo)</Label>
                               <Textarea
                                 id="schedule"
                                 value={eventForm.schedule}
-                                onChange={(e) =>
-                                  setEventForm({ ...eventForm, schedule: e.target.value })
-                                }
-                                placeholder="Descreva a programação..."
+                                onChange={(e) => setEventForm({ ...eventForm, schedule: e.target.value })}
+                                placeholder="Descreva os horários e atividades..."
                                 rows={3}
+                                className="rounded-xl border-slate-200 resize-none"
                               />
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="speakerName">Nome do Palestrante</Label>
-                              <Input
-                                id="speakerName"
-                                value={eventForm.speakerName}
-                                onChange={(e) =>
-                                  setEventForm({ ...eventForm, speakerName: e.target.value })
-                                }
-                                placeholder="Ex: Dr. Fulano"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="speakerRole">Cargo do Palestrante</Label>
-                              <Input
-                                id="speakerRole"
-                                value={eventForm.speakerRole}
-                                onChange={(e) =>
-                                  setEventForm({ ...eventForm, speakerRole: e.target.value })
-                                }
-                                placeholder="Ex: Secretário de Educação"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Upload de Foto removido daqui e movido para área de edição pós-criação */}
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="startDate">Data de Início</Label>
-                              <Input
-                                id="startDate"
-                                type="datetime-local"
-                                value={eventForm.startDate}
-                                onChange={(e) =>
-                                  setEventForm({
-                                    ...eventForm,
-                                    startDate: e.target.value,
-                                  })
-                                }
-                                required
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="endDate">Data de Término</Label>
-                              <Input
-                                id="endDate"
-                                type="datetime-local"
-                                value={eventForm.endDate}
-                                onChange={(e) =>
-                                  setEventForm({
-                                    ...eventForm,
-                                    endDate: e.target.value,
-                                  })
-                                }
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="maxAttendees">
-                              Máximo de Participantes (opcional)
-                            </Label>
-                            <Input
-                              id="maxAttendees"
-                              type="number"
-                              min="1"
-                              value={eventForm.maxAttendees}
-                              onChange={(e) =>
-                                setEventForm({
-                                  ...eventForm,
-                                  maxAttendees: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-
-                          <div className="flex items-center space-x-2 py-2">
-                            <input
-                              type="checkbox"
-                              id="isPrivate"
-                              checked={eventForm.isPrivate}
-                              onChange={(e) => setEventForm({ ...eventForm, isPrivate: e.target.checked })}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <Label htmlFor="isPrivate" className="cursor-pointer">
-                              Evento Privado (Ocultar da listagem pública)
-                            </Label>
-                          </div>
-
-                          <div className="flex justify-end gap-2">
+                          <div className="sticky bottom-0 bg-white pt-4 pb-0 flex flex-col sm:flex-row justify-end gap-3 mt-8">
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
+                              className="h-11 rounded-xl font-bold px-8 order-2 sm:order-1"
                               onClick={() => {
                                 setEditingEvent(null);
                                 setIsCreateDialogOpen(false);
@@ -1239,17 +1211,12 @@ const Admin = () => {
                             </Button>
                             <Button
                               type="submit"
-                              disabled={
-                                createEventMutation.isPending ||
-                                updateEventMutation.isPending
-                              }
+                              disabled={createEventMutation.isPending || updateEventMutation.isPending}
+                              className="h-11 px-10 bg-blue-600 hover:bg-blue-700 font-black text-white rounded-xl shadow-xl shadow-blue-100 active:scale-95 transition-all order-1 sm:order-2"
                             >
-                              {createEventMutation.isPending ||
-                                updateEventMutation.isPending
+                              {createEventMutation.isPending || updateEventMutation.isPending
                                 ? "Salvando..."
-                                : editingEvent
-                                  ? "Atualizar"
-                                  : "Criar"}
+                                : editingEvent ? "Salvar Alterações" : "Criar Evento"}
                             </Button>
                           </div>
                         </form>
@@ -1313,66 +1280,98 @@ const Admin = () => {
                         )}
                       </TabsContent>
 
-                      <TabsContent value="badge" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
+                      <TabsContent value="badge" className="flex-1 overflow-y-auto p-6 sm:p-8 mt-0 space-y-8 custom-scrollbar">
                         {editingEvent && (
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                              <h3 className="text-lg font-semibold">Configuração do Crachá</h3>
+                          <div className="space-y-8">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div>
+                                <h3 className="text-xl font-bold text-slate-900">Configuração do Crachá</h3>
+                                <p className="text-sm text-slate-500">Personalize o layout dos crachás para impressão.</p>
+                              </div>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handlePrintBadges(editingEvent.id, editingEvent.title)}
+                                className="rounded-xl font-bold border-slate-200 hover:bg-slate-50"
                               >
                                 <Printer className="h-4 w-4 mr-2" />
                                 Imprimir Crachás
                               </Button>
                             </div>
 
-                            <div className="p-4 border rounded-lg space-y-4">
-                              {/* ... Conteúdo do Crachá (Simplificado para caber no replace) ... */}
-                              <form onSubmit={handleTemplateSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label>Imagem de Fundo</Label>
-                                  <Input type="file" onChange={handleFileChange} accept="image/*" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <Label>Posição Nome (X, Y)</Label>
-                                    <div className="flex gap-2">
-                                      <Input type="number" placeholder="X" value={badgeConfig.nameX} onChange={e => setBadgeConfig({ ...badgeConfig, nameX: e.target.value })} />
-                                      <Input type="number" placeholder="Y" value={badgeConfig.nameY} onChange={e => setBadgeConfig({ ...badgeConfig, nameY: e.target.value })} />
+                            <div className="bg-slate-50/50 p-6 sm:p-8 border border-slate-100 rounded-3xl space-y-8 shadow-inner">
+                              <form onSubmit={handleTemplateSubmit} className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                  <div className="space-y-3">
+                                    <Label className="font-bold ml-1 text-slate-700">Imagem de Fundo (Template)</Label>
+                                    <div className="relative group">
+                                      <Label
+                                        htmlFor="badge-upload"
+                                        className="flex flex-col items-center justify-center w-full h-32 rounded-2xl border-2 border-dashed border-slate-300 bg-white hover:bg-slate-50 hover:border-blue-400 cursor-pointer transition-all"
+                                      >
+                                        <Upload className="h-6 w-6 text-slate-400 mb-2 group-hover:scale-110 transition-all" />
+                                        <span className="text-sm font-medium text-slate-600">
+                                          {badgeTemplateFile ? badgeTemplateFile.name : "Selecionar nova imagem"}
+                                        </span>
+                                        <Input id="badge-upload" type="file" onChange={handleFileChange} accept="image/*" className="hidden" />
+                                      </Label>
                                     </div>
+                                    <p className="text-[10px] text-slate-400 italic">Recomendado: 400x600px ou similar.</p>
                                   </div>
-                                  <div>
-                                    <Label>Fonte (Tam, Cor)</Label>
-                                    <div className="flex gap-2">
-                                      <Input type="number" placeholder="px" value={badgeConfig.nameFontSize} onChange={e => setBadgeConfig({ ...badgeConfig, nameFontSize: e.target.value })} />
-                                      <Input type="color" value={badgeConfig.nameColor} onChange={e => setBadgeConfig({ ...badgeConfig, nameColor: e.target.value })} />
+
+                                  <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <Label className="font-bold text-xs text-slate-500 uppercase tracking-wider">Posição Nome (X, Y)</Label>
+                                        <div className="flex gap-2">
+                                          <Input type="number" placeholder="X" value={badgeConfig.nameX} onChange={e => setBadgeConfig({ ...badgeConfig, nameX: e.target.value })} className="h-10 rounded-xl border-slate-200" />
+                                          <Input type="number" placeholder="Y" value={badgeConfig.nameY} onChange={e => setBadgeConfig({ ...badgeConfig, nameY: e.target.value })} className="h-10 rounded-xl border-slate-200" />
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="font-bold text-xs text-slate-500 uppercase tracking-wider">Fonte (px, Cor)</Label>
+                                        <div className="flex gap-2">
+                                          <Input type="number" placeholder="48" value={badgeConfig.nameFontSize} onChange={e => setBadgeConfig({ ...badgeConfig, nameFontSize: e.target.value })} className="h-10 rounded-xl border-slate-200" />
+                                          <Input type="color" value={badgeConfig.nameColor} onChange={e => setBadgeConfig({ ...badgeConfig, nameColor: e.target.value })} className="h-10 w-12 p-1 rounded-lg border-slate-200 cursor-pointer" />
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <Label>Posição QR (X, Y)</Label>
-                                    <div className="flex gap-2">
-                                      <Input type="number" placeholder="X" value={badgeConfig.qrX} onChange={e => setBadgeConfig({ ...badgeConfig, qrX: e.target.value })} />
-                                      <Input type="number" placeholder="Y" value={badgeConfig.qrY} onChange={e => setBadgeConfig({ ...badgeConfig, qrY: e.target.value })} />
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <Label className="font-bold text-xs text-slate-500 uppercase tracking-wider">Posição QR (X, Y)</Label>
+                                        <div className="flex gap-2">
+                                          <Input type="number" placeholder="X" value={badgeConfig.qrX} onChange={e => setBadgeConfig({ ...badgeConfig, qrX: e.target.value })} className="h-10 rounded-xl border-slate-200" />
+                                          <Input type="number" placeholder="Y" value={badgeConfig.qrY} onChange={e => setBadgeConfig({ ...badgeConfig, qrY: e.target.value })} className="h-10 rounded-xl border-slate-200" />
+                                        </div>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="font-bold text-xs text-slate-500 uppercase tracking-wider">Tamanho QR (px)</Label>
+                                        <Input type="number" placeholder="150" value={badgeConfig.qrSize} onChange={e => setBadgeConfig({ ...badgeConfig, qrSize: e.target.value })} className="h-10 rounded-xl border-slate-200" />
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div>
-                                    <Label>Tamanho QR</Label>
-                                    <Input type="number" placeholder="px" value={badgeConfig.qrSize} onChange={e => setBadgeConfig({ ...badgeConfig, qrSize: e.target.value })} />
                                   </div>
                                 </div>
 
-                                <BadgePreview
-                                  templateImage={badgeTemplatePreviewUrl || getAssetUrl(editingEvent.badgeTemplateUrl)}
-                                  config={badgeConfig}
-                                  onConfigChange={setBadgeConfig}
-                                />
+                                <div className="space-y-4">
+                                  <Label className="font-black text-slate-900 flex items-center gap-2">
+                                    <ImageIcon className="h-5 w-5 text-blue-500" /> Pré-visualização
+                                  </Label>
+                                  <div className="bg-white border p-4 rounded-3xl shadow-sm flex justify-center">
+                                    <BadgePreview
+                                      templateImage={badgeTemplatePreviewUrl || getAssetUrl(editingEvent.badgeTemplateUrl)}
+                                      config={badgeConfig}
+                                      onConfigChange={setBadgeConfig}
+                                    />
+                                  </div>
+                                </div>
 
-                                <Button type="submit" disabled={uploadTemplateMutation.isPending} className="w-full">
-                                  <Upload className="h-4 w-4 mr-2" /> Salvar Modelo
+                                <Button 
+                                  type="submit" 
+                                  disabled={uploadTemplateMutation.isPending} 
+                                  className="w-full h-12 bg-slate-900 hover:bg-black text-white rounded-2xl font-black shadow-xl transition-all active:scale-95"
+                                >
+                                  {uploadTemplateMutation.isPending ? "Salvando Configurações..." : "Salvar Modelo do Crachá"}
                                 </Button>
                               </form>
                             </div>
@@ -1380,114 +1379,138 @@ const Admin = () => {
                         )}
                       </TabsContent>
 
-                      <TabsContent value="certificate" className="flex-1 overflow-y-auto min-h-0 space-y-4 py-4">
+                      <TabsContent value="certificate" className="flex-1 overflow-y-auto p-6 sm:p-8 mt-0 space-y-8 custom-scrollbar">
                         {editingEvent && (
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                              <h3 className="text-lg font-semibold">Configuração do Certificado</h3>
+                          <div className="space-y-8">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                              <div>
+                                <h3 className="text-xl font-bold text-slate-900">Configuração do Certificado</h3>
+                                <p className="text-sm text-slate-500">Defina o layout e envie os certificados para os participantes confirmados.</p>
+                              </div>
                               <Button
                                 variant="outline"
                                 onClick={() => handleSendCertificates(editingEvent.id, editingEvent.title)}
+                                className="rounded-xl font-bold border-slate-200 hover:bg-slate-50"
                               >
-                                <Send className="h-4 w-4 mr-2" /> Enviar Certificados
+                                <Send className="h-4 w-4 mr-2" /> Enviar Certificados em Massa
                               </Button>
                             </div>
 
-                            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-                               <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
-                                  <div className="space-y-1">
-                                    <Label className="text-primary font-bold text-xs uppercase tracking-wider">Imagem de Fundo (Opcional)</Label>
-                                    <Input type="file" onChange={handleCertificateFileChange} accept="image/*" className="bg-white h-8 text-xs w-64" />
+                            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+                               <div className="p-6 bg-slate-50/50 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                  <div className="space-y-1 flex-1">
+                                    <Label className="text-blue-600 font-black text-[10px] uppercase tracking-widest">Template de Fundo</Label>
+                                    <div className="flex items-center gap-2">
+                                      <Input type="file" id="cert-upload" onChange={handleCertificateFileChange} accept="image/*" className="hidden" />
+                                      <Label htmlFor="cert-upload" className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors text-sm font-bold">
+                                        <Upload className="h-4 w-4 text-slate-400" />
+                                        {certificateTemplateFile ? certificateTemplateFile.name : "Selecionar Imagem (1920x1080)"}
+                                      </Label>
+                                    </div>
                                   </div>
-                                  <p className="text-[10px] text-muted-foreground w-48 text-right">Dica: Use templates 1920x1080 ou similares (A4 Landscape).</p>
+                                  <div className="text-[10px] text-slate-400 max-w-[200px] sm:text-right leading-tight">
+                                    <strong>Dica:</strong> Use imagens em alta resolução (A4 Paisagem) para melhores resultados.
+                                  </div>
                                </div>
                                
-                               <CertificateEditor 
-                                 initialConfig={{
-                                   name: { 
-                                     x: parseInt(certificateConfig.nameX), 
-                                     y: parseInt(certificateConfig.nameY), 
-                                     fontSize: parseInt(certificateConfig.nameFontSize), 
-                                     color: certificateConfig.nameColor 
-                                   },
-                                   hours: { 
-                                     x: parseInt(certificateConfig.hoursX), 
-                                     y: parseInt(certificateConfig.hoursY), 
-                                     fontSize: parseInt(certificateConfig.hoursFontSize), 
-                                     color: certificateConfig.hoursColor 
-                                   },
-                                   date: { 
-                                     x: parseInt(certificateConfig.dateX), 
-                                     y: parseInt(certificateConfig.dateY), 
-                                     fontSize: parseInt(certificateConfig.dateFontSize), 
-                                     color: certificateConfig.dateColor 
-                                   },
-                                   logo: { 
-                                     x: parseInt(certificateConfig.logoX), 
-                                     y: parseInt(certificateConfig.logoY), 
-                                     size: parseInt(certificateConfig.logoSize) 
-                                   },
-                                   phrase: { 
-                                     x: parseInt(certificateConfig.phraseX), 
-                                     y: parseInt(certificateConfig.phraseY), 
-                                     fontSize: parseInt(certificateConfig.phraseFontSize), 
-                                     color: certificateConfig.phraseColor,
-                                     maxWidth: parseInt(certificateConfig.phraseMaxWidth),
-                                     text: certificateConfig.phraseText 
-                                   },
-                                 }}
-                                 templateImage={certificateTemplatePreviewUrl || (editingEvent.certificateTemplateUrl ? getAssetUrl(editingEvent.certificateTemplateUrl) : null)}
-                                 eventData={editingEvent}
-                                 onSave={(newEditorConfig) => {
-                                   const configToSubmit = {
-                                      name: newEditorConfig.name,
-                                      hours: newEditorConfig.hours,
-                                      date: newEditorConfig.date,
-                                      logo: newEditorConfig.logo,
-                                   };
-                                   
-                                   if (newEditorConfig.phrase) {
-                                     configToSubmit.phrase = {
-                                       ...newEditorConfig.phrase,
-                                       text: newEditorConfig.phrase.text
+                               <div className="bg-slate-900 overflow-hidden">
+                                 <CertificateEditor 
+                                   initialConfig={{
+                                     name: { 
+                                       x: parseInt(certificateConfig.nameX), 
+                                       y: parseInt(certificateConfig.nameY), 
+                                       fontSize: parseInt(certificateConfig.nameFontSize), 
+                                       color: certificateConfig.nameColor 
+                                     },
+                                     hours: { 
+                                       x: parseInt(certificateConfig.hoursX), 
+                                       y: parseInt(certificateConfig.hoursY), 
+                                       fontSize: parseInt(certificateConfig.hoursFontSize), 
+                                       color: certificateConfig.hoursColor 
+                                     },
+                                     date: { 
+                                       x: parseInt(certificateConfig.dateX), 
+                                       y: parseInt(certificateConfig.dateY), 
+                                       fontSize: parseInt(certificateConfig.dateFontSize), 
+                                       color: certificateConfig.dateColor 
+                                     },
+                                     logo: { 
+                                       x: parseInt(certificateConfig.logoX), 
+                                       y: parseInt(certificateConfig.logoY), 
+                                       size: parseInt(certificateConfig.logoSize) 
+                                     },
+                                     phrase: { 
+                                       x: parseInt(certificateConfig.phraseX), 
+                                       y: parseInt(certificateConfig.phraseY), 
+                                       fontSize: parseInt(certificateConfig.phraseFontSize), 
+                                       color: certificateConfig.phraseColor,
+                                       maxWidth: parseInt(certificateConfig.phraseMaxWidth),
+                                       text: certificateConfig.phraseText 
+                                     },
+                                   }}
+                                   templateImage={certificateTemplatePreviewUrl || (editingEvent.certificateTemplateUrl ? getAssetUrl(editingEvent.certificateTemplateUrl) : null)}
+                                   eventData={editingEvent}
+                                   onSave={(newEditorConfig) => {
+                                     const configToSubmit = {
+                                        name: newEditorConfig.name,
+                                        hours: newEditorConfig.hours,
+                                        date: newEditorConfig.date,
+                                        logo: newEditorConfig.logo,
                                      };
-                                   }
-                                   
-                                   const formData = new FormData();
-                                   if (certificateTemplateFile) {
-                                     formData.append("certificateTemplate", certificateTemplateFile);
-                                   }
-                                   formData.append("certificateTemplateConfig", JSON.stringify(configToSubmit));
+                                     
+                                     if (newEditorConfig.phrase) {
+                                       configToSubmit.phrase = {
+                                         ...newEditorConfig.phrase,
+                                         text: newEditorConfig.phrase.text
+                                       };
+                                     }
+                                     
+                                     const formData = new FormData();
+                                     if (certificateTemplateFile) {
+                                       formData.append("certificateTemplate", certificateTemplateFile);
+                                     }
+                                     formData.append("certificateTemplateConfig", JSON.stringify(configToSubmit));
 
-                                   uploadCertificateMutation.mutate({ id: editingEvent.id, formData });
-                                 }}
-                               />
+                                     uploadCertificateMutation.mutate({ id: editingEvent.id, formData });
+                                   }}
+                                 />
+                               </div>
                             </div>
 
-                            <div className="mt-6">
-                              <h4 className="font-semibold mb-2">Histórico de Envios</h4>
-                              <div className="border rounded-lg max-h-48 overflow-y-auto">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Nome</TableHead>
-                                      <TableHead>Status</TableHead>
-                                      <TableHead>Data</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {logsLoading ? (
-                                      <TableRow><TableCell colSpan={3}>Carregando...</TableCell></TableRow>
-                                    ) : certificateLogs?.map(log => (
-                                      <TableRow key={log.userId}>
-                                        <TableCell>{log.userName}</TableCell>
-                                        <TableCell>{log.status}</TableCell>
-                                        <TableCell>{log.createdAt ? new Date(log.createdAt).toLocaleDateString() : '-'}</TableCell>
-                                        <TableCell className="text-xs text-red-500">{log.details}</TableCell>
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-slate-400" />
+                                <h4 className="font-bold text-slate-900">Histórico de Envios</h4>
+                              </div>
+                              <div className="border border-slate-100 rounded-3xl overflow-hidden bg-white shadow-sm">
+                                <div className="max-h-64 overflow-y-auto">
+                                  <Table>
+                                    <TableHeader className="bg-slate-50">
+                                      <TableRow>
+                                        <TableHead className="font-bold text-slate-700">Participante</TableHead>
+                                        <TableHead className="font-bold text-slate-700">Status</TableHead>
+                                        <TableHead className="font-bold text-slate-700">Data de Envio</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {logsLoading ? (
+                                        <TableRow><TableCell colSpan={3} className="text-center py-8">Carregando histórico...</TableCell></TableRow>
+                                      ) : certificateLogs?.length === 0 ? (
+                                        <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400">Nenhum certificado enviado ainda.</TableCell></TableRow>
+                                      ) : certificateLogs?.map(log => (
+                                        <TableRow key={log.userId} className="hover:bg-slate-50 transition-colors">
+                                          <TableCell className="font-medium text-slate-900">{log.userName}</TableCell>
+                                          <TableCell>
+                                            <Badge className={log.status === 'SUCCESS' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"}>
+                                              {log.status === 'SUCCESS' ? 'Enviado' : 'Falhou'}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-slate-500 text-sm">{log.createdAt ? new Date(log.createdAt).toLocaleDateString() : '-'}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1814,18 +1837,25 @@ const Admin = () => {
       </Tabs>
       {/* Diálogos de Envio de Certificado */}
       <AlertDialog open={isSendConfirmOpen} onOpenChange={setIsSendConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Enviar Certificados?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja enviar os certificados para todos os participantes elegíveis do evento <strong>"{sendingEventTitle}"</strong>?
-              Esta ação iniciará o processamento em segundo plano.
+        <AlertDialogContent className="border-none rounded-[2rem] shadow-2xl p-0 overflow-hidden max-w-md bg-white dark:bg-slate-900">
+          <div className="p-8 bg-amber-50/50 dark:bg-amber-900/10 border-b border-amber-100/50 dark:border-amber-900/20 text-center">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+              <GraduationCap className="h-8 w-8" />
+            </div>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">
+              Confirmar Envio?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-medium mt-2">
+              Você está prestes a enviar os certificados por e-mail para todos os participantes com check-in no evento: <br />
+              <span className="font-black text-amber-600 dark:text-amber-500 underline decoration-2 underline-offset-4">{sendingEventTitle}</span>
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          </div>
+          <AlertDialogFooter className="p-8 gap-3 sm:gap-0 flex-col sm:flex-row bg-white dark:bg-slate-900">
+            <AlertDialogCancel className="h-12 rounded-xl font-bold border-slate-200 hover:bg-slate-50 transition-all active:scale-95">
+              Agora não
+            </AlertDialogCancel>
             <AlertDialogAction 
-              className="bg-primary hover:bg-primary/90"
+              className="h-12 rounded-xl font-black bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-100 dark:shadow-none transition-all active:scale-95 px-8"
               onClick={() => {
                 sendCertificatesMutation.mutate(sendingEventId);
                 setIsSendConfirmOpen(false);
@@ -1838,39 +1868,91 @@ const Admin = () => {
       </AlertDialog>
 
       <Dialog open={isSendingProgressOpen} onOpenChange={setIsSendingProgressOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enviando Certificados</DialogTitle>
-            <DialogDescription>
-              Processando envio para o evento <strong>"{sendingEventTitle}"</strong>.
-            </DialogDescription>
+        <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-lg w-full bg-white dark:bg-slate-900 mx-auto">
+          <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-slate-800/50">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 text-white p-3 rounded-2xl shadow-lg shadow-blue-100 dark:shadow-none animate-pulse">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Enviando Certificados</DialogTitle>
+                <DialogDescription className="font-medium text-slate-500 line-clamp-1">
+                  Evento: <span className="font-black text-blue-600 dark:text-blue-400">{sendingEventTitle}</span>
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
-          <div className="py-6 space-y-4">
-            <div className="flex justify-between text-sm font-medium">
-              <span>Status: {sendProgress.status === 'completed' ? 'Concluído' : 'Processando...'}</span>
-              <span>{sendProgress.current} de {sendProgress.total}</span>
-            </div>
-            <Progress value={sendProgress.total > 0 ? (sendProgress.current / sendProgress.total) * 100 : 0} className="h-2" />
-            
-            <div className="max-h-40 overflow-y-auto border rounded p-2 text-[10px] bg-slate-50 font-mono space-y-1">
-              {certificateLogs?.slice(0, 10).map((log, i) => (
-                <div key={i} className={log.status === 'SUCCESS' ? 'text-green-600' : log.status === 'FAILED' ? 'text-red-600' : 'text-slate-500'}>
-                  [{log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : 'Pendente'}] {log.userName}: {log.status} 
-                  {log.details && <span className="block text-[8px] opacity-70 ml-4 font-sans">{log.details}</span>}
+          <div className="p-8 space-y-6 bg-white dark:bg-slate-900">
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Status do Processo</span>
+                  <span className={`text-sm font-bold ${sendProgress.status === 'completed' ? 'text-emerald-500' : 'text-blue-500 animate-pulse'}`}>
+                    {sendProgress.status === 'completed' ? 'Processamento Concluído' : 'Enviando e-mails...'}
+                  </span>
                 </div>
-              ))}
-              {(!certificateLogs || certificateLogs.length === 0) && (
-                <div className="text-slate-400 italic">Aguardando início do processamento...</div>
-              )}
+                <div className="text-right">
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">{sendProgress.current}</span>
+                  <span className="text-slate-400 font-bold ml-1">/ {sendProgress.total}</span>
+                </div>
+              </div>
+              
+              <div className="relative h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                <div 
+                  className={`absolute top-0 left-0 h-full transition-all duration-500 ${sendProgress.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                  style={{ width: `${sendProgress.total > 0 ? (sendProgress.current / sendProgress.total) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Logs de Atividade</span>
+              <div className="max-h-48 overflow-y-auto rounded-3xl border border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-950/50 font-mono space-y-2 custom-scrollbar shadow-inner">
+                {certificateLogs?.map((log, i) => (
+                  <div key={i} className={`text-[10px] flex items-start gap-2 border-l-2 pl-2 ${
+                    log.status === 'SUCCESS' ? 'text-emerald-600 border-emerald-500 bg-emerald-50/30' : 
+                    log.status === 'FAILED' ? 'text-rose-600 border-rose-500 bg-rose-50/30' : 
+                    'text-slate-500 border-slate-300'
+                  } p-1.5 rounded-r-lg transition-all`}>
+                    <span className="opacity-50 font-bold shrink-0">
+                      {log.createdAt ? new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="font-black uppercase tracking-tight">{log.userName}</span>
+                      <span className="mx-1 opacity-50">•</span>
+                      <span className="font-medium italic">{log.status}</span>
+                      {log.details && (
+                        <span className="block text-[9px] opacity-70 mt-1 font-sans leading-tight bg-white/50 dark:bg-black/20 p-1 rounded border border-current/10">
+                          {log.details}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {(!certificateLogs || certificateLogs.length === 0) && (
+                  <div className="flex flex-col items-center justify-center py-8 text-slate-400 space-y-2 opacity-50">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest italic">Iniciando motor de envio...</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {sendProgress.status === 'completed' && (
-            <div className="flex justify-end pt-4">
-              <Button onClick={() => setIsSendingProgressOpen(false)}>Fechar</Button>
-            </div>
-          )}
+          <DialogFooter className="p-8 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-100/50 dark:border-slate-800/50">
+            <Button 
+              className={`w-full h-12 font-black rounded-xl transition-all active:scale-95 shadow-lg ${
+                sendProgress.status === 'completed' 
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100' 
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+              }`}
+              disabled={sendProgress.status !== 'completed'}
+              onClick={() => setIsSendingProgressOpen(false)}
+            >
+              {sendProgress.status === 'completed' ? 'Finalizar e Fechar' : 'Aguarde a conclusão...'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

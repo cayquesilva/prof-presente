@@ -261,63 +261,74 @@ const MyTracks = () => {
             )}
             {/* MODAL DE JORNADA */}
             <Dialog open={!!selectedTrack} onOpenChange={() => setSelectedTrack(null)}>
-                <DialogContent className="max-w-md bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-3xl p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-black">Sua Jornada</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="p-0 gap-0 overflow-hidden sm:rounded-3xl border-none shadow-2xl max-w-lg w-full bg-white dark:bg-slate-900 mx-auto">
+                    <DialogHeader className="p-8 pb-4 bg-slate-50/50 dark:bg-slate-800/50">
+                        <DialogTitle className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-tight">Sua Jornada</DialogTitle>
+                        <DialogDescription className="font-medium text-slate-500 mt-1">
                             Complete todos os eventos abaixo para concluir a trilha: <br />
-                            <span className="font-bold text-blue-500">{selectedTrack?.track.title}</span>
+                            <span className="font-black text-blue-600 dark:text-blue-400">{selectedTrack?.track.title}</span>
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+
+                    <div className="p-8 pb-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
                         {selectedTrack?.track?.events?.map((te, index) => {
                             const isDone = te.event?.userCheckins?.length > 0;
                             return (
                                 <div
                                     key={te.id || `${te.trackId}-${te.eventId}`}
-                                    className={`flex items-start gap-3 p-4 rounded-2xl border transition-all ${isDone
-                                        ? 'bg-green-50/50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30'
-                                        : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800'
+                                    className={`flex items-start gap-4 p-5 rounded-[2rem] border transition-all duration-300 ${isDone
+                                        ? 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30'
+                                        : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 hover:border-blue-100 dark:hover:border-blue-900/30'
                                         }`}
                                 >
-                                    <div className={`mt-1 p-1.5 rounded-full ${isDone ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                                    <div className={`mt-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${isDone 
+                                        ? 'bg-emerald-500 text-white shadow-emerald-200/50' 
+                                        : 'bg-white dark:bg-slate-800 text-slate-400 border border-slate-100 dark:border-slate-700'
                                         }`}>
-                                        {isDone ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 flex items-center justify-center font-bold text-[10px]">{index + 1}</div>}
+                                        {isDone ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-xs font-black">{index + 1}</span>}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className={`font-bold text-sm line-clamp-1 ${isDone ? 'text-green-700 dark:text-green-400' : 'text-slate-900 dark:text-white'}`}>
+                                        <h4 className={`font-black tracking-tight text-base mb-2 truncate ${isDone ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
                                             {te.event?.title}
                                         </h4>
-                                        <div className="flex flex-col gap-1 mt-1">
-                                            <p className="text-xs text-slate-500 flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {te.event?.startDate ? new Date(te.event.startDate).toLocaleDateString() : 'Data não definida'}
-                                            </p>
-                                            <p className="text-xs text-slate-500 flex items-center gap-1">
-                                                <MapPin className="w-3 h-3" />
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                                {te.event?.startDate ? new Date(te.event.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Data não definida'}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                <MapPin className="w-3.5 h-3.5 text-blue-500" />
                                                 {te.event?.location || 'Local não definido'}
-                                            </p>
+                                            </div>
                                         </div>
                                     </div>
                                     {!isDone && te.event?.id && (
-                                        <Link to={`/events/${te.event.id}`}>
-                                            <Button size="sm" variant="ghost" className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 h-8">
-                                                Ver Evento
+                                        <Link to={`/events/${te.event.id}`} className="shrink-0">
+                                            <Button size="sm" variant="outline" className="h-10 rounded-xl px-4 font-black text-xs bg-white hover:bg-blue-600 hover:text-white border-slate-100 hover:border-blue-600 transition-all active:scale-95 shadow-sm">
+                                                Ver Detalhes
                                             </Button>
                                         </Link>
+                                    )}
+                                    {isDone && (
+                                        <div className="bg-emerald-100/50 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-inner">
+                                            OK
+                                        </div>
                                     )}
                                 </div>
                             );
                         }) || (
-                                <div className="text-center py-8 text-slate-500 italic">
-                                    Nenhum evento vinculado a esta trilha.
+                            <div className="text-center py-12 flex flex-col items-center justify-center space-y-4">
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-full">
+                                    <BookOpen className="w-8 h-8 text-slate-300" />
                                 </div>
-                            )}
+                                <p className="text-slate-500 font-medium italic">Nenhum evento vinculado a esta trilha.</p>
+                            </div>
+                        )}
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="p-8 bg-white dark:bg-slate-900">
                         <Button
-                            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-xl shadow-blue-100 dark:shadow-none transition-all active:scale-95"
                             onClick={() => setSelectedTrack(null)}
                         >
                             Entendido
