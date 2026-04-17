@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tracksAPI, eventsAPI } from '../lib/api';
 import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
-import { Plus, Pencil, Trash2, Loader2, Search, Link as LinkIcon, X, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '../components/ui/dialog';
+import { Plus, Pencil, Trash2, Loader2, Search, Link as LinkIcon, X, Users, Image as ImageIcon, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '../components/ui/badge';
@@ -244,7 +245,7 @@ const AdminTracks = () => {
 
             {/* DIALOG DE CRIAÇÃO/EDIÇÃO */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-slate-900 mx-auto">
+                <DialogContent className="max-w-4xl w-full p-0 gap-0 overflow-hidden sm:rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-slate-900 mx-auto">
                     <DialogHeader className="p-10 pb-8 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-6">
                             <div className="bg-blue-600 text-white p-4 rounded-3xl shadow-lg shadow-blue-100 dark:shadow-none">
@@ -275,7 +276,7 @@ const AdminTracks = () => {
                                             value={formData.title}
                                             onChange={e => setFormData({ ...formData, title: e.target.value })}
                                             placeholder="Ex: Formação em IA para Professores"
-                                            className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
+                                            className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
                                             required
                                         />
                                     </div>

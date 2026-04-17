@@ -2,55 +2,59 @@
 
 Este guia contém os comandos necessários para compilar, enviar as imagens para o Docker Hub e atualizar o ambiente de produção via Portainer.
 
-## 🛠️ 1. Build e Push para o Docker Hub
+## 🛠️ 1. Build e Push Automatizado
 
-Siga a ordem abaixo para garantir que todas as imagens estejam atualizadas:
+A forma recomendada de gerar as imagens é utilizando o script automatizado que gerencia versões e tags `latest`.
 
-### A. Backend (Sistema)
-No diretório `cracha-virtual-system`:
-```bash
-# 1. Gerar Prisma Client (importante para novas tabelas)
-npx prisma generate
-
-# 2. Build da imagem
-docker build -t vydhal/eduagenda-backend:latest ./cracha-virtual-system
-
-# 3. Push para o Docker Hub
-docker push vydhal/eduagenda-backend:latest
+### No Windows (PowerShell):
+```powershell
+.\build-images.ps1
 ```
 
-### B. Frontend
-No diretório `cracha-virtual-frontend`:
+### No Linux/WSL (Bash):
 ```bash
-# 1. Build da imagem (Certifique-se que o .env de produção está correto)
-docker build -t vydhal/eduagenda-frontend:latest ./cracha-virtual-frontend
-
-# 2. Push para o Docker Hub
-docker push vydhal/eduagenda-frontend:latest
+chmod +x build-images.sh
+./build-images.sh
 ```
 
 ---
 
 ## 🚀 2. Atualização no Portainer
 
-Após enviar as imagens para o Docker Hub, siga estes passos no seu servidor:
+Após enviar as imagens para o Docker Hub (`cayquesilva/simplicorre-*`), siga estes passos:
 
-1. **Acesse o Portainer** da SimpliSoft.
+1. **Acesse o Portainer**.
 2. Vá em **Stacks** e selecione a stack `eduagenda`.
-3. No painel de edição da Stack:
-   - Certifique-se de que a opção **"Pull latest image"** (ou "Force Redeploy") está ativada.
-   - Clique em **Update the stack**.
-4. **Verificação de Migração**: Se houver mudanças no banco de dados (novas tabelas de Espaços/Reservas), acesse o container do **backend** pelo console do Portainer e execute:
-   ```bash
-   npx prisma migrate deploy
-   ```
-   *Nota: Use `migrate deploy` em produção para não apagar dados existentes.*
+3. No painel de edição da Stack clique em **Update the stack**.
+4. Certifique-se de que a opção **"Re-pull image"** está ativada.
 
 ---
 
-## 📋 3. Notas Importantes
-- **Fuso Horário**: O sistema está configurado para `America/Sao_Paulo`.
-- **URLs**: As APIs agora apontam para `https://corre.simplisoft.com.br/api`.
-- **Logs**: Verifique os logs dos containers no Portainer para garantir que o Socket.io e a conexão com o banco de dados estão operacionais.
+## ⚠️ 3. Solução de Problemas (FAQ)
+
+### Erro P3005: "The database schema is not empty"
+Se ao iniciar o container o log mostrar o erro P3005 durante o `prisma migrate deploy`, significa que o histórico de migrações está em branco mas as tabelas já existem.
+
+**Solução (Baseline):**
+Execute os comandos abaixo no console do container do backend (via Portainer) para sincronizar o histórico sem mexer nos dados:
+
+```bash
+npx prisma migrate resolve --applied 20260206135426_init_postgres
+npx prisma migrate resolve --applied 20260210112112_add_event_staff_model
+npx prisma migrate resolve --applied 20260210184920_add_learning_tracks
+npx prisma migrate resolve --applied 20260210185412_update_certificate_and_tracks
+npx prisma migrate resolve --applied 20260212121408_add_space_management
+npx prisma migrate resolve --applied 20260212124036_add_reservation_config
+npx prisma prisma migrate resolve --applied 20260212130802_refine_reservation_form
+npx prisma migrate resolve --applied 20260212131842_add_equipment_inventory
+```
+
+---
+
+## 📋 4. Notas Importantes
+- **Namespace**: `cayquesilva`
+- **Imagens**: `simplicorre-backend`, `simplicorre-frontend`, `simplicorre-facialrec`
+- **Fuso Horário**: `America/Sao_Paulo`.
+- **URLs**: APIs em `https://corre.simplisoft.com.br/api`.
 
 Desenvolvido por **Antigravity AI**.

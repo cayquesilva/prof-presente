@@ -19,6 +19,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogFooter,
 } from "./ui/dialog";
 import {
     Table,
@@ -28,14 +29,7 @@ import {
     TableHeader,
     TableRow,
 } from "./ui/table";
-import {
-    Plus,
-    Trash2,
-    Edit,
-    Image as ImageIcon,
-    ExternalLink,
-    Upload,
-} from "lucide-react";
+import { Plus, Trash2, Edit, ExternalLink, Image as ImageIcon, Laptop, Smartphone, Monitor, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { getAssetUrl } from "../lib/utils";
 import { Switch } from "./ui/switch";
@@ -198,7 +192,7 @@ const BannerManagement = () => {
                                         value={form.title}
                                         onChange={(e) => setForm({ ...form, title: e.target.value })}
                                         placeholder="Ex: Inscrições Abertas - Jornada 2026"
-                                        className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
+                                        className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
                                         required
                                     />
                                 </div>
@@ -211,7 +205,7 @@ const BannerManagement = () => {
                                         onChange={(e) => setForm({ ...form, description: e.target.value })}
                                         placeholder="Texto que aparecerá sobre a imagem do banner..."
                                         rows={2}
-                                        className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[80px] resize-none focus-visible:ring-blue-500 transition-all shadow-inner font-medium"
+                                        className="rounded-[1.5rem] border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[80px] resize-none focus-visible:ring-blue-500 transition-all shadow-inner font-medium text-slate-900 dark:text-white"
                                     />
                                 </div>
 
@@ -226,7 +220,7 @@ const BannerManagement = () => {
                                             value={form.linkUrl}
                                             onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
                                             placeholder="https://exemplo.com/evento-especifico"
-                                            className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white pl-14"
+                                            className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white pl-14"
                                         />
                                     </div>
                                 </div>
@@ -239,7 +233,7 @@ const BannerManagement = () => {
                                             type="number"
                                             value={form.order}
                                             onChange={(e) => setForm({ ...form, order: e.target.value })}
-                                            className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
+                                            className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
                                         />
                                     </div>
                                     <div className="flex items-center justify-between p-4 px-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner h-14 mt-auto">

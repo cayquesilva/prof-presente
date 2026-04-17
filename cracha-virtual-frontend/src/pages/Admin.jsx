@@ -14,8 +14,8 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 
 import {
@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "../components/ui/dialog";
 import {
   AlertDialog,
@@ -78,6 +79,8 @@ import {
   Image as ImageIcon,
   Palette,
   Tags,
+  GraduationCap,
+  Loader2,
 } from "lucide-react";
 import CertificateEditor from "../components/CertificateEditor"; // Adjusted path to match existing imports
 import { toast } from "sonner";

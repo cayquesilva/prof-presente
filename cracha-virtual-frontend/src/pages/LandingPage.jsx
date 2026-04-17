@@ -6,8 +6,9 @@ import { getAssetUrl } from "../lib/utils";
 import { useAuth } from "../hooks/useAuth.jsx";
 import { useTheme } from "../contexts/ThemeContext";
 import { Button } from "../components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
     Search,
     Moon,
@@ -217,9 +218,9 @@ const LandingPage = () => {
                             autoFocus
                         />
                         {searchTerm && (
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => setSearchTerm("")}
                                 className="rounded-full hover:bg-slate-200"
                             >
@@ -227,7 +228,7 @@ const LandingPage = () => {
                             </Button>
                         )}
                     </div>
-                    
+
                     <div className="max-h-[70vh] overflow-y-auto p-4 custom-scrollbar bg-white dark:bg-slate-900">
                         {isLoading ? (
                             <div className="py-20 flex flex-col items-center justify-center space-y-4">
@@ -272,9 +273,9 @@ const LandingPage = () => {
                                         onClick={() => setSearchModalOpen(false)}
                                     >
                                         <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0 overflow-hidden shadow-inner">
-                                            <img 
-                                                src={event.imageUrl ? getAssetUrl(event.imageUrl) : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"} 
-                                                className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+                                            <img
+                                                src={event.imageUrl ? getAssetUrl(event.imageUrl) : "https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=2070&auto=format&fit=crop"}
+                                                className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                                 alt=""
                                             />
                                         </div>
@@ -720,8 +721,6 @@ const LandingPage = () => {
                             </div>
                         )}
                     </div>
-
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
@@ -747,72 +746,72 @@ const LandingPage = () => {
                         <form onSubmit={handleProposalSubmit} className="space-y-5">
                             <div className="space-y-2">
                                 <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Seu Nome *</Label>
-                                <Input 
-                                    required 
-                                    value={proposalForm.name} 
-                                    onChange={e => setProposalForm({ ...proposalForm, name: e.target.value })} 
-                                    placeholder="Como gostaria de ser chamado?" 
-                                    className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-medium"
+                                <Input
+                                    required
+                                    value={proposalForm.name}
+                                    onChange={e => setProposalForm({ ...proposalForm, name: e.target.value })}
+                                    placeholder="Como gostaria de ser chamado?"
+                                    className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 focus:border-blue-500 transition-all font-medium text-slate-900 dark:text-white"
                                 />
                             </div>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">E-mail Corporativo *</Label>
-                                    <Input 
-                                        required 
-                                        type="email" 
-                                        value={proposalForm.email} 
-                                        onChange={e => setProposalForm({ ...proposalForm, email: e.target.value })} 
-                                        placeholder="seu@email.com" 
-                                        className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-medium" 
+                                    <Input
+                                        required
+                                        type="email"
+                                        value={proposalForm.email}
+                                        onChange={e => setProposalForm({ ...proposalForm, email: e.target.value })}
+                                        placeholder="seu@email.com"
+                                        className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 focus:border-blue-500 transition-all font-medium text-slate-900 dark:text-white"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">WhatsApp / Telefone</Label>
-                                    <Input 
-                                        value={proposalForm.phone} 
-                                        onChange={e => setProposalForm({ ...proposalForm, phone: e.target.value })} 
-                                        placeholder="(00) 00000-0000" 
-                                        className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-medium" 
+                                    <Input
+                                        value={proposalForm.phone}
+                                        onChange={e => setProposalForm({ ...proposalForm, phone: e.target.value })}
+                                        placeholder="(00) 00000-0000"
+                                        className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 focus:border-blue-500 transition-all font-medium text-slate-900 dark:text-white"
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
                                 <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Tema da Palestra ou Workshop *</Label>
-                                <Input 
-                                    required 
-                                    value={proposalForm.topic} 
-                                    onChange={e => setProposalForm({ ...proposalForm, topic: e.target.value })} 
-                                    placeholder="Ex: Novos Rumos da Educação 4.0" 
-                                    className="h-11 rounded-xl bg-slate-50/50 border-slate-100 focus:border-blue-500 transition-all font-bold text-blue-600" 
+                                <Input
+                                    required
+                                    value={proposalForm.topic}
+                                    onChange={e => setProposalForm({ ...proposalForm, topic: e.target.value })}
+                                    placeholder="Ex: Novos Rumos da Educação 4.0"
+                                    className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 focus:border-blue-500 transition-all font-bold text-blue-600 dark:text-blue-400"
                                 />
                             </div>
 
                             <div className="space-y-2">
                                 <Label className="font-bold text-slate-700 dark:text-slate-300 ml-1">Resumo da sua Proposta *</Label>
-                                <textarea 
-                                    required 
-                                    value={proposalForm.description} 
-                                    onChange={e => setProposalForm({ ...proposalForm, description: e.target.value })} 
-                                    className="w-full flex min-h-[120px] rounded-2xl border border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-3 text-sm font-medium shadow-inner placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all" 
+                                <textarea
+                                    required
+                                    value={proposalForm.description}
+                                    onChange={e => setProposalForm({ ...proposalForm, description: e.target.value })}
+                                    className="w-full flex min-h-[120px] rounded-2xl border border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-3 text-sm font-medium shadow-inner placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all"
                                     placeholder="Conte-nos brevemente sobre o que você gostaria de apresentar, objetivos e público-alvo."
                                 ></textarea>
                             </div>
 
                             <div className="pt-4 flex flex-col sm:flex-row justify-end gap-3">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
                                     onClick={() => setProposalModalOpen(false)}
                                     className="h-12 rounded-xl font-bold order-2 sm:order-1"
                                 >
                                     Agora não
                                 </Button>
-                                <Button 
-                                    type="submit" 
-                                    disabled={proposalLoading} 
+                                <Button
+                                    type="submit"
+                                    disabled={proposalLoading}
                                     className="h-12 px-8 bg-[#137fec] text-white hover:bg-blue-600 rounded-xl font-black shadow-xl shadow-blue-100 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 order-1 sm:order-2"
                                 >
                                     {proposalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}

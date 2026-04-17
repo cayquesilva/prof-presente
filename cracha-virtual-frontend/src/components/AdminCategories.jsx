@@ -6,8 +6,8 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "./ui/dialog";
+import { Edit2, Plus, Trash2, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { HexColorPicker } from "react-colorful";
 
@@ -141,7 +141,7 @@ export default function AdminCategories() {
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="Ex: Tecnologia, Educação, Gestão"
-                                    className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-900 dark:text-white"
+                                    className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-indigo-500 transition-all font-bold text-slate-900 dark:text-white"
                                     required
                                 />
                             </div>
@@ -163,7 +163,7 @@ export default function AdminCategories() {
                                                 value={formData.color.replace('#', '')}
                                                 onChange={(e) => setFormData({ ...formData, color: `#${e.target.value.replace('#', '')}` })}
                                                 placeholder="FFFFFF"
-                                                className="h-12 rounded-xl border-slate-200 pl-12 font-mono uppercase text-slate-900 dark:text-white font-black"
+                                                className="h-12 rounded-xl border-slate-200 dark:border-slate-700 pl-12 font-mono uppercase text-slate-900 dark:text-white font-black bg-white dark:bg-slate-900"
                                                 maxLength={7}
                                             />
                                         </div>

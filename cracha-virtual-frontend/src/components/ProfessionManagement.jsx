@@ -27,6 +27,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
+  DialogTrigger,
   DialogClose,
 } from "./ui/dialog";
 import {
@@ -227,7 +229,7 @@ const ProfessionManagement = () => {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     placeholder="Ex: Professor de Matemática"
-                    className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
+                    className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-slate-900 transition-all font-bold text-slate-900 dark:text-white"
                     required
                   />
                 </div>
@@ -241,7 +243,7 @@ const ProfessionManagement = () => {
                     }
                     placeholder="Breve descrição sobre a especialidade..."
                     rows={3}
-                    className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-slate-900 transition-all shadow-inner font-medium text-slate-900 dark:text-white"
+                    className="rounded-[1.5rem] border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-slate-900 transition-all shadow-inner font-medium text-slate-900 dark:text-white"
                   />
                 </div>
               </div>

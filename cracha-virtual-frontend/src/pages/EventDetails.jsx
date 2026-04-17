@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { eventsAPI, enrollmentsAPI } from "../lib/api";
 import { Loader2, Calendar, MapPin, Mail, ArrowRight, Share2, AlertCircle, LayoutDashboard, CheckCircle, Users, Facebook, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Label } from "../components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "../components/ui/dialog";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "sonner"; // Assuming sonner is used for notifications based on context, or use standard alert if not
 import { getAssetUrl } from "../lib/utils";

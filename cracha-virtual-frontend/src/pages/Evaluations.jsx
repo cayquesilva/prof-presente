@@ -18,7 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "../components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "../components/ui/badge";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Star, MessageSquare, Calendar, MapPin } from "lucide-react";

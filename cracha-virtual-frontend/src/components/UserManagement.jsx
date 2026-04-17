@@ -350,7 +350,7 @@ const UserManagement = () => {
                   setSearchTerm(e.target.value);
                   setPage(1); // Reseta para a primeira página ao buscar
                 }}
-                className="pl-10"
+                className="pl-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:ring-indigo-500"
               />
             </div>
             <Button onClick={() => setIsRegisterDialogOpen(true)}>
@@ -368,8 +368,8 @@ const UserManagement = () => {
                 <div className="text-center p-4 text-gray-500">Nenhum usuário encontrado</div>
               ) : (
                 users.map((user) => (
-                  <Card key={user.id} className="overflow-hidden border shadow-sm">
-                    <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
+                  <Card key={user.id} className="overflow-hidden border dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+                    <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 border-b dark:border-slate-700 flex justify-between items-center">
                       <span className="font-semibold truncate max-w-[200px]">{user.name}</span>
                       {getRoleBadge(user.role)}
                     </div>
@@ -760,7 +760,7 @@ const UserManagement = () => {
                     <div className="space-y-3">
                       <Label className="font-black text-blue-500 uppercase text-[9px] tracking-widest ml-1">Profissão / Cargo Atual</Label>
                       <Select value={editProfession} onValueChange={setEditProfession}>
-                        <SelectTrigger className="h-14 rounded-2xl bg-white border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white">
+                        <SelectTrigger className="h-14 rounded-2xl bg-white dark:bg-slate-900 border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white">
                           <SelectValue placeholder="Selecione o cargo" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
@@ -776,7 +776,7 @@ const UserManagement = () => {
                         <div className="space-y-3">
                           <Label className="font-black text-blue-500 uppercase text-[9px] tracking-widest ml-1">Série / Ano</Label>
                           <Select value={editSerie} onValueChange={setEditSerie}>
-                            <SelectTrigger className="h-12 rounded-xl bg-white border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white text-sm">
+                            <SelectTrigger className="h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white text-sm">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
@@ -790,7 +790,7 @@ const UserManagement = () => {
                         <div className="space-y-3">
                           <Label className="font-black text-blue-500 uppercase text-[9px] tracking-widest ml-1">Comp. Curricular</Label>
                           <Select value={editSubject} onValueChange={setEditSubject}>
-                            <SelectTrigger className="h-12 rounded-xl bg-white border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white text-sm">
+                            <SelectTrigger className="h-12 rounded-xl bg-white dark:bg-slate-900 border-transparent focus:ring-blue-500 transition-all font-bold text-slate-900 dark:text-white text-sm">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
@@ -846,7 +846,7 @@ const UserManagement = () => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
-                className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-rose-500 transition-all font-bold text-slate-900 dark:text-white"
+                className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-rose-500 transition-all font-bold text-slate-900 dark:text-white"
               />
             </div>
             <div className="space-y-4">

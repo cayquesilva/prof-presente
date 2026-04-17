@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "./ui/dialog";
 import {
   Table,
@@ -22,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Trophy, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { getAssetUrl } from "../lib/utils"; // NOVO: Para resolver a URL da imagem
 
@@ -200,7 +201,7 @@ const AwardManagement = () => {
                   placeholder="Ex: Mestre Engajador 2026"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-amber-500 transition-all font-bold text-slate-900 dark:text-white"
+                  className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-amber-500 transition-all font-bold text-slate-900 dark:text-white"
                   required
                 />
               </div>
@@ -211,7 +212,7 @@ const AwardManagement = () => {
                   placeholder="Descreva o propósito desta premiação..."
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-amber-500 transition-all shadow-inner font-medium"
+                  className="rounded-[1.5rem] border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-amber-500 transition-all shadow-inner font-medium text-slate-900 dark:text-white"
                   rows={2}
                 />
               </div>
@@ -222,7 +223,7 @@ const AwardManagement = () => {
                   placeholder="Ex: Realizar check-in em todos os eventos da trilha de Tecnologia."
                   value={form.criteria}
                   onChange={(e) => setForm({ ...form, criteria: e.target.value })}
-                  className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-amber-500 transition-all shadow-inner font-medium border-rose-100 focus:border-amber-500"
+                  className="rounded-[1.5rem] border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[100px] resize-none focus-visible:ring-amber-500 transition-all shadow-inner font-medium focus:border-amber-500 text-slate-900 dark:text-white"
                   rows={2}
                   required
                 />

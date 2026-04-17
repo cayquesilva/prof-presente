@@ -279,7 +279,7 @@ const WorkplaceManagement = () => {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     placeholder="Ex: EEEFM Professor José Lins"
-                    className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
+                    className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
                     required
                   />
                 </div>
@@ -293,7 +293,7 @@ const WorkplaceManagement = () => {
                     }
                     placeholder="Informações adicionais sobre o local..."
                     rows={2}
-                    className="rounded-[1.5rem] border-slate-100 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[80px] resize-none focus-visible:ring-blue-500 transition-all shadow-inner font-medium"
+                    className="rounded-[1.5rem] border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6 min-h-[80px] resize-none focus-visible:ring-blue-500 transition-all shadow-inner font-medium text-slate-900 dark:text-white"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -306,7 +306,7 @@ const WorkplaceManagement = () => {
                         setFormData({ ...formData, city: e.target.value })
                       }
                       placeholder="Ex: João Pessoa"
-                      className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
+                      className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white"
                       required
                     />
                   </div>
@@ -319,7 +319,7 @@ const WorkplaceManagement = () => {
                         setFormData({ ...formData, state: e.target.value })
                       }
                       placeholder="PB"
-                      className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white uppercase"
+                      className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-blue-500 transition-all font-bold text-slate-900 dark:text-white uppercase"
                       required
                       maxLength={2}
                     />

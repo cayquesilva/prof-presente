@@ -33,7 +33,7 @@ services:
         echo 'Tentando conectar ao banco: eduagenda_db:5432' &&
         echo 'DATABASE_URL detectada (mascarada): postgresql://***:***@eduagenda_db:5432/***' &&
         sleep 10 &&
-        echo 'Sincronizando schema (prisma db push)...' &&
+        echo 'Sincronizando schema (prisma migrate deploy)...' &&
         npx prisma migrate deploy &&
         echo 'Iniciando servidor...' &&
         npm start
